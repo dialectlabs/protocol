@@ -25,7 +25,7 @@
     ],
     "rules": {
       "no-console": 0,
-      "semi": 0,
+      "semi": 1,
       "@typescript-eslint/no-explicit-any": 0,
       "quotes": [2, "single", { "avoidEscape": true }]
     }

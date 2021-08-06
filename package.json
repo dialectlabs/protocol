@@ -8,7 +8,7 @@
   },
   "scripts": {
     "lint": "eslint --ext .js tests/* && prettier --check \"tests/**/*.js\"",
-    "lint:fix": "eslint --ext .js tests/* --fix",
+    "lint:fix": "eslint --ext .js tests/* --fix && prettier --write {,tests/**/}*.js",
     "pretty": "prettier --write '{,tests/**/}*.js'"
   },
   "keywords": [],
