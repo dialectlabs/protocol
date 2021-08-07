@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --ext .js --ext .ts --ext .tsx pages/* tests/* && prettier --check \"pages/**/*.tsx\" \"tests/**/*.js\"",
-    "lint:fix": "eslint --ext .js --ext .ts --ext .tsx .js pages/* tests/* --fix && prettier --write {,tests/**/,pages/**/}*.{js,ts,tsx}",
+    "lint:fix": "eslint --ext .js --ext .ts --ext .tsx pages/* tests/* --fix && prettier --write {,tests/**/,pages/**/}*.{js,ts,tsx}",
     "pretty": "prettier --write '{,tests/**/,pages/**/}*.{js,ts,tsx}'"
   },
   "keywords": [],
