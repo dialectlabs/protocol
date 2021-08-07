@@ -2,8 +2,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 type Data = {
-  name: string
-}
+  name: string;
+};
 
 export default function handler(
   req: NextApiRequest,
