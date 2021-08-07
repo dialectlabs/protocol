@@ -23,4 +23,15 @@ module.exports = {
     quotes: [2, 'single', { avoidEscape: true }],
     semi: 1,
   },
+  overrides: [
+    {
+      files: ["*.ts", "*.tsx"],
+      extends: [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+      ],
+      parser: "@typescript-eslint/parser",
+      plugins: ["@typescript-eslint"]
+    }
+  ]
 };

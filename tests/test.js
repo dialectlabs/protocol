@@ -69,7 +69,9 @@ describe('test update_user_threads_account', () => {
     const updatedMessage = 'the quick brown dog jumped over the lazy fox';
     const tx = await _updateThreadsAccount(updatedMessage, THREADSKP, newkp);
     console.log('update tx', tx);
-    const updatedThread = await PROGRAM.account.threadsData.fetch(THREADSKP.publicKey);
+    const updatedThread = await PROGRAM.account.threadsData.fetch(
+      THREADSKP.publicKey
+    );
     returnedMessage = new TextDecoder('utf-8').decode(
       new Uint8Array(updatedThread.message)
     );
