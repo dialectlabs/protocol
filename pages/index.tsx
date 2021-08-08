@@ -1,14 +1,11 @@
 import { Cluster, Connection, clusterApiUrl } from '@solana/web3.js';
 import Wallet from '@project-serum/sol-wallet-adapter';
-import React, { useContext } from 'react';
+import React from 'react';
 import Navbar from '../components/Navbar';
 import Landing from '../components/Landing';
-import useDarkMode, {
-  DarkModeContextProvider,
-} from '../utils/DarkModeContext';
+import useDarkMode, { DarkModeContextProvider } from '../utils/DarkModeContext';
 
-export default function HomeWrapper(props: any): JSX.Element {
-  const [darkMode, setDarkMode] = React.useState(false);
+export default function HomeContextWrapper(props: any): JSX.Element {
   return (
     <DarkModeContextProvider>
       <Home {...props} />
