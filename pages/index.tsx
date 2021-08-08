@@ -3,23 +3,21 @@ import Wallet from '@project-serum/sol-wallet-adapter';
 import React, { useContext } from 'react';
 import Navbar from '../components/Navbar';
 import Landing from '../components/Landing';
-import {
-  DarkModeContext,
-  ValueType as DarkModeType,
+import useDarkMode, {
+  DarkModeContextProvider,
 } from '../utils/DarkModeContext';
 
 export default function HomeWrapper(props: any): JSX.Element {
   const [darkMode, setDarkMode] = React.useState(false);
   return (
-    <DarkModeContext.Provider value={{ darkMode, setDarkMode }}>
+    <DarkModeContextProvider>
       <Home {...props} />
-    </DarkModeContext.Provider>
+    </DarkModeContextProvider>
   );
 }
 
 function Home(): JSX.Element {
-  // const [darkMode, setDarkMode] = React.useState<boolean>(false);
-  const { darkMode } = useContext(DarkModeContext) as DarkModeType;
+  const { darkMode } = useDarkMode();
   const [selectedWallet, setSelectedWallet] = React.useState<
     Wallet | undefined | null
   >(undefined);

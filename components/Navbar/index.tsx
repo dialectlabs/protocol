@@ -6,7 +6,7 @@ import Wallet from '@project-serum/sol-wallet-adapter';
 import { BeakerIcon, CubeIcon, MoonIcon, LightningBoltIcon, SunIcon, XIcon } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
 import * as React from 'react';
-import { DarkModeContext, ValueType as DarkModeType } from '../../utils/DarkModeContext';
+import useDarkMode from '../../utils/DarkModeContext';
 
 const walletNavigation = [
   { name: 'mainnet (coming soon)', href: '#', disabled: true, networkName: 'mainnet-beta' },
@@ -27,7 +27,7 @@ type PropType = {
 };
 
 export default function Navbar({networkName, setNetworkName, wallet, onWalletConnect, onWalletDisconnect}: PropType): JSX.Element {
-  const {darkMode, setDarkMode} = React.useContext(DarkModeContext) as DarkModeType;
+  const {darkMode, setDarkMode} = useDarkMode();
   if (wallet && wallet.connected) {
     const pubkeystr = `${wallet.publicKey?.toBase58()}`;
     console.log('pubkey', pubkeystr);
