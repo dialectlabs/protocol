@@ -25,13 +25,13 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["*.ts", "*.tsx"],
+      files: ['*.ts', '*.tsx'],
       extends: [
-        "plugin:@typescript-eslint/eslint-recommended",
-        "plugin:@typescript-eslint/recommended"
+        'plugin:@typescript-eslint/eslint-recommended',
+        'plugin:@typescript-eslint/recommended'
       ],
-      parser: "@typescript-eslint/parser",
-      plugins: ["@typescript-eslint"]
+      parser: '@typescript-eslint/parser',
+      plugins: ['@typescript-eslint']
     }
   ]
 };

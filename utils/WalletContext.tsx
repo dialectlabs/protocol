@@ -16,7 +16,13 @@ type ValueType = {
   onConnect: () => void;
   onDisconnect: () => void;
 };
-export const WalletContext = createContext<ValueType | null>(null);
+export const WalletContext = createContext<ValueType | null>({
+  wallet: null,
+  networkName: 'localnet',
+  setNetworkName: (_networkName: Cluster | 'localnet') => undefined,
+  onConnect: () => undefined,
+  onDisconnect: () => undefined,
+});
 
 export const WalletContextProvider = (props: PropsType): JSX.Element => {
   const [selectedWallet, setSelectedWallet] = useState<

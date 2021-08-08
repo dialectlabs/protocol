@@ -19,7 +19,7 @@ function classNames(...classes: string[]): string {
 }
 
 export default function Navbar(): JSX.Element {
-  const {wallet, networkName, setNetworkName, onConnect: onWalletConnect, onDisconnect: onWalletDisconnect } = useWallet() || {};
+  const {wallet, networkName, setNetworkName, onConnect: onWalletConnect, onDisconnect: onWalletDisconnect } = useWallet();
   const {darkMode, setDarkMode} = useDarkMode();
   if (wallet && wallet.connected) {
     const pubkeystr = `${wallet.publicKey?.toBase58()}`;
