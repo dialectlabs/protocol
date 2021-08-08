@@ -17,11 +17,11 @@ export default function Home(): JSX.Element {
         </Head>
 
         <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center space-y-4">
-          <h1 className="text-8xl font-bold font-crimson dark:text-gray-200">
+          <h1 className="text-8xl font-crimson dark:text-gray-200">
             dialect
           </h1>
           <p className="text-lg text-gray-500">
-            On-chain Solana messaging protocol.
+            On-chain, encrypted Solana messaging protocol.
           </p>
         </main>
 
