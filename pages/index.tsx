@@ -1,9 +1,12 @@
 import Head from 'next/head';
 import * as React from 'react';
+import Navbar from '../components/Navbar';
 
 export default function Home(): JSX.Element {
+  const [darkMode, setDarkMode] = React.useState(false);
   return (
-    <div className='dark'>
+    <div className={darkMode ? 'dark' : ''}>
+      <Navbar darkMode={darkMode} toggleDarkMode={() => setDarkMode(!darkMode)} />
       <div className="flex flex-col items-center justify-center min-h-screen py-2 dark:bg-black">
         <Head>
           <title>dialect</title>
@@ -11,10 +14,10 @@ export default function Home(): JSX.Element {
         </Head>
 
         <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center space-y-4">
-          <h1 className="text-8xl font-bold font-crimson dark:text-gray-400">
+          <h1 className="text-8xl font-bold font-crimson dark:text-gray-200">
             dialect
           </h1>
-          <p className='text-lg text-gray-500'>On-chain messaging protocol. Built for Solana.</p>
+          <p className='text-lg text-gray-500'>On-chain Solana messaging protocol.</p>
         </main>
 
         <footer className="text-gray-600 flex items-center justify-center w-full h-24 border-t dark:border-gray-900">
