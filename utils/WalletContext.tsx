@@ -19,7 +19,9 @@ type ValueType = {
 export const WalletContext = createContext<ValueType | null>({
   wallet: null,
   networkName: 'localnet',
-  setNetworkName: (_networkName: Cluster | 'localnet') => undefined,
+  setNetworkName: (_: Cluster | 'localnet') => {
+    _;
+  },
   onConnect: () => undefined,
   onDisconnect: () => undefined,
 });
@@ -28,7 +30,7 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
   const [selectedWallet, setSelectedWallet] = useState<
     Wallet | undefined | null
   >(undefined);
-  const [, setUrlWallet] = useState<Wallet | null>(null);
+  const [urlWallet, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
     'localnet'
   );
@@ -42,9 +44,6 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
   // const connection = useMemo(() => new Connection(network), [network]);
   useEffect(() => {
     const w = new Wallet(providerUrl, network);
-    console.log('providerUrl', providerUrl);
-    console.log('network', network);
-    console.log('wallet', w);
     setUrlWallet(w);
   }, [providerUrl, network]);
 
@@ -73,7 +72,7 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
         wallet: selectedWallet,
         networkName,
         setNetworkName,
-        onConnect: () => setSelectedWallet(null),
+        onConnect: () => setSelectedWallet(urlWallet),
         onDisconnect: () => setSelectedWallet(null),
       }}
     >
