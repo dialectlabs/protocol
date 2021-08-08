@@ -1,3 +1,3 @@
 export type ProviderPropsType = {
-    children: JSX.Element,
-}
+  children: JSX.Element;
+};

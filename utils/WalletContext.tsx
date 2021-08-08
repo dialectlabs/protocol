@@ -1,8 +1,7 @@
-import React, {createContext, useContext, useState} from "react";
-import {ProviderPropsType as PropsType} from './';
+import React, { createContext, useContext, useState } from 'react';
+import { ProviderPropsType as PropsType } from './';
 
-type ValueType = {
-};
+type ValueType = {};
 export const WalletContext = createContext<ValueType>({});
 
 export const WalletContextProvider = (props: PropsType): JSX.Element => {
