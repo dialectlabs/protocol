@@ -23,8 +23,8 @@ module.exports = {
       },
     },
     fontFamily: {
-      'crimson': '"Crimson Text"',
-    }
+      crimson: '"Crimson Text"',
+    },
   },
   variants: {
     extend: {},
