@@ -13,7 +13,7 @@ function AppWithContext(props: AppProps): JSX.Element {
         <App {...props} />
       </WalletContextProvider>
     </DarkModeContextProvider>
-);
+  );
 }
 
 function App({ Component, pageProps }: AppProps): JSX.Element {

@@ -1,30 +1,36 @@
-import React, {Fragment} from 'react';
+import React, { Fragment } from 'react';
 import { Menu as TMenu, Transition } from '@headlessui/react';
 
 export type ItemType = {
-  name: string,
-  disabled: boolean,
-  onClick: () => void,
-  itemChildren: JSX.Element,
-}
+  name: string;
+  disabled: boolean;
+  onClick: () => void;
+  itemChildren: JSX.Element;
+};
 
 type PropsType = {
-  button: JSX.Element,
-  items: ItemType[],
-  className?: string,
-}
+  button: JSX.Element;
+  items: ItemType[];
+  className?: string;
+};
 
 function classNames(...classes: string[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function Menu({button, items, className = ''}: PropsType): JSX.Element {
+export default function Menu({
+  button,
+  items,
+  className = '',
+}: PropsType): JSX.Element {
   return (
     <TMenu as="div" className="relative">
-      {({ open }: {open: boolean}) => (
+      {({ open }: { open: boolean }) => (
         <>
           <div>
-            <TMenu.Button className={`relative inline-flex items-center px-4 py-2 border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-700 dark:bg-red-600 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-700 dark:text-gray-300 ${className}`}>
+            <TMenu.Button
+              className={`relative inline-flex items-center px-4 py-2 border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-700 dark:bg-red-600 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-700 dark:text-gray-300 ${className}`}
+            >
               {button}
             </TMenu.Button>
           </div>
@@ -49,8 +55,16 @@ export default function Menu({button, items, className = ''}: PropsType): JSX.El
                       disabled={item.disabled}
                       onClick={item.onClick}
                       className={classNames(
-                        active && !item.disabled ? 'bg-gray-100 dark:bg-gray-800' : 'cursor-default',
-                        `flex flex-grow space-x-2 items-center block px-4 py-2 text-sm ${!item.disabled ? 'text-gray-800' : 'text-gray-400'} ${!item.disabled ? 'dark:text-gray-300' : 'dark:text-gray-500'} dark:bg-gray-900`
+                        active && !item.disabled
+                          ? 'bg-gray-100 dark:bg-gray-800'
+                          : 'cursor-default',
+                        `flex flex-grow space-x-2 items-center block px-4 py-2 text-sm ${
+                          !item.disabled ? 'text-gray-800' : 'text-gray-400'
+                        } ${
+                          !item.disabled
+                            ? 'dark:text-gray-300'
+                            : 'dark:text-gray-500'
+                        } dark:bg-gray-900`
                       )}
                     >
                       {item.itemChildren}
