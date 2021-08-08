@@ -6,6 +6,7 @@ import Wallet from '@project-serum/sol-wallet-adapter';
 import { BeakerIcon, CubeIcon, MoonIcon, LightningBoltIcon, SunIcon, XIcon } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
 import * as React from 'react';
+import { DarkModeContext, ValueType as DarkModeType } from '../../utils/DarkModeContext';
 
 const walletNavigation = [
   { name: 'mainnet (coming soon)', href: '#', disabled: true, networkName: 'mainnet-beta' },
@@ -18,8 +19,6 @@ function classNames(...classes: string[]): string {
 }
 
 type PropType = {
-  darkMode: boolean,
-  toggleDarkMode: () => void,
   networkName: Cluster | 'localnet',
   wallet: Wallet | null,
   onWalletConnect: () => void,
@@ -27,7 +26,8 @@ type PropType = {
   setNetworkName: (networkName: Cluster | 'localnet') => void,
 };
 
-export default function Navbar({darkMode, toggleDarkMode, networkName, setNetworkName, wallet, onWalletConnect, onWalletDisconnect}: PropType): JSX.Element {
+export default function Navbar({networkName, setNetworkName, wallet, onWalletConnect, onWalletDisconnect}: PropType): JSX.Element {
+  const {darkMode, setDarkMode} = React.useContext(DarkModeContext) as DarkModeType;
   if (wallet && wallet.connected) {
     const pubkeystr = `${wallet.publicKey?.toBase58()}`;
     console.log('pubkey', pubkeystr);
@@ -52,7 +52,7 @@ export default function Navbar({darkMode, toggleDarkMode, networkName, setNetwor
               <button
                 type="button"
                 className="border-none bg-none"
-                onClick={toggleDarkMode}
+                onClick={() => setDarkMode(!darkMode)}
               >
                 {darkMode ? <SunIcon className="text-white mr-4 h-5 w-5" aria-hidden="true" /> : (<MoonIcon className="mr-4 h-5 w-5" aria-hidden="true" />)}
               </button>
