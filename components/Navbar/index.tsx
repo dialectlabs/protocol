@@ -1,7 +1,5 @@
-/* This example requires Tailwind CSS v2.0+ */
 import { Cluster } from '@solana/web3.js';
-import { Fragment } from 'react';
-import { Menu, Transition } from '@headlessui/react';
+import Menu from '../../components/Menu';
 import { BeakerIcon, CubeIcon, MoonIcon, LightningBoltIcon, SunIcon, XIcon } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
 import * as React from 'react';
@@ -9,26 +7,22 @@ import useDarkMode from '../../utils/DarkModeContext';
 import useWallet from '../../utils/WalletContext';
 
 const walletNavigation = [
-  { name: 'mainnet (coming soon)', href: '#', disabled: true, networkName: 'mainnet-beta' },
-  { name: 'testnet (coming soon)', href: '#', disabled: true, networkName: 'testnet' },
-  { name: 'localnet', href: '#', disabled: false, networkName: 'localnet' },
+  { name: 'mainnet (coming soon)', disabled: true, networkName: 'mainnet-beta' },
+  { name: 'testnet (coming soon)', disabled: true, networkName: 'testnet' },
+  { name: 'localnet', disabled: false, networkName: 'localnet' },
 ];
 
-function classNames(...classes: string[]): string {
-  return classes.filter(Boolean).join(' ');
-}
-
 export default function Navbar(): JSX.Element {
-  const {wallet, networkName, setNetworkName, onConnect: onWalletConnect, onDisconnect: onWalletDisconnect } = useWallet();
+  const {
+    wallet,
+    networkName,
+    setNetworkName,
+    onConnect: onWalletConnect,
+    onDisconnect: onWalletDisconnect
+  } = useWallet();
   const {darkMode, setDarkMode} = useDarkMode();
-  if (wallet && wallet.connected) {
-    const pubkeystr = `${wallet.publicKey?.toBase58()}`;
-    console.log('pubkey', pubkeystr);
-    console.log('pubkeystr begin', pubkeystr.slice(0, 4));
-    console.log('pubkeystr end', pubkeystr.slice(pubkeystr.length - 4));
-  }
   const pubkeyStr = wallet && wallet.connected ? `${wallet.publicKey?.toBase58()}` : null;
-  const displayPubkey = pubkeyStr ? `${pubkeyStr.slice(0, 4)}...${pubkeyStr.slice(pubkeyStr.length - 4)}` : null; 
+  const displayPubkey = pubkeyStr ? `${pubkeyStr.slice(0, 4)}...${pubkeyStr.slice(pubkeyStr.length - 4)}` : null;
   return (
     <div className='dark:bg-black'>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -70,64 +64,37 @@ export default function Navbar(): JSX.Element {
               </button>
             </div>
             <div className="flex md:ml-0 md:flex-shrink-0 md:items-center">
-              <Menu as="div" className="relative">
-                {({ open }) => (
+              <Menu
+                className='rounded-l-none'
+                button={(
                   <>
-                    <div>
-                      <Menu.Button className="relative inline-flex items-center px-4 py-2 border-transparent shadow-sm text-sm font-medium rounded-md rounded-l-none text-white bg-red-700 dark:bg-red-600 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-700 dark:text-gray-300">
-                        <span className="sr-only">Open wallet menu</span>
-                        {networkName === 'localnet' ? (
-                          <BeakerIcon className='w-5 h-5'/>
-                        ) : networkName === 'testnet' ? (
-                          <CubeIcon className='w-5 h-5' />
-                        ) : (
-                          <LightningBoltIcon className='w-5 h-5'/>
-                        )}
-                      </Menu.Button>
-                    </div>
-                    <Transition
-                      show={open}
-                      as={Fragment}
-                      enter="transition ease-out duration-200"
-                      enterFrom="transform opacity-0 scale-95"
-                      enterTo="transform opacity-100 scale-100"
-                      leave="transition ease-in duration-75"
-                      leaveFrom="transform opacity-100 scale-100"
-                      leaveTo="transform opacity-0 scale-95"
-                    >
-                      <Menu.Items
-                        static
-                        className="flex flex-col dark:bg-gray-900 dark:border-2 dark:border-gray-700 origin-top-right absolute right-0 mt-2 w-60 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
-                      >
-                        {walletNavigation.map((item) => (
-                          <Menu.Item key={item.name}>
-                            {({ active }) => (
-                              <button
-                                disabled={item.disabled}
-                                onClick={() => setNetworkName(item.networkName as Cluster | 'localnet')}
-                                className={classNames(
-                                  active && !item.disabled ? 'bg-gray-100 dark:bg-gray-800' : 'cursor-default',
-                                  `flex flex-grow space-x-2 items-center block px-4 py-2 text-sm ${!item.disabled ? 'text-gray-800' : 'text-gray-400'} ${!item.disabled ? 'dark:text-gray-300' : 'dark:text-gray-500'} dark:bg-gray-900`
-                                )}
-                              >
-                                {item.networkName === 'localnet' ? (
-                                  <BeakerIcon className='w-4 h-4'/>
-                                ) : item.networkName === 'testnet' ? (
-                                  <CubeIcon className='w-4 h-4' />
-                                ) : 
-                                (
-                                  <LightningBoltIcon className='w-4 h-4'/>
-                                )}
-                                <span>{item.name}</span>
-                              </button>
-                            )}
-                          </Menu.Item>
-                        ))}
-                      </Menu.Items>
-                    </Transition>
+                    <span className="sr-only">Open wallet menu</span>
+                    {networkName === 'localnet' ? (
+                      <BeakerIcon className='w-5 h-5'/>
+                    ) : networkName === 'testnet' ? (
+                      <CubeIcon className='w-5 h-5' />
+                    ) : (
+                      <LightningBoltIcon className='w-5 h-5'/>
+                    )}
                   </>
                 )}
-              </Menu>
+                items={walletNavigation.map(item => ({
+                  ...item,
+                  onClick: () => setNetworkName(item.networkName as Cluster | 'localnet'),
+                  itemChildren: (
+                    <>
+                      {item.networkName === 'localnet' ? (
+                        <BeakerIcon className='w-4 h-4'/>
+                      ) : item.networkName === 'testnet' ? (
+                        <CubeIcon className='w-4 h-4' />
+                      ) : (
+                        <LightningBoltIcon className='w-4 h-4'/>
+                      )}
+                      <span>{item.name}</span>
+                    </>
+                  ),
+                }))}
+              />
             </div>
           </div>
         </div>

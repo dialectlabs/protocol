@@ -1,25 +1,14 @@
 import React from 'react';
-import Navbar from '../components/Navbar';
+
 import Landing from '../components/Landing';
-import useDarkMode, { DarkModeContextProvider } from '../utils/DarkModeContext';
-import { WalletContextProvider } from '../utils/WalletContext';
+import Home from '../components/Home';
+import useWallet from '../utils/WalletContext';
 
-export default function HomeContextWrapper(props: JSX.Element): JSX.Element {
+export default function Index(): JSX.Element {
+  const {wallet} = useWallet();
   return (
-    <DarkModeContextProvider>
-      <WalletContextProvider>
-        <Home {...props} />
-      </WalletContextProvider>
-    </DarkModeContextProvider>
-  );
-}
-
-function Home(): JSX.Element {
-  const { darkMode } = useDarkMode();
-  return (
-    <div className={darkMode ? 'dark' : ''}>
-      <Navbar />
-      <Landing />
-    </div>
+    <>
+      {wallet && wallet.connected ? (<Home />) : (<Landing />)}
+    </>
   );
 }
