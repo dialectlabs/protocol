@@ -1,15 +1,15 @@
 /* This example requires Tailwind CSS v2.0+ */
+import { Cluster } from '@solana/web3.js';
 import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { MoonIcon, SunIcon } from '@heroicons/react/outline';
-import { DotsHorizontalIcon } from '@heroicons/react/solid';
+import { BeakerIcon, CubeIcon, MoonIcon, LightningBoltIcon, SunIcon } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
 import * as React from 'react';
 
 const walletNavigation = [
-  { name: 'sollet.io', href: '#' },
-  { name: 'sollet extension', href: '#' },
-  { name: 'phantom', href: '#' },
+  { name: 'mainnet (coming soon)', href: '#', disabled: true, networkName: 'mainnet-beta' },
+  { name: 'testnet (coming soon)', href: '#', disabled: true, networkName: 'testnet' },
+  { name: 'localnet', href: '#', disabled: false, networkName: 'localnet' },
 ];
 
 function classNames(...classes: string[]): string {
@@ -19,9 +19,11 @@ function classNames(...classes: string[]): string {
 type PropType = {
   darkMode: boolean,
   toggleDarkMode: () => void,
+  networkName: Cluster | 'localnet',
+  setNetworkName: (networkName: Cluster | 'localnet') => void,
 };
 
-export default function Navbar({darkMode, toggleDarkMode}: PropType): JSX.Element {
+export default function Navbar({darkMode, toggleDarkMode, networkName, setNetworkName}: PropType): JSX.Element {
   return (
     <div className='dark:bg-black'>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -59,7 +61,13 @@ export default function Navbar({darkMode, toggleDarkMode}: PropType): JSX.Elemen
                     <div>
                       <Menu.Button className="relative inline-flex items-center px-4 py-2 border-transparent shadow-sm text-sm font-medium rounded-md rounded-l-none text-white bg-red-700 dark:bg-red-600 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-700 dark:text-gray-300">
                         <span className="sr-only">Open wallet menu</span>
-                        <DotsHorizontalIcon className='block h-5 w-5' />
+                        {networkName === 'localnet' ? (
+                          <BeakerIcon className='w-5 h-5'/>
+                        ) : networkName === 'testnet' ? (
+                          <CubeIcon className='w-5 h-5' />
+                        ) : (
+                          <LightningBoltIcon className='w-5 h-5'/>
+                        )}
                       </Menu.Button>
                     </div>
                     <Transition
@@ -74,20 +82,29 @@ export default function Navbar({darkMode, toggleDarkMode}: PropType): JSX.Elemen
                     >
                       <Menu.Items
                         static
-                        className="dark:bg-gray-900 dark:border-2 dark:border-gray-700 origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+                        className="flex flex-col dark:bg-gray-900 dark:border-2 dark:border-gray-700 origin-top-right absolute right-0 mt-2 w-60 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
                       >
                         {walletNavigation.map((item) => (
                           <Menu.Item key={item.name}>
                             {({ active }) => (
-                              <a
-                                href={item.href}
+                              <button
+                                disabled={item.disabled}
+                                onClick={() => setNetworkName(item.networkName as Cluster | 'localnet')}
                                 className={classNames(
-                                  active ? 'bg-gray-100 dark:bg-gray-800' : '',
-                                  'block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 dark:bg-gray-900'
+                                  active && !item.disabled ? 'bg-gray-100 dark:bg-gray-800' : 'cursor-default',
+                                  `flex flex-grow space-x-2 items-center block px-4 py-2 text-sm ${!item.disabled ? 'text-gray-800' : 'text-gray-400'} ${!item.disabled ? 'dark:text-gray-300' : 'dark:text-gray-500'} dark:bg-gray-900`
                                 )}
                               >
-                                {item.name}
-                              </a>
+                                {item.networkName === 'localnet' ? (
+                                  <BeakerIcon className='w-4 h-4'/>
+                                ) : item.networkName === 'testnet' ? (
+                                  <CubeIcon className='w-4 h-4' />
+                                ) : 
+                                (
+                                  <LightningBoltIcon className='w-4 h-4'/>
+                                )}
+                                <span>{item.name}</span>
+                              </button>
                             )}
                           </Menu.Item>
                         ))}
