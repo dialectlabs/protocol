@@ -2,11 +2,11 @@
 import { Cluster } from '@solana/web3.js';
 import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import Wallet from '@project-serum/sol-wallet-adapter';
 import { BeakerIcon, CubeIcon, MoonIcon, LightningBoltIcon, SunIcon, XIcon } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
 import * as React from 'react';
 import useDarkMode from '../../utils/DarkModeContext';
+import useWallet from '../../utils/WalletContext';
 
 const walletNavigation = [
   { name: 'mainnet (coming soon)', href: '#', disabled: true, networkName: 'mainnet-beta' },
@@ -18,15 +18,8 @@ function classNames(...classes: string[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-type PropType = {
-  networkName: Cluster | 'localnet',
-  wallet: Wallet | null,
-  onWalletConnect: () => void,
-  onWalletDisconnect: () => void,
-  setNetworkName: (networkName: Cluster | 'localnet') => void,
-};
-
-export default function Navbar({networkName, setNetworkName, wallet, onWalletConnect, onWalletDisconnect}: PropType): JSX.Element {
+export default function Navbar(): JSX.Element {
+  const {wallet, networkName, setNetworkName, onConnect: onWalletConnect, onDisconnect: onWalletDisconnect } = useWallet() || {};
   const {darkMode, setDarkMode} = useDarkMode();
   if (wallet && wallet.connected) {
     const pubkeystr = `${wallet.publicKey?.toBase58()}`;
