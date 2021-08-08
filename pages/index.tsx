@@ -10,6 +10,9 @@ import Landing from '../components/Landing';
 
 export default function Home(): JSX.Element {
   const [darkMode, setDarkMode] = React.useState<boolean>(false);
+  const [selectedWallet, setSelectedWallet] = React.useState<
+    Wallet | undefined | null
+  >(undefined);
   const [urlWallet, setUrlWallet] = React.useState<Wallet | null>(null);
   const [networkName, setNetworkName] = React.useState<Cluster | 'localnet'>('localnet');
   const network: string = React.useMemo(() => {
@@ -41,9 +44,6 @@ export default function Home(): JSX.Element {
       return null;
     }
   }, [network]);
-  const [selectedWallet, setSelectedWallet] = React.useState<
-    Wallet | undefined | null
-  >(undefined);
   const [, setConnected] = React.useState(false);
   React.useEffect(() => {
     if (selectedWallet) {
@@ -68,6 +68,9 @@ export default function Home(): JSX.Element {
       <Navbar
         darkMode={darkMode}
         toggleDarkMode={() => setDarkMode(!darkMode)}
+        wallet={selectedWallet}
+        onWalletDisconnect={() => setSelectedWallet(null)}
+        onWalletConnect={() => setSelectedWallet(urlWallet)}
         networkName={networkName}
         setNetworkName={(networkName) => setNetworkName(networkName)}
       />
