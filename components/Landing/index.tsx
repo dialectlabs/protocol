@@ -9,7 +9,7 @@ export default function Landing(): JSX.Element {
       </Head>
       <div className="mt-24 md:mt-64">
         <h1 className="text-8xl font-crimson dark:text-gray-200">dialect</h1>
-        <p className="text-lg text-gray-500 dark:text-gray-400">
+        <p className="text-lg text-center">
           On-chain, encrypted Solana messaging protocol.
         </p>
       </div>

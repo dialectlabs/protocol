@@ -1,4 +1,5 @@
 import 'tailwindcss/tailwind.css';
+import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import * as React from 'react';
 import Footer from '../components/Footer';
@@ -23,7 +24,7 @@ function App({ Component, pageProps }: AppProps): JSX.Element {
     <div className={darkMode ? 'dark' : ''}>
       <div className="flex flex-col min-h-screen py-2 dark:bg-black">
         <Navbar />
-        <main className="flex flex-col items-center max-w-7xl mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 text-center space-y-4">
+        <main className="flex flex-col max-w-7xl mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 space-y-4">
           <Component {...pageProps} />
         </main>
         <Footer />

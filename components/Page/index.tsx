@@ -13,10 +13,12 @@ export function ProtectedPage(props: PropsType): JSX.Element {
   const router = useRouter();
   const { wallet } = useWallet();
   useEffect(() => {
+    if (!router) return;
+    
     if (!wallet?.connected) {
       router.push('/');
     }
-  }, []);
+  }, [router, wallet]);
   if (!router) {
     return <div />;
   }
@@ -27,12 +29,12 @@ export default function Page({ title, children }: PropsType): JSX.Element {
   return (
     <>
       <Head>
-        <title>dialect | {title}</title>
+        <title>dialect | {title || 'Home'}</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
       {title && (
-        <div className="mt-6 md:mt-6">
-          <h1 className="text-5xl font-crimson dark:text-gray-200">{title}</h1>
+        <div className="mt-6 md:mt-6 text-center">
+          <h2>{title}</h2>
         </div>
       )}
       {children}

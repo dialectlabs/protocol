@@ -60,17 +60,16 @@ export default function Navbar(): JSX.Element {
     ? `${pubkeyStr.slice(0, 4)}...${pubkeyStr.slice(pubkeyStr.length - 4)}`
     : null;
   return (
-    <div className="dark:bg-black">
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* logo */}
           <div className="flex">
             <div className="hidden sm:flex flex-shrink-0 flex items-center">
               <button
-                className="text-3xl font-crimson dark:text-gray-400"
                 onClick={() => router.push('/')}
               >
-                dialect
+                <h4>dialect</h4>
               </button>
             </div>
             <div className="hidden md:ml-6 md:flex md:items-center md:space-x-4"></div>
@@ -85,11 +84,11 @@ export default function Navbar(): JSX.Element {
               >
                 {darkMode ? (
                   <SunIcon
-                    className="text-white mr-4 h-5 w-5"
+                    className="icon mr-4 h-5 w-5"
                     aria-hidden="true"
                   />
                 ) : (
-                  <MoonIcon className="mr-4 h-5 w-5" aria-hidden="true" />
+                  <MoonIcon className="icon mr-4 h-5 w-5" aria-hidden="true" />
                 )}
               </button>
             </div>
