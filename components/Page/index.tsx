@@ -1,10 +1,27 @@
 import Head from 'next/head';
-import React from 'react';
+import {useRouter} from 'next/router';
+import React, { useEffect } from 'react';
+
+import useWallet from '../../utils/WalletContext';
 
 type PropsType = {
   title: string;
   children: JSX.Element;
 };
+
+export function ProtectedPage(props: PropsType): JSX.Element {
+  const router = useRouter();
+  const { wallet } = useWallet();
+  useEffect(() => {
+    if (!wallet?.connected) {
+      router.push('/');
+    }
+  }, []);
+  if (!router) {
+    return <div />;
+  }
+  return <Page {...props} />;
+}
 
 export default function Page({ title, children }: PropsType): JSX.Element {
   return (

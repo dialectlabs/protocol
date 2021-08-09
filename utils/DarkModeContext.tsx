@@ -5,11 +5,8 @@ type ValueType = {
   darkMode: boolean;
   setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
 };
-export const DarkModeContext = createContext(null as ValueType | null);
 
-// type PropsType = {
-//   children: JSX.Element,
-// }
+export const DarkModeContext = createContext(null as ValueType | null);
 
 export const DarkModeContextProvider = (props: PropsType): JSX.Element => {
   const [darkMode, setDarkMode] = useState(false);
