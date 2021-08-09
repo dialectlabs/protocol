@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 import useWallet from '../../utils/WalletContext';
 
 type PropsType = {
-  title: string;
+  title?: string;
   children: JSX.Element;
 };
 
@@ -30,10 +30,10 @@ export default function Page({ title, children }: PropsType): JSX.Element {
         <title>dialect | {title}</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <div className="mt-24 md:mt-24">
-        <h1 className="text-6xl font-crimson dark:text-gray-200">{title}</h1>
-        {children}
-      </div>
+      {title && (<div className="mt-6 md:mt-6">
+        <h1 className="text-5xl font-crimson dark:text-gray-200">{title}</h1>
+      </div>)}
+      {children}
     </>
   );
 }
