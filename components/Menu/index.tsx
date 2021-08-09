@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react';
 import { Menu as TMenu, Transition } from '@headlessui/react';
-import Button, {BUTTON_STYES, BUTTON_STYLES} from '../Button';
+import {BUTTON_STYLES} from '../Button';
 
 export type ItemType = {
   name: string;
@@ -30,7 +30,7 @@ export default function Menu({
         <>
           <div>
             <TMenu.Button
-              className={`${BUTTON_STYLES} border-transparent ${className}`}
+              className={`${BUTTON_STYLES} ${className}`}
             >
               {button}
             </TMenu.Button>
