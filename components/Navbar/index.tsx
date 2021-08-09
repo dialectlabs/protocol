@@ -1,5 +1,6 @@
 import { Cluster } from '@solana/web3.js';
-import Menu from '../../components/Menu';
+import Button from '../Button';
+import Menu from '..//Menu';
 import {
   BeakerIcon,
   CubeIcon,
@@ -67,9 +68,8 @@ export default function Navbar(): JSX.Element {
               </button>
             </div>
             <div className="flex-shrink-0">
-              <button
-                type="button"
-                className="border-r-2 border-white dark:border-black relative inline-flex items-center px-4 py-2 shadow-sm text-sm font-medium rounded-md rounded-r-none text-white bg-red-700 dark:bg-red-600 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-700 dark:text-gray-300"
+              <Button
+                className="border-r-2 rounded-r-none"
                 onClick={wallet ? onWalletDisconnect : onWalletConnect}
               >
                 {wallet && wallet.connected ? (
@@ -86,7 +86,7 @@ export default function Navbar(): JSX.Element {
                     <span>Connect wallet</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
             <div className="flex md:ml-0 md:flex-shrink-0 md:items-center">
               <Menu
