@@ -30,7 +30,7 @@ export default function Menu({
         <>
           <div>
             <TMenu.Button
-              className={`${BUTTON_STYES} border-transparent ${className}`}
+              className={`${BUTTON_STYLES} border-transparent ${className}`}
             >
               {button}
             </TMenu.Button>
