@@ -94,18 +94,21 @@ export default function Navbar(): JSX.Element {
                   button={
                     <>
                       <span className="sr-only">Open wallet menu</span>
-                      <UserCircleIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                      <UserCircleIcon
+                        className="-ml-1 mr-2 h-5 w-5"
+                        aria-hidden="true"
+                      />
                       <span>{displayPubkey}</span>
                     </>
                   }
                   items={walletNavigation.map((item) => ({
                     ...item,
                     onClick: () => {
-                        if (item.name === 'Profile') {
-                          router.push('/profile');
-                        } else if (item.name === 'Disconnect') {
-                          onWalletDisconnect();
-                        }
+                      if (item.name === 'Profile') {
+                        router.push('/profile');
+                      } else if (item.name === 'Disconnect') {
+                        onWalletDisconnect();
+                      }
                     },
                     itemChildren: (
                       <>
