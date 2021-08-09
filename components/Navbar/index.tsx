@@ -3,7 +3,9 @@ import Button from '../Button';
 import Menu from '..//Menu';
 import {
   BeakerIcon,
+  ChatIcon,
   CubeIcon,
+  CubeTransparentIcon,
   MoonIcon,
   LightningBoltIcon,
   SunIcon,
@@ -22,11 +24,16 @@ const networkNavigation = [
     disabled: true,
     networkName: 'mainnet-beta',
   },
+  { name: 'devnet (coming soon)', disabled: true, networkName: 'devnet' },
   { name: 'testnet (coming soon)', disabled: true, networkName: 'testnet' },
   { name: 'localnet', disabled: false, networkName: 'localnet' },
 ];
 
 const walletNavigation = [
+  {
+    name: 'Messages',
+    disabled: false,
+  },
   {
     name: 'Profile',
     disabled: false,
@@ -106,6 +113,8 @@ export default function Navbar(): JSX.Element {
                     onClick: () => {
                       if (item.name === 'Profile') {
                         router.push('/profile');
+                      } else if (item.name === 'Messages') {
+                        router.push('/');
                       } else if (item.name === 'Disconnect') {
                         onWalletDisconnect();
                       }
@@ -117,7 +126,7 @@ export default function Navbar(): JSX.Element {
                         ) : item.name === 'Disconnect' ? (
                           <XIcon className="w-4 h-4" />
                         ) : (
-                          <LightningBoltIcon className="w-4 h-4" />
+                          <ChatIcon className="w-4 h-4" />
                         )}
                         <span>{item.name}</span>
                       </>
@@ -148,8 +157,10 @@ export default function Navbar(): JSX.Element {
                     <span className="sr-only">Open wallet menu</span>
                     {networkName === 'localnet' ? (
                       <BeakerIcon className="w-5 h-5" />
-                    ) : networkName === 'testnet' ? (
+                    ) : networkName === 'devnet' ? (
                       <CubeIcon className="w-5 h-5" />
+                    ) : networkName === 'testnet' ? (
+                      <CubeTransparentIcon className="w-5 h-5" />
                     ) : (
                       <LightningBoltIcon className="w-5 h-5" />
                     )}
@@ -163,8 +174,10 @@ export default function Navbar(): JSX.Element {
                     <>
                       {item.networkName === 'localnet' ? (
                         <BeakerIcon className="w-4 h-4" />
+                      ) : item.networkName === 'devnet' ? (
+                        <CubeIcon className="w-5 h-5" />
                       ) : item.networkName === 'testnet' ? (
-                        <CubeIcon className="w-4 h-4" />
+                        <CubeTransparentIcon className="w-5 h-5" />
                       ) : (
                         <LightningBoltIcon className="w-4 h-4" />
                       )}
