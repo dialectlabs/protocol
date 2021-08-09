@@ -30,9 +30,11 @@ export default function Page({ title, children }: PropsType): JSX.Element {
         <title>dialect | {title}</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      {title && (<div className="mt-6 md:mt-6">
-        <h1 className="text-5xl font-crimson dark:text-gray-200">{title}</h1>
-      </div>)}
+      {title && (
+        <div className="mt-6 md:mt-6">
+          <h1 className="text-5xl font-crimson dark:text-gray-200">{title}</h1>
+        </div>
+      )}
       {children}
     </>
   );

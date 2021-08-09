@@ -11,8 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/* && prettier --check {,tests,pages}/**/*",
-    "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
+    "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
+    "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
     "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}"
   },
   "keywords": [],
