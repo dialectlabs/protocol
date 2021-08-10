@@ -17,6 +17,7 @@ import * as React from 'react';
 import useDarkMode from '../../utils/DarkModeContext';
 import useWallet from '../../utils/WalletContext';
 import { useRouter } from 'next/router';
+import { getPublicKey } from '../../utils';
 
 const networkNavigation = [
   {
@@ -54,11 +55,7 @@ export default function Navbar(): JSX.Element {
     onDisconnect: onWalletDisconnect,
   } = useWallet();
   const { darkMode, setDarkMode } = useDarkMode();
-  const pubkeyStr =
-    wallet && wallet.connected ? `${wallet.publicKey?.toBase58()}` : null;
-  const displayPubkey = pubkeyStr
-    ? `${pubkeyStr.slice(0, 4)}...${pubkeyStr.slice(pubkeyStr.length - 4)}`
-    : null;
+  const displayPubkey = getPublicKey(wallet, true);
   return (
     <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -101,10 +98,10 @@ export default function Navbar(): JSX.Element {
                     <>
                       <span className="sr-only">Open wallet menu</span>
                       <UserCircleIcon
-                        className="-ml-1 mr-2 h-5 w-5"
+                        className="btn-txt -ml-1 mr-2 h-5 w-5"
                         aria-hidden="true"
                       />
-                      <span>{displayPubkey}</span>
+                      <span className='btn-txt'>{displayPubkey}</span>
                     </>
                   }
                   items={walletNavigation.map((item) => ({
@@ -139,10 +136,10 @@ export default function Navbar(): JSX.Element {
                 >
                   <>
                     <PlusIcon
-                      className="-ml-1 mr-2 h-5 w-5"
+                      className="btn-txt -ml-1 mr-2 h-5 w-5"
                       aria-hidden="true"
                     />
-                    <span>Connect wallet</span>
+                    <span className='btn-txt'>Connect wallet</span>
                   </>
                 </Button>
               )}
@@ -155,13 +152,13 @@ export default function Navbar(): JSX.Element {
                   <>
                     <span className="sr-only">Open wallet menu</span>
                     {networkName === 'localnet' ? (
-                      <BeakerIcon className="w-5 h-5" />
+                      <BeakerIcon className="btn-txt w-5 h-5" />
                     ) : networkName === 'devnet' ? (
-                      <CubeIcon className="w-5 h-5" />
+                      <CubeIcon className="btn-txt w-5 h-5" />
                     ) : networkName === 'testnet' ? (
-                      <CubeTransparentIcon className="w-5 h-5" />
+                      <CubeTransparentIcon className="btn-txt w-5 h-5" />
                     ) : (
-                      <LightningBoltIcon className="w-5 h-5" />
+                      <LightningBoltIcon className="btn-txt w-5 h-5" />
                     )}
                   </>
                 }

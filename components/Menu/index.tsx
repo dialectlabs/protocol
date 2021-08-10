@@ -45,7 +45,7 @@ export default function Menu({
           >
             <TMenu.Items
               static
-              className="flex flex-col dark:bg-gray-900 dark:border-2 dark:border-gray-700 origin-top-right absolute right-0 mt-2 w-60 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+              className="card-white flex flex-col origin-top-right absolute right-0 mt-2 w-60 shadow-lg py-1 focus:outline-none"
             >
               {items.map((item) => (
                 <TMenu.Item key={item.name}>
@@ -55,7 +55,7 @@ export default function Menu({
                       onClick={item.onClick}
                       className={classNames(
                         active && !item.disabled
-                          ? 'bg-gray-100 dark:bg-gray-800'
+                          ? 'bg-gray-100 dark:bg-gray-700'
                           : 'cursor-default',
                         `flex flex-grow space-x-2 items-center block px-4 py-2 text-sm ${
                           !item.disabled ? 'text-gray-800' : 'text-gray-400'
