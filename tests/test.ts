@@ -68,7 +68,7 @@ describe('test create_user_threads_account', () => {
         nonce,
         newkp.publicKey,
         newkp,
-        await PROGRAM.account.threadsAccount.createInstruction(newkp),
+        [await PROGRAM.account.threadsAccount.createInstruction(newkp)],
       )
     ).to.eventually.be.rejectedWith(Error);  // 0x92 (A seeds constraint was violated)
   });
