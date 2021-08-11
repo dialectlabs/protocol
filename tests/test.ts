@@ -29,7 +29,9 @@ async function _createUserThreadsAccount(
   );
 }
 
-async function _findThreadsProgramAddress(publicKey: anchor.web3.PublicKey | null = null): Promise<[anchor.web3.PublicKey, number]> {
+async function _findThreadsProgramAddress(
+  publicKey: anchor.web3.PublicKey | null = null
+): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [
       publicKey || PROGRAM.provider.wallet.publicKey.toBuffer(),
@@ -49,7 +51,10 @@ describe('test create_user_threads_account', () => {
 
     await _createUserThreadsAccount(threadspk, nonce);
     const threadsAccount = await PROGRAM.account.threadsAccount.fetch(threadspk);
-    assert.ok(threadsAccount.owner.toString() === PROGRAM.provider.wallet.publicKey.toString());
+    assert.ok(
+      threadsAccount.owner.toString() === 
+      PROGRAM.provider.wallet.publicKey.toString()
+    );
     assert.ok(threadsAccount.threads.length === 0);
   });
 
