@@ -12,6 +12,7 @@ async function _createUserThreadsAccount(
   nonce: number,
   owner: anchor.web3.PublicKey | null = null,
   signer: anchor.web3.Keypair | null = null,
+  instructions: anchor.web3.TransactionInstruction[] | undefined = undefined,
 ) {
   await PROGRAM.rpc.createUserThreadsAccount(
     new anchor.BN(nonce),
@@ -23,6 +24,7 @@ async function _createUserThreadsAccount(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [signer || PROGRAM.provider.wallet.keypair],
+      instructions: instructions,
     }
   );
 }
@@ -58,8 +60,16 @@ describe('test create_user_threads_account', () => {
   });
 
   it('should fail to create a threads account for the wrong user', async () => {
-    const newkp = anchor.web3.Keypair.generate();
-    const [threadspk, nonce] = await _findThreadsProgramAddress();
-    chai.expect(_createUserThreadsAccount(threadspk, nonce, newkp.publicKey, newkp)).to.eventually.be.rejectedWith(Error);  // 0x92 (A seeds constraint was violated)
+    const newkp = anchor.web3.Keypair.generate(); // new user
+    const [threadspk, nonce] = await _findThreadsProgramAddress(); // derived for old user
+    chai.expect(
+      _createUserThreadsAccount(
+        threadspk,
+        nonce,
+        newkp.publicKey,
+        newkp,
+        await PROGRAM.account.threadsAccount.createInstruction(newkp),
+      )
+    ).to.eventually.be.rejectedWith(Error);  // 0x92 (A seeds constraint was violated)
   });
 });
