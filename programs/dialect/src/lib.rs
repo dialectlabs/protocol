@@ -5,43 +5,45 @@ mod dialect {
     use super::*;
     pub fn create_user_threads_account(
         ctx: Context<CreateThreadsAccountContext>,
-        message: String,
+        _nonce: u8,
     ) -> ProgramResult {
-        let mut threads_account = ctx.accounts.threads_account.load_init()?;
-        let src = message.as_bytes();
-        let mut data = [0u8; 280];
-        data[..src.len()].copy_from_slice(src);
-        threads_account.message = data;
-        Ok(())
-    }
-
-    pub fn update_user_threads_account(
-        ctx: Context<UpdateThreadsAccountContext>,
-        new_message: String,
-    ) -> ProgramResult {
-        let mut threads_account = ctx.accounts.threads_account.load_mut()?;
-        let src = new_message.as_bytes();
-        let mut data = [0u8; 280];
-        data[..src.len()].copy_from_slice(src);
-        threads_account.message = data;
+        let threads_account = &mut ctx.accounts.threads_account;
+        threads_account.owner = *ctx.accounts.owner.key;
+        threads_account.threads = vec![];
         Ok(())
     }
 }
 
 #[derive(Accounts)]
+#[instruction(_nonce: u8)]
 pub struct CreateThreadsAccountContext<'info> {
-    #[account(init)]
-    pub threads_account: Loader<'info, ThreadsData>,
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(
+        init,
+        seeds = [owner.key.as_ref(), b"threads_account", &[_nonce]],
+        payer = owner,
+        space = 512,
+    )]
+    pub threads_account: ProgramAccount<'info, ThreadsAccount>,
     pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateThreadsAccountContext<'info> {
     #[account(mut)]
-    pub threads_account: Loader<'info, ThreadsData>,
+    pub threads_account: ProgramAccount<'info, ThreadsAccount>,
 }
 
-#[account(zero_copy)]
-pub struct ThreadsData {
-    pub message: [u8; 280],
+#[account]
+#[derive(Default)]
+pub struct ThreadsAccount {
+    pub owner: Pubkey,
+    pub threads: Vec<Thread>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+pub struct Thread {
+    pub key: Pubkey,
 }
