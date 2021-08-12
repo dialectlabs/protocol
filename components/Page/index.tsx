@@ -19,7 +19,7 @@ export function ProtectedPage(props: PropsType): JSX.Element {
       router.push('/');
     }
   }, [router, wallet]);
-  if (!router) {
+  if (!router || !wallet?.publicKey) {
     return <div />;
   }
   return <Page {...props} />;

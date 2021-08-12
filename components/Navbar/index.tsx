@@ -131,7 +131,7 @@ export default function Navbar(): JSX.Element {
                 />
               ) : (
                 <Button
-                  className="border-r-2 rounded-r-none"
+                  className="border-r-2 rounded-r-none border-white dark:border-black"
                   onClick={onWalletConnect}
                 >
                   <>

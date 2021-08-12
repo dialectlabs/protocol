@@ -19,12 +19,32 @@ export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Co
   return await connection.getAccountInfo(wallet.publicKey);
 }
 
-export async function profileFetcher(_url: string, wallet: Wallet_,  program: anchor.Program): Promise<unknown> {
+export async function settingsFetcher(_url: string, wallet: Wallet_,  program: anchor.Program, connection: Connection): Promise<unknown> {
   const [threadspk,] = await _findThreadsProgramAddress(program, wallet.publicKey);
-  return await program.account.threadsAccount.fetch(threadspk);
-};
+  const data = await program.account.threadsAccount.fetch(threadspk);
+  const account = await connection.getAccountInfo(threadspk);
+  return {data, account: {...account, publicKey: `${threadspk?.toBase58()}`}};
+}
 
-async function _findThreadsProgramAddress(
+export async function settingsMutator(_url: string, wallet: Wallet_, program: anchor.Program): Promise<unknown> {
+  const [settingspk, nonce] = await _findThreadsProgramAddress(program, wallet.publicKey);
+  console.log('program wallet', program.provider.wallet);
+  const tx = await program.rpc.createUserThreadsAccount(
+    new anchor.BN(nonce),
+    {
+      accounts: {
+        owner: program.provider.wallet.publicKey,
+        threadsAccount: settingspk,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    }
+  );
+  console.log('tx', tx);
+  return tx;
+}
+
+export async function _findThreadsProgramAddress(
   program: anchor.Program, publicKey: anchor.web3.PublicKey
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(

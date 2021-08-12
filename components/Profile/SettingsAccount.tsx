@@ -1,15 +1,18 @@
 import React, { useEffect } from 'react';
 import useWallet from '../../utils/WalletContext';
-import useApi, { profileFetcher } from '../../utils/ApiContext';
+import useApi, { _findThreadsProgramAddress, settingsFetcher } from '../../utils/ApiContext';
 import useSWR from 'swr';
-import { getPublicKey } from '../../utils';
 import { WalletComponent } from './WalletAccount';
 
-export default function ProfileAccount(): JSX.Element {
+export default function SettingsAccount(): JSX.Element {
   const {wallet} = useWallet();
-  const {program} = useApi();
-  const { data, error } = useSWR(wallet && program ? ['profile', wallet, program] : null, profileFetcher);
+  const {program, connection} = useApi();
+  const { data } = useSWR(
+    wallet && program && connection
+    ? ['/settings', wallet, program, connection] 
+    : null,
+    settingsFetcher);
   return (
-    <WalletComponent account={null} balance={null} />
+    <WalletComponent account={data?.account?.publicKey} balance={data?.account?.lamports / 1e9} />
   );
 }

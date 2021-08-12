@@ -12,9 +12,9 @@ type WalletComponentType = {
 
 export function WalletComponent({account, balance}: WalletComponentType): JSX.Element {
   return (
-    <div>
+    <div className='overflow-hidden'>
       <p className='text-xs dark:text-gray-400'>Public key</p>
-      <code className='text-sm text-gray-900 dark:text-gray-200'>{account || '–'}</code>
+      <code className='overflow-ellipsis text-sm text-gray-900 dark:text-gray-200'>{account || '–'}</code>
       <div className='h-2'></div>
       <p className='text-xs dark:text-gray-400'>Balance</p>
       <div className='text-sm text-gray-900 dark:text-gray-200'>⊙ {balance || '–'}</div>
