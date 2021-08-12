@@ -7,6 +7,6 @@ export default function ProfileAccount(): JSX.Element {
   const { wallet } = useWallet();
   const pubkey = getPublicKey(wallet);
   return (
-    <WalletComponent account={pubkey} />
+    <WalletComponent account={pubkey} balance={null} />
   );
 }

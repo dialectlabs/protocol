@@ -1,7 +1,7 @@
 import React from 'react';
 import { ProtectedPage } from '../Page';
 import WalletAccount from './WalletAccount';
-import ProfileAccount from './WalletAccount';
+import ProfileAccount from './ProfileAccount';
 import SettingsAccount from './SettingsAccount';
 
 type SectionTitleProps = {

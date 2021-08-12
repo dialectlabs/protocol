@@ -7,10 +7,39 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import {
+  Keypair,
+  PublicKey,
+  Transaction,
+} from '@solana/web3.js';
+import * as anchor from '@project-serum/anchor';
 import { ProviderPropsType as PropsType } from './';
 
+/**
+ * Wallet interface for objects that can be used to sign provider transactions.
+ */
+ interface WalletInterface {
+  signTransaction(tx: Transaction): Promise<Transaction>;
+  signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
+  publicKey: PublicKey;
+}
+// anchor needs a publickey, sollet says it's | null.
+export class Wallet_ extends Wallet implements WalletInterface {
+  get publicKey(): PublicKey {
+    const pkornull = super.publicKey;
+    let pk: PublicKey;
+    if (!pkornull) {
+      const kp = Keypair.generate();
+      pk = kp.publicKey;
+    } else {
+      pk = pkornull as PublicKey;
+    }
+    return pk;
+  }
+}
+
 type ValueType = {
-  wallet: Wallet | null | undefined;
+  wallet: Wallet_ | null | undefined;
   networkName: Cluster | 'localnet';
   setNetworkName: (networkName: Cluster | 'localnet') => void;
   onConnect: () => void;
@@ -28,7 +57,7 @@ export const WalletContext = createContext<ValueType | null>({
 
 export const WalletContextProvider = (props: PropsType): JSX.Element => {
   const [selectedWallet, setSelectedWallet] = useState<
-    Wallet | undefined | null
+    Wallet_ | undefined | null
   >(undefined);
   const [urlWallet, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
@@ -52,13 +81,9 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     if (selectedWallet) {
       selectedWallet.on('connect', () => {
         setConnected(true);
-        console.log(
-          `Connected to wallet ${selectedWallet.publicKey?.toBase58() ?? '--'}`
-        );
       });
       selectedWallet.on('disconnect', () => {
         setConnected(false);
-        console.log('Disconnected from wallet');
       });
       void selectedWallet.connect();
       return () => {
