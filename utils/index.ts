@@ -1,5 +1,4 @@
-import dynamic from 'next/dynamic';
-const Wallet = dynamic(import('@project-serum/sol-wallet-adapter'), {ssr: false});
+import Wallet from '@project-serum/sol-wallet-adapter';
 
 export type ProviderPropsType = {
   children: JSX.Element;

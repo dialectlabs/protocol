@@ -12,19 +12,19 @@ import {
   PublicKey,
   Transaction,
 } from '@solana/web3.js';
-import * as anchor from '@project-serum/anchor';
 import { ProviderPropsType as PropsType } from './';
 
 /**
- * Wallet interface for objects that can be used to sign provider transactions.
+ * Wallet interface for objects that can be used to sign provider transactions. Copied from https://github.com/project-serum/anchor.
  */
  interface WalletInterface {
   signTransaction(tx: Transaction): Promise<Transaction>;
   signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
   publicKey: PublicKey;
 }
-// anchor needs a publickey, sollet says it's | null.
+
 export class Wallet_ extends Wallet implements WalletInterface {
+  // anchor needs a non-optional publicKey attribute, sollet says it's optional, so we need to fix it here.
   get publicKey(): PublicKey {
     const pkornull = super.publicKey;
     let pk: PublicKey;

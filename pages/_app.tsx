@@ -6,12 +6,15 @@ import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import useDarkMode, { DarkModeContextProvider } from '../utils/DarkModeContext';
 import { WalletContextProvider } from '../utils/WalletContext';
+import { ApiContextProvider } from '../utils/ApiContext';
 
 function AppWithContext(props: AppProps): JSX.Element {
   return (
     <DarkModeContextProvider>
       <WalletContextProvider>
-        <App {...props} />
+        <ApiContextProvider>
+          <App {...props} />
+        </ApiContextProvider>
       </WalletContextProvider>
     </DarkModeContextProvider>
   );
