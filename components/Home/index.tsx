@@ -11,7 +11,7 @@ export default function Home(): JSX.Element {
   const router = useRouter();
   const { wallet } = useWallet();
   const { program, connection } = useApi();
-  const { data, error } = useSWR(wallet && program && connection ? ['/settings', wallet, program, connection] : null, getSettings);
+  const { data, error } = useSWR(wallet && program && connection ? ['/settings', program, connection, wallet.publicKey] : null, getSettings);
   const loading = !data && !error;
   if (error) {
     router.push('/profile');

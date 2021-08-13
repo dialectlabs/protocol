@@ -10,7 +10,7 @@ export default function SettingsAccount(): JSX.Element {
   const {program, connection} = useApi();
   const { data } = useSWR(
     wallet && program && connection
-    ? ['/settings', wallet, program, connection] 
+    ? ['/settings', program, connection, wallet.publicKey] 
     : null,
     getSettings);
   return (

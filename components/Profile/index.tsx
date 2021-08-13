@@ -29,7 +29,7 @@ export default function Profile(): JSX.Element {
   const {wallet} = useWallet();
   const {program, connection} = useApi();
   const { data, error } = useSWR(
-    wallet && program && connection ? ['/settings', wallet, program, connection] : null,
+    wallet && program && connection ? ['/settings', program, connection, wallet.publicKey] : null,
     getSettings,
   );
   const loading: boolean = (!data && !error);
