@@ -2,28 +2,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Connection } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 import { ProviderPropsType as PropsType } from './';
-import useWallet, {Wallet_} from './WalletContext';
+import useWallet from './WalletContext';
+import {Wallet_} from './';
+import {_findSettingsProgramAddress} from '../api';
 import idl from './dialect.json';
-
-type ValueType = {
-  connection: Connection | null | undefined;
-  program: anchor.Program | null;
-};
-
-export const ApiContext = createContext<ValueType | null>({
-  connection: null,
-  program: null,
-});
+import {getAccountInfo} from '../api';
 
 export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Connection): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await connection.getAccountInfo(wallet.publicKey);
-}
-
-export async function settingsFetcher(_url: string, wallet: Wallet_,  program: anchor.Program, connection: Connection): Promise<unknown> {
-  const [settingspk,] = await _findSettingsProgramAddress(program, wallet.publicKey);
-  const data = await program.account.settingsAccount.fetch(settingspk);
-  const account = await connection.getAccountInfo(settingspk);
-  return {data, account: {...account, publicKey: `${settingspk?.toBase58()}`}};
+  return await getAccountInfo(connection, wallet.publicKey);
 }
 
 export async function settingsMutator(_url: string, wallet: Wallet_, program: anchor.Program): Promise<unknown> {
@@ -44,17 +30,15 @@ export async function settingsMutator(_url: string, wallet: Wallet_, program: an
   return tx;
 }
 
-export async function _findSettingsProgramAddress(
-  program: anchor.Program, publicKey: anchor.web3.PublicKey
-): Promise<[anchor.web3.PublicKey, number]> {
-  return await anchor.web3.PublicKey.findProgramAddress(
-    [
-      publicKey.toBuffer(),
-      Buffer.from('settings_account'),
-    ],
-    program.programId,
-  );
-}
+type ValueType = {
+  connection: Connection | null | undefined;
+  program: anchor.Program | null;
+};
+
+export const ApiContext = createContext<ValueType | null>({
+  connection: null,
+  program: null,
+});
 
 export const ApiContextProvider = (props: PropsType): JSX.Element => {
   const { wallet } = useWallet();

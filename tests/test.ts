@@ -2,12 +2,13 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
+import { createThreadAccount, getAccountInfo, getSettings } from '../api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 const PROGRAM = anchor.workspace.Dialect;
 
-async function _createUserSettingsAccount(
+async function _createSettingsAccount(
   pk: anchor.web3.PublicKey,
   nonce: number,
   owner: anchor.web3.PublicKey | null = null,
@@ -41,7 +42,7 @@ async function _findSettingsProgramAddress(
   );
 }
 
-describe('test create_user_settings_account', () => {
+describe('test create_settings_account', () => {
   let settingspk: anchor.web3.PublicKey;
   let nonce: number;
   it('creates a settings account for the user', async () => {
@@ -49,7 +50,7 @@ describe('test create_user_settings_account', () => {
     settingspk = _settingspk;
     nonce = _nonce;
 
-    await _createUserSettingsAccount(settingspk, nonce);
+    await _createSettingsAccount(settingspk, nonce);
     const settingsAccount = await PROGRAM.account.settingsAccount.fetch(settingspk);
     assert.ok(
       settingsAccount.owner.toString() === 
@@ -60,7 +61,7 @@ describe('test create_user_settings_account', () => {
 
   it('should fail to create a settings account a second time for the user', async () => {
     chai
-      .expect(_createUserSettingsAccount(settingspk, nonce))
+      .expect(_createSettingsAccount(settingspk, nonce))
       .to.eventually.be.rejectedWith(Error);
   });
 
@@ -68,16 +69,24 @@ describe('test create_user_settings_account', () => {
     const newkp = anchor.web3.Keypair.generate(); // new user
     const [settingspk, nonce] = await _findSettingsProgramAddress(); // derived for old user
     chai.expect(
-      _createUserSettingsAccount(
+      _createSettingsAccount(
         settingspk,
         nonce,
         newkp.publicKey,
         newkp,
-        [await PROGRAM.account.settingsAccount.createInstruction(newkp)],
+        [await PROGRAM.account.settingsAccount.createInstruction(newkp)], // TODO: is this failing bc newkp is not for the settingsAccount?
       )
     ).to.eventually.be.rejectedWith(Error);  // 0x92 (A seeds constraint was violated)
   });
 });
 
-describe('test create_settings_account', () => {
+describe('test create_thread_account', () => {
+  // TODO: Remove test dependence on previous tests
+  it('creates a thread account for the user', async () => {
+    const {publicKey} = await createThreadAccount(PROGRAM, PROGRAM.provider.wallet);
+    // TODO: check if invited users' settings accounts exist. if not, make them on their behalf
+    const settingsAccount = await getSettings('/settings', PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
+    assert.ok(settingsAccount.data.threads.length === 1);
+    assert.ok(settingsAccount.data.threads[0].key.toString() === publicKey.toString());
+  });
 });

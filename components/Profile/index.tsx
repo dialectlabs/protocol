@@ -8,7 +8,8 @@ import WalletAccount from './WalletAccount';
 import ProfileAccount from './ProfileAccount';
 import SettingsAccount from './SettingsAccount';
 import useWallet from '../../utils/WalletContext';
-import useApi, { settingsFetcher, settingsMutator } from '../../utils/ApiContext';
+import useApi, { settingsMutator } from '../../utils/ApiContext';
+import { getSettings } from '../../api';
 import Badge from '../utils/Badge';
 import Button from '../Button';
 import CircleProgress from '../utils/CircleProgress';
@@ -29,7 +30,7 @@ export default function Profile(): JSX.Element {
   const {program, connection} = useApi();
   const { data, error } = useSWR(
     wallet && program && connection ? ['/settings', wallet, program, connection] : null,
-    settingsFetcher,
+    getSettings,
   );
   const loading: boolean = (!data && !error);
   const settingsNeedsCreating: boolean = !loading && !data;
