@@ -17,8 +17,22 @@ mod dialect {
     }
 
     pub fn create_thread_account(ctx: Context<CreateThreadAccount>, _nonce: u8) -> ProgramResult {
+        // set the owner of the thread account
+        let thread_account = &mut ctx.accounts.thread_account;
+        thread_account.owner = *ctx.accounts.owner.key;
+        // add the thread to the owner's settings.threads
         let settings_account = &mut ctx.accounts.settings_account;
         let threads = &mut settings_account.threads;
+        let mut new_threads = vec![Thread {
+            key: *ctx.accounts.thread_account.to_account_info().key,
+        }];
+        threads.append(&mut new_threads);
+        Ok(())
+    }
+
+    pub fn add_user_to_thread(ctx: Context<AddUserToThread>, _nonce: u8) -> ProgramResult {
+        let invitee_settings_account = &mut ctx.accounts.invitee_settings_account;
+        let threads = &mut invitee_settings_account.threads;
         let mut new_threads = vec![Thread {
             key: *ctx.accounts.thread_account.to_account_info().key,
         }];
@@ -33,9 +47,9 @@ Contexts
 #[derive(Accounts)]
 #[instruction(_nonce: u8)]
 pub struct CreateSettingsAccount<'info> {
-    #[account(signer)]
+    #[account(signer, mut)]
     pub owner: AccountInfo<'info>,
-    #[account( // do we need has_one? i think seeds solves this
+    #[account(
         init,
         seeds = [owner.key.as_ref(), b"settings_account", &[_nonce]],
         payer = owner,
@@ -62,6 +76,21 @@ pub struct CreateThreadAccount<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
+#[derive(Accounts)]
+#[instruction(_nonce: u8)]
+pub struct AddUserToThread<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    pub invitee: AccountInfo<'info>,
+    #[account(has_one = owner)] // only the owner can add users
+    pub thread_account: ProgramAccount<'info, ThreadAccount>,
+    #[account(
+        mut,
+        seeds = [invitee.key.as_ref(), b"settings_account", &[_nonce]],
+    )]
+    pub invitee_settings_account: ProgramAccount<'info, SettingsAccount>,
+}
+
 /*
 Accounts
 */
@@ -76,6 +105,7 @@ pub struct SettingsAccount {
 #[derive(Default)]
 pub struct ThreadAccount {
     pub owner: Pubkey,
+    // TODO: Add members
 }
 
 /*

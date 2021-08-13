@@ -2,7 +2,8 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
-import { createThreadAccount, getAccountInfo, getSettings } from '../api';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { addUserToThread, createThreadAccount, getAccountInfo, getSettings, getThreadAccount } from '../api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -35,14 +36,14 @@ async function _findSettingsProgramAddress(
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [
-      publicKey || PROGRAM.provider.wallet.publicKey.toBuffer(),
+      publicKey?.toBuffer() || PROGRAM.provider.wallet.publicKey.toBuffer(),
       'settings_account',
     ],
     PROGRAM.programId,
   );
 }
 
-describe('test create_settings_account', () => {
+describe('test settings', () => {
   let settingspk: anchor.web3.PublicKey;
   let nonce: number;
   it('creates a settings account for the user', async () => {
@@ -50,7 +51,10 @@ describe('test create_settings_account', () => {
     settingspk = _settingspk;
     nonce = _nonce;
 
-    await _createSettingsAccount(settingspk, nonce);
+    await _createSettingsAccount(
+      settingspk,
+      nonce
+    );
     const settingsAccount = await PROGRAM.account.settingsAccount.fetch(settingspk);
     assert.ok(
       settingsAccount.owner.toString() === 
@@ -80,13 +84,48 @@ describe('test create_settings_account', () => {
   });
 });
 
-describe('test create_thread_account', () => {
+describe('test threads', () => {
   // TODO: Remove test dependence on previous tests
+  let threadpk: PublicKey;
   it('creates a thread account for the user', async () => {
     const {publicKey} = await createThreadAccount(PROGRAM, PROGRAM.provider.wallet);
+    threadpk = publicKey;
     // TODO: check if invited users' settings accounts exist. if not, make them on their behalf
     const settingsAccount = await getSettings('/settings', PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
     assert.ok(settingsAccount.data.threads.length === 1);
     assert.ok(settingsAccount.data.threads[0].key.toString() === publicKey.toString());
+  });
+
+  it('adds another user to the thread', async () => {
+    // new user
+    const newkp = anchor.web3.Keypair.generate(); // invitee
+
+    const transferTransaction = new Transaction();
+    transferTransaction.add(SystemProgram.transfer({
+      fromPubkey: PROGRAM.provider.wallet.publicKey,
+      toPubkey: newkp.publicKey,
+      lamports: 1000000000
+    }));
+
+    await PROGRAM.provider.send(transferTransaction);
+    
+    // make settings account
+    const [_settingspk, _nonce] = await _findSettingsProgramAddress(newkp.publicKey);
+
+    await _createSettingsAccount(
+      _settingspk,
+      _nonce,
+      newkp.publicKey,
+      newkp,
+    );
+
+    // thread owner invites new user to thread
+    await addUserToThread(
+      PROGRAM,
+      threadpk,
+      newkp.publicKey,
+      _settingspk,
+      _nonce,
+    );
   });
 });

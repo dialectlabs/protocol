@@ -1,5 +1,4 @@
-import { Connection } from '@solana/web3.js';
-import { PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 import {Wallet_} from '../utils';
 
@@ -42,6 +41,36 @@ export async function createThreadAccount(program: anchor.Program, wallet: Walle
       instructions: [await program.account.threadAccount.createInstruction(threadkp)],
     },
   );
-  console.log('tx', tx);
   return {transaction: tx, publicKey: threadkp.publicKey};
+}
+
+export async function getThreadAccount(program: anchor.Program, publicKey: PublicKey): Promise<unknown> {
+  const data = await program.account.threadAccount.fetch(publicKey);
+  const account = await program.provider.connection.getAccountInfo(publicKey);
+  return {data, account: {...account, publicKey: `${publicKey?.toBase58()}`}};
+}
+
+export async function addUserToThread(
+  program: anchor.Program,
+  thread: PublicKey,
+  invitee: PublicKey,
+  inviteeSettingsAccount: PublicKey,
+  nonce: number,
+  signers?: anchor.web3.Keypair[] | null,
+  instructions?: anchor.web3.TransactionInstruction[] | null
+): Promise<unknown> {
+  const tx = await program.rpc.addUserToThread(
+    new anchor.BN(nonce),
+    {
+      accounts: {
+        owner: program.provider.wallet.publicKey,
+        invitee,
+        threadAccount: thread,
+        inviteeSettingsAccount,
+      },
+      signers: signers || undefined,
+      instructions: instructions || undefined,
+    },
+  );
+  return tx;
 }

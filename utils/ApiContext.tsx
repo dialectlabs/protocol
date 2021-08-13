@@ -14,7 +14,6 @@ export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Co
 
 export async function settingsMutator(_url: string, wallet: Wallet_, program: anchor.Program): Promise<unknown> {
   const [settingspk, nonce] = await _findSettingsProgramAddress(program, wallet.publicKey);
-  console.log('program wallet', program.provider.wallet);
   const tx = await program.rpc.createUserSettingsAccount(
     new anchor.BN(nonce),
     {
@@ -26,7 +25,6 @@ export async function settingsMutator(_url: string, wallet: Wallet_, program: an
       },
     }
   );
-  console.log('tx', tx);
   return tx;
 }
 
