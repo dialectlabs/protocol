@@ -3,7 +3,7 @@
   "name": "dialect",
   "instructions": [
     {
-      "name": "createUserThreadsAccount",
+      "name": "createUserSettingsAccount",
       "accounts": [
         {
           "name": "owner",
@@ -11,7 +11,7 @@
           "isSigner": true
         },
         {
-          "name": "threadsAccount",
+          "name": "settingsAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -36,7 +36,7 @@
   ],
   "accounts": [
     {
-      "name": "ThreadsAccount",
+      "name": "SettingsAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -71,6 +71,6 @@
     }
   ],
   "metadata": {
-    "address": "2zdwQGfsij3oQFVqPFvL2sZKt9NbLHkjcSohXjdCt6nu"
+    "address": "3FqdhHiCLPtvSKfx2HykNCqoRJT6kZPfSJRn9TzwFXSB"
   }
 }

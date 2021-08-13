@@ -3,42 +3,42 @@ use anchor_lang::prelude::*;
 #[program]
 mod dialect {
     use super::*;
-    pub fn create_user_threads_account(
-        ctx: Context<CreateThreadsAccountContext>,
+    pub fn create_user_settings_account(
+        ctx: Context<CreateSettingsAccountContext>,
         _nonce: u8,
     ) -> ProgramResult {
-        let threads_account = &mut ctx.accounts.threads_account;
-        threads_account.owner = *ctx.accounts.owner.key;
-        threads_account.threads = vec![];
+        let settings_account = &mut ctx.accounts.settings_account;
+        settings_account.owner = *ctx.accounts.owner.key;
+        settings_account.threads = vec![];
         Ok(())
     }
 }
 
 #[derive(Accounts)]
 #[instruction(_nonce: u8)]
-pub struct CreateThreadsAccountContext<'info> {
+pub struct CreateSettingsAccountContext<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [owner.key.as_ref(), b"threads_account", &[_nonce]],
+        seeds = [owner.key.as_ref(), b"settings_account", &[_nonce]],
         payer = owner,
         space = 512,
     )]
-    pub threads_account: ProgramAccount<'info, ThreadsAccount>,
+    pub settings_account: ProgramAccount<'info, SettingsAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
-pub struct UpdateThreadsAccountContext<'info> {
+pub struct UpdateSettingsAccountContext<'info> {
     #[account(mut)]
-    pub threads_account: ProgramAccount<'info, ThreadsAccount>,
+    pub settings_account: ProgramAccount<'info, SettingsAccount>,
 }
 
 #[account]
 #[derive(Default)]
-pub struct ThreadsAccount {
+pub struct SettingsAccount {
     pub owner: Pubkey,
     pub threads: Vec<Thread>,
 }

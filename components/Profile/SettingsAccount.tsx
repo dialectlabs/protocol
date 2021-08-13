@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import useWallet from '../../utils/WalletContext';
-import useApi, { _findThreadsProgramAddress, settingsFetcher } from '../../utils/ApiContext';
+import useApi, { settingsFetcher } from '../../utils/ApiContext';
 import useSWR from 'swr';
 import { WalletComponent } from './WalletAccount';
 

@@ -20,21 +20,21 @@ export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Co
 }
 
 export async function settingsFetcher(_url: string, wallet: Wallet_,  program: anchor.Program, connection: Connection): Promise<unknown> {
-  const [threadspk,] = await _findThreadsProgramAddress(program, wallet.publicKey);
-  const data = await program.account.threadsAccount.fetch(threadspk);
-  const account = await connection.getAccountInfo(threadspk);
-  return {data, account: {...account, publicKey: `${threadspk?.toBase58()}`}};
+  const [settingspk,] = await _findSettingsProgramAddress(program, wallet.publicKey);
+  const data = await program.account.settingsAccount.fetch(settingspk);
+  const account = await connection.getAccountInfo(settingspk);
+  return {data, account: {...account, publicKey: `${settingspk?.toBase58()}`}};
 }
 
 export async function settingsMutator(_url: string, wallet: Wallet_, program: anchor.Program): Promise<unknown> {
-  const [settingspk, nonce] = await _findThreadsProgramAddress(program, wallet.publicKey);
+  const [settingspk, nonce] = await _findSettingsProgramAddress(program, wallet.publicKey);
   console.log('program wallet', program.provider.wallet);
-  const tx = await program.rpc.createUserThreadsAccount(
+  const tx = await program.rpc.createUserSettingsAccount(
     new anchor.BN(nonce),
     {
       accounts: {
         owner: program.provider.wallet.publicKey,
-        threadsAccount: settingspk,
+        settingsAccount: settingspk,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
@@ -44,13 +44,13 @@ export async function settingsMutator(_url: string, wallet: Wallet_, program: an
   return tx;
 }
 
-export async function _findThreadsProgramAddress(
+export async function _findSettingsProgramAddress(
   program: anchor.Program, publicKey: anchor.web3.PublicKey
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [
       publicKey.toBuffer(),
-      Buffer.from('threads_account'),
+      Buffer.from('settings_account'),
     ],
     program.programId,
   );
