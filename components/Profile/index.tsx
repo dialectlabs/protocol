@@ -47,7 +47,7 @@ export default function Profile(): JSX.Element {
     },
   });
 
-  const disabled = !isCreatingSettings || loading;
+  const disabled = !settingsNeedsCreating || isCreatingSettings || loading;
 
   return (
     <ProtectedPage title={'Profile'}>
