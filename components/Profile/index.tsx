@@ -108,15 +108,20 @@ export default function Profile(): JSX.Element {
             </>
           </Button>
         ) : (
-          <div className='flex space-x-2'>
-            <Button secondary onClick={() => router.push('/')}>
+          <div className='flex'>
+            <Button
+              secondary
+              onClick={() => router.back()}
+              className='rounded-r-none'
+            >
               {<div>Back</div>}
             </Button>
             <Button
               disabled={true}
+              className='rounded-l-none border-l-2'
             >
               <>
-                <CheckIcon className='-ml-1 mr-1 btn-txt h-4 w-4' />
+                <CheckIcon className='-ml-2 mr-1 btn-txt h-4 w-4' />
                 <div className='btn-txt'>Saved</div>
               </>
             </Button>
