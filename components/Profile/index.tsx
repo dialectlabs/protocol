@@ -112,16 +112,16 @@ export default function Profile(): JSX.Element {
             <Button
               secondary
               onClick={() => router.back()}
-              className='rounded-r-none'
+              className='rounded-r-none w-24'
             >
               {<div>Back</div>}
             </Button>
             <Button
               disabled={true}
-              className='rounded-l-none border-l-2'
+              className='rounded-l-none border-l-2 w-24'
             >
               <>
-                <CheckIcon className='-ml-2 mr-1 btn-txt h-4 w-4' />
+                <CheckIcon className='-ml-1 mr-1 btn-txt h-4 w-4' />
                 <div className='btn-txt'>Saved</div>
               </>
             </Button>
