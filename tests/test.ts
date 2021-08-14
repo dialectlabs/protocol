@@ -3,7 +3,7 @@ import chaiAsPromised from 'chai-as-promised';
 import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { addUserToThread, createThreadAccount, getAccountInfo, getSettings, getThreadAccount } from '../api';
+import { addMessageToThread, addUserToThread, createThreadAccount, getAccountInfo, getSettings, getThreadAccount } from '../api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -43,8 +43,19 @@ async function _findSettingsProgramAddress(
   );
 }
 
+let settingspk: anchor.web3.PublicKey;
+let threadpk: PublicKey;
+// new user
+const newkp = anchor.web3.Keypair.generate(); // invitee
+
+const transferTransaction = new Transaction();
+transferTransaction.add(SystemProgram.transfer({
+  fromPubkey: PROGRAM.provider.wallet.publicKey,
+  toPubkey: newkp.publicKey,
+  lamports: 1000000000
+}));
+
 describe('test settings', () => {
-  let settingspk: anchor.web3.PublicKey;
   let nonce: number;
   it('creates a settings account for the user', async () => {
     const [_settingspk, _nonce] = await _findSettingsProgramAddress();
@@ -86,8 +97,8 @@ describe('test settings', () => {
 
 describe('test threads', () => {
   // TODO: Remove test dependence on previous tests
-  let threadpk: PublicKey;
   it('creates a thread account for the user', async () => {
+    await PROGRAM.provider.send(transferTransaction);
     const {publicKey} = await createThreadAccount(PROGRAM, PROGRAM.provider.wallet);
     threadpk = publicKey;
     // TODO: check if invited users' settings accounts exist. if not, make them on their behalf
@@ -105,18 +116,6 @@ describe('test threads', () => {
   });
 
   it('adds another user to the thread', async () => {
-    // new user
-    const newkp = anchor.web3.Keypair.generate(); // invitee
-
-    const transferTransaction = new Transaction();
-    transferTransaction.add(SystemProgram.transfer({
-      fromPubkey: PROGRAM.provider.wallet.publicKey,
-      toPubkey: newkp.publicKey,
-      lamports: 1000000000
-    }));
-
-    await PROGRAM.provider.send(transferTransaction);
-    
     // make settings account for new user first
     const [_settingspk, _nonce] = await _findSettingsProgramAddress(newkp.publicKey);
 
@@ -126,7 +125,6 @@ describe('test threads', () => {
       newkp.publicKey,
       newkp,
     );
-
     // thread owner invites new user to thread
     await addUserToThread(
       PROGRAM,
@@ -147,5 +145,17 @@ describe('test threads', () => {
     );
     assert.ok(threadAccount.data.members.length === 2);
     assert.ok(threadAccount.data.members[1].key.toString() === newkp.publicKey.toString());
+  });
+});
+
+describe('test messages', () => {
+  it('sends a message from alice to bob', async () => {
+    const threadAccount = await getThreadAccount(
+      PROGRAM,
+      threadpk,
+    );
+    const text = 'hellow';
+    console.log('thread account pubkey', threadAccount.account.publicKey);
+    const tx = await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
   });
 });

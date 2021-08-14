@@ -18,6 +18,19 @@ export async function _findSettingsProgramAddress(
   );
 }
 
+export async function findMessageProgramAddress(
+  program: anchor.Program, threadPubkey: unknown, messageIdx: string,
+): Promise<[anchor.web3.PublicKey, number]> {
+  // console.log('thread.account.publicKey', thread.account.publicKey.slice(8));
+  return await anchor.web3.PublicKey.findProgramAddress(
+    [
+      threadPubkey.toBuffer(),
+      Buffer.from('message_account'),
+      Buffer.from(messageIdx),
+    ], program.programId,
+  );
+}
+
 export async function getSettings(
   _url: string, 
   program: anchor.Program,
@@ -78,6 +91,32 @@ export async function addUserToThread(
       },
       signers: signers || undefined,
       instructions: instructions || undefined,
+    },
+  );
+  return tx;
+}
+
+export async function addMessageToThread(
+  program: anchor.Program,
+  threadPublicKey: PublicKey,
+  thread: unknown,
+  text: string,
+  sender?: anchor.web3.Keypair | null,
+): Promise<unknown> {
+  console.log('thread', thread);
+  const [messagepk, nonce] = await findMessageProgramAddress(program, threadPublicKey, thread.data.messageIdx.toString());
+  const tx = await program.rpc.addMessageToThread(
+    new anchor.BN(nonce),
+    text,
+    {
+      accounts: {
+        sender: sender?.publicKey || program.provider.wallet.publicKey,
+        messageAccount: messagepk,
+        threadAccount: threadPublicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [sender] || undefined,
     },
   );
   return tx;
