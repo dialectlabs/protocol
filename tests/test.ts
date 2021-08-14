@@ -104,41 +104,49 @@ describe('test threads', () => {
     assert.ok(threadAccount.data.members[0].key.toString() === PROGRAM.provider.wallet.publicKey.toString());
   });
 
-  // it('adds another user to the thread', async () => {
-  //   // new user
-  //   const newkp = anchor.web3.Keypair.generate(); // invitee
+  it('adds another user to the thread', async () => {
+    // new user
+    const newkp = anchor.web3.Keypair.generate(); // invitee
 
-  //   const transferTransaction = new Transaction();
-  //   transferTransaction.add(SystemProgram.transfer({
-  //     fromPubkey: PROGRAM.provider.wallet.publicKey,
-  //     toPubkey: newkp.publicKey,
-  //     lamports: 1000000000
-  //   }));
+    const transferTransaction = new Transaction();
+    transferTransaction.add(SystemProgram.transfer({
+      fromPubkey: PROGRAM.provider.wallet.publicKey,
+      toPubkey: newkp.publicKey,
+      lamports: 1000000000
+    }));
 
-  //   await PROGRAM.provider.send(transferTransaction);
+    await PROGRAM.provider.send(transferTransaction);
     
-  //   // make settings account for new user first
-  //   const [_settingspk, _nonce] = await _findSettingsProgramAddress(newkp.publicKey);
+    // make settings account for new user first
+    const [_settingspk, _nonce] = await _findSettingsProgramAddress(newkp.publicKey);
 
-  //   await _createSettingsAccount(
-  //     _settingspk,
-  //     _nonce,
-  //     newkp.publicKey,
-  //     newkp,
-  //   );
+    await _createSettingsAccount(
+      _settingspk,
+      _nonce,
+      newkp.publicKey,
+      newkp,
+    );
 
-  //   // thread owner invites new user to thread
-  //   await addUserToThread(
-  //     PROGRAM,
-  //     threadpk,
-  //     newkp.publicKey,
-  //     _settingspk,
-  //     _nonce,
-  //   );
+    // thread owner invites new user to thread
+    await addUserToThread(
+      PROGRAM,
+      threadpk,
+      newkp.publicKey,
+      _settingspk,
+      _nonce,
+    );
 
-  //   // fetch user settings, confirm
-  //   const settingsAccount = await getSettings('/settings', PROGRAM, PROGRAM.provider.connection, newkp.publicKey);
-  //   assert.ok(settingsAccount.data.threads.length === 1);
-  //   assert.ok(settingsAccount.data.threads[0].key.toString() === threadpk.toString());
-  // });
+    // fetch user settings, confirm
+    const settingsAccount = await getSettings('/settings', PROGRAM, PROGRAM.provider.connection, newkp.publicKey);
+    assert.ok(settingsAccount.data.threads.length === 1);
+    assert.ok(settingsAccount.data.threads[0].key.toString() === threadpk.toString());
+    
+    const threadAccount = await getThreadAccount(
+      PROGRAM,
+      threadpk,
+    );
+    // console.log('members', threadAccount.data.members[0].key.toString);
+    assert.ok(threadAccount.data.members.length === 1);
+    assert.ok(threadAccount.data.members[1].key.toString() === newkp.publicKey.toString());
+  });
 });

@@ -35,12 +35,19 @@ mod dialect {
     }
 
     pub fn add_user_to_thread(ctx: Context<AddUserToThread>, _nonce: u8) -> ProgramResult {
+        // add the thread to user settings.threads
         let invitee_settings_account = &mut ctx.accounts.invitee_settings_account;
         let threads = &mut invitee_settings_account.threads;
         let mut new_threads = vec![Thread {
             key: *ctx.accounts.thread_account.to_account_info().key,
         }];
         threads.append(&mut new_threads);
+        // add the user to thread.members
+        let members = &mut ctx.accounts.thread_account.members;
+        let mut new_members = vec![Member {
+            key: *ctx.accounts.invitee.key,
+        }];
+        members.append(&mut new_members);
         Ok(())
     }
 }
