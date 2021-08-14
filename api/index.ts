@@ -21,7 +21,6 @@ export async function _findSettingsProgramAddress(
 export async function findMessageProgramAddress(
   program: anchor.Program, threadPubkey: unknown, messageIdx: string,
 ): Promise<[anchor.web3.PublicKey, number]> {
-  // console.log('thread.account.publicKey', thread.account.publicKey.slice(8));
   return await anchor.web3.PublicKey.findProgramAddress(
     [
       threadPubkey.toBuffer(),
@@ -120,4 +119,14 @@ export async function addMessageToThread(
     },
   );
   return tx;
+}
+
+export async function getMessages(
+  program: anchor.Program,
+  threadpk: PublicKey,
+  thread: unknown,
+): Promise<unknown[]> {
+  const maxIdx = thread.data.messageIdx;
+  const [pk,] = await findMessageProgramAddress(program, threadpk, maxIdx.toString());
+  return [await program.account.messageAccount.fetch(pk)];
 }

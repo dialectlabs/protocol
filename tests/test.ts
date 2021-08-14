@@ -3,7 +3,7 @@ import chaiAsPromised from 'chai-as-promised';
 import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { addMessageToThread, addUserToThread, createThreadAccount, getAccountInfo, getSettings, getThreadAccount } from '../api';
+import { addMessageToThread, addUserToThread, createThreadAccount, getMessages, getSettings, getThreadAccount } from '../api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -110,7 +110,6 @@ describe('test threads', () => {
       PROGRAM,
       threadpk,
     );
-    // console.log('members', threadAccount.data.members[0].key.toString);
     assert.ok(threadAccount.data.members.length === 1);
     assert.ok(threadAccount.data.members[0].key.toString() === PROGRAM.provider.wallet.publicKey.toString());
   });
@@ -155,7 +154,8 @@ describe('test messages', () => {
       threadpk,
     );
     const text = 'hellow';
-    console.log('thread account pubkey', threadAccount.account.publicKey);
     const tx = await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
+    const messages = await getMessages(PROGRAM, threadpk, threadAccount);
+    assert.ok(messages[0].text === text);
   });
 });
