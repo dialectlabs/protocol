@@ -140,13 +140,12 @@ describe('test threads', () => {
     const settingsAccount = await getSettings('/settings', PROGRAM, PROGRAM.provider.connection, newkp.publicKey);
     assert.ok(settingsAccount.data.threads.length === 1);
     assert.ok(settingsAccount.data.threads[0].key.toString() === threadpk.toString());
-    
+
     const threadAccount = await getThreadAccount(
       PROGRAM,
       threadpk,
     );
-    // console.log('members', threadAccount.data.members[0].key.toString);
-    assert.ok(threadAccount.data.members.length === 1);
+    assert.ok(threadAccount.data.members.length === 2);
     assert.ok(threadAccount.data.members[1].key.toString() === newkp.publicKey.toString());
   });
 });
