@@ -20,6 +20,10 @@ mod dialect {
         // set the owner of the thread account
         let thread_account = &mut ctx.accounts.thread_account;
         thread_account.owner = *ctx.accounts.owner.key;
+        // add the owner to the members
+        thread_account.members = vec![Member {
+            key: *ctx.accounts.owner.key,
+        }];
         // add the thread to the owner's settings.threads
         let settings_account = &mut ctx.accounts.settings_account;
         let threads = &mut settings_account.threads;
@@ -105,7 +109,7 @@ pub struct SettingsAccount {
 #[derive(Default)]
 pub struct ThreadAccount {
     pub owner: Pubkey,
-    // TODO: Add members
+    pub members: Vec<Member>,
 }
 
 /*
@@ -113,5 +117,10 @@ Data
 */
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
 pub struct Thread {
+    pub key: Pubkey,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+pub struct Member {
     pub key: Pubkey,
 }

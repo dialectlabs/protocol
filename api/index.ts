@@ -18,7 +18,12 @@ export async function _findSettingsProgramAddress(
   );
 }
 
-export async function getSettings(_url: string,  program: anchor.Program, connection: Connection, publicKey: PublicKey): Promise<unknown> {
+export async function getSettings(
+  _url: string, 
+  program: anchor.Program,
+  connection: Connection,
+  publicKey: PublicKey
+): Promise<unknown> {
   const [settingspk,] = await _findSettingsProgramAddress(program, publicKey);
   const data = await program.account.settingsAccount.fetch(settingspk);
   const account = await connection.getAccountInfo(settingspk);
@@ -38,13 +43,16 @@ export async function createThreadAccount(program: anchor.Program, wallet: Walle
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
       signers: [threadkp],
-      instructions: [await program.account.threadAccount.createInstruction(threadkp)],
+      instructions: [await program.account.threadAccount.createInstruction(threadkp, 512)],
     },
   );
   return {transaction: tx, publicKey: threadkp.publicKey};
 }
 
-export async function getThreadAccount(program: anchor.Program, publicKey: PublicKey): Promise<unknown> {
+export async function getThreadAccount(
+  program: anchor.Program,
+  publicKey: PublicKey
+): Promise<unknown> {
   const data = await program.account.threadAccount.fetch(publicKey);
   const account = await program.provider.connection.getAccountInfo(publicKey);
   return {data, account: {...account, publicKey: `${publicKey?.toBase58()}`}};
