@@ -94,7 +94,7 @@ pub struct AddUserToThread<'info> {
     pub owner: AccountInfo<'info>,
     pub invitee: AccountInfo<'info>,
     #[account(mut, has_one = owner)] // only the owner can add users
-    pub thread_account: ProgramAccount<'info, ThreadAccount>, // why doesn't this need to be mut?
+    pub thread_account: ProgramAccount<'info, ThreadAccount>,
     #[account(
         mut,
         seeds = [invitee.key.as_ref(), b"settings_account", &[_nonce]],
