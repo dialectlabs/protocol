@@ -102,8 +102,7 @@ export async function addMessageToThread(
   text: string,
   sender?: anchor.web3.Keypair | null,
 ): Promise<unknown> {
-  console.log('thread', thread);
-  const [messagepk, nonce] = await findMessageProgramAddress(program, threadPublicKey, thread.data.messageIdx.toString());
+  const [messagepk, nonce] = await findMessageProgramAddress(program, threadPublicKey, (thread.data.messageIdx + 1).toString());
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
     text,
@@ -125,8 +124,20 @@ export async function getMessages(
   program: anchor.Program,
   threadpk: PublicKey,
   thread: unknown,
+  batchSize?: number | undefined,
 ): Promise<unknown[]> {
+  if (!batchSize) {
+    batchSize = 20;
+  }
   const maxIdx = thread.data.messageIdx;
-  const [pk,] = await findMessageProgramAddress(program, threadpk, maxIdx.toString());
-  return [await program.account.messageAccount.fetch(pk)];
+  const minIdx = Math.max(maxIdx - batchSize, 1);
+  const idxs = Array(maxIdx - minIdx + 1).fill(null).map((_, i) => minIdx + i);
+  // TODO: Batch RPC calls
+  const messages = (await Promise.all(idxs.map(async (idx) => {
+    const [messagepk,] = await findMessageProgramAddress(program, threadpk, idx.toString());
+    const data = await program.account.messageAccount.fetch(messagepk);
+    const account = await program.provider.connection.getAccountInfo(messagepk);
+    return {data, account: {...account, publicKey: `${messagepk?.toBase58()}`}};
+  }))).reverse(); // descending
+  return messages;
 }

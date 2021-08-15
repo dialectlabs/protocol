@@ -149,13 +149,19 @@ describe('test threads', () => {
 
 describe('test messages', () => {
   it('sends a message from alice to bob', async () => {
-    const threadAccount = await getThreadAccount(
+    let threadAccount = await getThreadAccount(
       PROGRAM,
       threadpk,
     );
-    const text = 'hellow';
-    const tx = await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
+    for (let i = 0; i < 20; i++) { 
+      const text = 'h'.repeat(i);
+      console.log('text', text);
+      const tx = await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
+      threadAccount = await getThreadAccount(PROGRAM, threadpk);
+    }
     const messages = await getMessages(PROGRAM, threadpk, threadAccount);
-    assert.ok(messages[0].text === text);
+    for (let i = 0; i < 20; i++) {
+      assert.ok(messages[i].data.text === 'h'.repeat(20 - i - 1));
+    }
   });
 });

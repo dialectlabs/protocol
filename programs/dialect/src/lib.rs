@@ -61,13 +61,12 @@ mod dialect {
         // TODO: Verify that sender is a member of the thread
         // increment thread.message_idx
         let thread_account = &mut ctx.accounts.thread_account;
-        let mut message_idx = thread_account.message_idx;
-        message_idx += 1;
+        thread_account.message_idx += 1;
         // set the message data
         let message_account = &mut ctx.accounts.message_account;
         message_account.owner = *ctx.accounts.sender.key;
         message_account.text = text;
-        message_account.idx = message_idx;
+        message_account.idx = thread_account.message_idx;
         Ok(())
     }
 }
@@ -132,7 +131,7 @@ pub struct AddMessageToThread<'info> {
         seeds = [
             thread_account.to_account_info().key.as_ref(),
             b"message_account",
-            thread_account.message_idx.to_string().as_bytes(), // u64 as &[u8]
+            (thread_account.message_idx + 1).to_string().as_bytes(), // u32 as &[u8]
             &[_nonce],
         ],
         payer = sender,
@@ -160,7 +159,7 @@ pub struct SettingsAccount {
 pub struct ThreadAccount {
     pub owner: Pubkey,
     pub members: Vec<Member>,
-    pub message_idx: u64,
+    pub message_idx: u32,
 }
 
 #[account]
@@ -168,7 +167,7 @@ pub struct ThreadAccount {
 pub struct MessageAccount {
     pub owner: Pubkey, // sender
     pub text: String,  // TODO: use [u8; 280]
-    pub idx: u64,      // not sure we need this
+    pub idx: u32,      // not sure we need this
 }
 
 /*
