@@ -66,7 +66,7 @@ export async function settingsFetch(
   program: anchor.Program,
   connection: Connection,
   publicKey: PublicKey
-): Promise<unknown> {
+): Promise<SettingsAccount> {
   return await settingsGet(program, connection, publicKey);
 }
 

@@ -1,20 +1,19 @@
-import React, {useEffect, useState} from 'react';
-import { getPublicKey } from '../../utils';
-import * as anchor from '@project-serum/anchor';
-import useApi, { ownerFetcher } from '../../utils/ApiContext';
-import useWallet, { Wallet_ } from '../../utils/WalletContext';
+import React from 'react';
+import useApi from '../../utils/ApiContext';
+import {ownerFetcher} from '../../api';
+import useWallet from '../../utils/WalletContext';
 import useSWR from 'swr';
 
 type WalletComponentType = {
-  account: string | null;
-  balance: number | null;
+  publicKey: string | undefined;
+  balance: number | undefined;
 }
 
-export function WalletComponent({account, balance}: WalletComponentType): JSX.Element {
+export function WalletComponent({publicKey, balance}: WalletComponentType): JSX.Element {
   return (
     <div className='overflow-hidden'>
       <p className='text-xs dark:text-gray-400'>Public key</p>
-      <code className='overflow-ellipsis text-sm text-gray-900 dark:text-gray-200'>{account || '–'}</code>
+      <code className='overflow-ellipsis text-sm text-gray-900 dark:text-gray-200'>{publicKey || '–'}</code>
       <div className='h-2'></div>
       <p className='text-xs dark:text-gray-400'>Balance</p>
       <div className='text-sm text-gray-900 dark:text-gray-200'>⊙ {balance || '–'}</div>
@@ -27,10 +26,9 @@ export default function WalletAccount(): JSX.Element {
   const { wallet } = useWallet();
   const {data} = useSWR(connection && wallet ? ['/owner', wallet, connection] : null, ownerFetcher);
 
-  const balance: number | null = data?.lamports ? data.lamports / 1e9 : null;
+  const balance: number | undefined = data?.lamports ? data.lamports / 1e9 : undefined;
 
-  const pubkey = getPublicKey(wallet);
   return (
-    <WalletComponent account={pubkey} balance={balance} />
+    <WalletComponent publicKey={wallet?.publicKey.toString()} balance={balance} />
   );
 }

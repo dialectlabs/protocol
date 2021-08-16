@@ -28,8 +28,8 @@ export const WalletContext = createContext<ValueType | null>({
 
 export const WalletContextProvider = (props: PropsType): JSX.Element => {
   const [selectedWallet, setSelectedWallet] = useState<
-    Wallet_ | undefined | null
-  >(undefined);
+    Wallet_ | null
+  >(null);
   const [urlWallet, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
     'localnet'
@@ -68,7 +68,7 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
         wallet: selectedWallet,
         networkName,
         setNetworkName,
-        onConnect: () => setSelectedWallet(urlWallet),
+        onConnect: () => setSelectedWallet(urlWallet as Wallet_),
         onDisconnect: () => setSelectedWallet(null),
       }}
     >
