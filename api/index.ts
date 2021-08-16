@@ -2,6 +2,12 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 import {Wallet_} from '../utils';
 
+type CreateResponse = {
+  tx: unknown,
+  publicKey: PublicKey,
+  nonce?: number | undefined,
+}
+
 export async function getAccountInfo(connection: Connection, publicKey: PublicKey): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   return await connection.getAccountInfo(publicKey);
 }
@@ -22,24 +28,36 @@ export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Co
   return await getAccountInfo(connection, wallet.publicKey);
 }
 
-export async function settingsMutator(
-  _url: string,
+export async function settingsCreate(
   wallet: Wallet_,
-  program: anchor.Program
-): Promise<unknown> {
-  const [settingspk, nonce] = await _findSettingsProgramAddress(program, wallet.publicKey);
+  program: anchor.Program,
+  owner?: anchor.web3.PublicKey | undefined,
+  signers?: anchor.web3.Keypair[] | undefined,
+  instructions?: anchor.web3.TransactionInstruction[] | undefined,
+): Promise<CreateResponse> {
+  const [publicKey, nonce] = await _findSettingsProgramAddress(program, owner || wallet.publicKey);
   const tx = await program.rpc.createUserSettingsAccount(
     new anchor.BN(nonce),
     {
       accounts: {
-        owner: program.provider.wallet.publicKey,
-        settingsAccount: settingspk,
+        owner: owner || program.provider.wallet.publicKey,
+        settingsAccount: publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
+      signers,
+      instructions,
     }
   );
-  return tx;
+  return {tx, publicKey, nonce};
+}
+
+export async function settingsMutate(
+  _url: string,
+  wallet: Wallet_,
+  program: anchor.Program
+): Promise<unknown> {
+  return await settingsCreate(wallet, program);
 }
 
 export async function findMessageProgramAddress(
@@ -54,16 +72,42 @@ export async function findMessageProgramAddress(
   );
 }
 
-export async function getSettings(
+type SettingsThreadRef = {
+  key: PublicKey
+}
+
+type SettingsData = {
+  owner: PublicKey,
+  threads: SettingsThreadRef[],
+}
+
+type SettingsAccount = anchor.web3.AccountInfo<Buffer> & {
+  settings: SettingsData,
+  publicKey: PublicKey | undefined,
+}
+
+export async function settingsGet(
+  program: anchor.Program,
+  connection: Connection,
+  publicKey: PublicKey
+): Promise<SettingsAccount> {
+  const [settingspk,] = await _findSettingsProgramAddress(program, publicKey);
+  const data: SettingsData = await program.account.settingsAccount.fetch(settingspk) as SettingsData;
+  const account = await connection.getAccountInfo(settingspk);
+  return {
+    ...account,
+    publicKey,
+    settings: data
+  } as SettingsAccount;
+}
+
+export async function settingsFetch(
   _url: string, 
   program: anchor.Program,
   connection: Connection,
   publicKey: PublicKey
 ): Promise<unknown> {
-  const [settingspk,] = await _findSettingsProgramAddress(program, publicKey);
-  const data = await program.account.settingsAccount.fetch(settingspk);
-  const account = await connection.getAccountInfo(settingspk);
-  return {data, account: {...account, publicKey: `${settingspk?.toBase58()}`}};
+  return await settingsGet(program, connection, publicKey);
 }
 
 export async function createThreadAccount(program: anchor.Program, wallet: Wallet_): Promise<unknown> {

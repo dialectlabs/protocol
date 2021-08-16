@@ -1,7 +1,7 @@
 import React from 'react';
 import useWallet from '../../utils/WalletContext';
 import useApi from '../../utils/ApiContext';
-import { getSettings } from '../../api';
+import { settingsGet } from '../../api';
 import useSWR from 'swr';
 import { WalletComponent } from './WalletAccount';
 
@@ -12,7 +12,7 @@ export default function SettingsAccount(): JSX.Element {
     wallet && program && connection
     ? ['/settings', program, connection, wallet.publicKey] 
     : null,
-    getSettings);
+    settingsGet);
   return (
     <WalletComponent account={data?.account?.publicKey} balance={data?.account?.lamports / 1e9} />
   );

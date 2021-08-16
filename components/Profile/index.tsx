@@ -8,8 +8,8 @@ import ProfileAccount from './ProfileAccount';
 import SettingsAccount from './SettingsAccount';
 import useWallet from '../../utils/WalletContext';
 import useApi from '../../utils/ApiContext';
-import { settingsMutator } from '../../api';
-import { getSettings } from '../../api';
+import { settingsMutate } from '../../api';
+import { settingsGet } from '../../api';
 import Badge from '../utils/Badge';
 import Button from '../Button';
 import CircleProgress from '../utils/CircleProgress';
@@ -30,14 +30,14 @@ export default function Profile(): JSX.Element {
   const {program, connection} = useApi();
   const { data, error } = useSWR(
     wallet && program && connection ? ['/settings', program, connection, wallet.publicKey] : null,
-    getSettings,
+    settingsGet,
   );
   const loading: boolean = (!data && !error);
   const settingsNeedsCreating: boolean = !loading && !data;
   
   const [isCreatingSettings, setIsCreatingSettings] = useState(false);
   // TODO: Mutate on success
-  useSWR(isCreatingSettings ? ['/mutate/settings', wallet, program] : null, settingsMutator, {
+  useSWR(isCreatingSettings ? ['/mutate/settings', wallet, program] : null, settingsMutate, {
     onSuccess: (data) => {
       console.log('succeeded', data);
       setIsCreatingSettings(false);
