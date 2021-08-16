@@ -17,18 +17,6 @@ chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 const PROGRAM = anchor.workspace.Dialect;
 
-async function _findSettingsProgramAddress(
-  publicKey: anchor.web3.PublicKey | null = null
-): Promise<[anchor.web3.PublicKey, number]> {
-  return await anchor.web3.PublicKey.findProgramAddress(
-    [
-      publicKey?.toBuffer() || PROGRAM.provider.wallet.publicKey.toBuffer(),
-      'settings_account',
-    ],
-    PROGRAM.programId,
-  );
-}
-
 let settingspk: anchor.web3.PublicKey;
 let threadpk: PublicKey;
 // new user
@@ -61,7 +49,6 @@ describe('test settings', () => {
 
   it('should fail to create a settings account for the wrong user', async () => {
     const newkp = anchor.web3.Keypair.generate(); // new user
-    // const [settingspk, nonce] = await _findSettingsProgramAddress(); // derived for old user
     chai.expect(
       settingsCreate(
         PROGRAM.provider.wallet,
