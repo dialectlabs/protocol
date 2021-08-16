@@ -153,7 +153,7 @@ describe('test messages', () => {
       PROGRAM,
       threadpk,
     );
-    let n = 5;
+    const n = 5;
     for (let i = 0; i < n; i++) { 
       const text = 'h'.repeat(i);
       console.log(`sending test message ${i + 1} of ${n}`);
