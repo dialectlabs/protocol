@@ -6,10 +6,10 @@ import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import {
   addMessageToThread,
   addUserToThread,
-  createThreadAccount,
+  threadCreate,
   getMessages,
   settingsGet,
-  getThreadAccount,
+  threadGet,
   settingsCreate,
 } from '../api';
 
@@ -17,7 +17,7 @@ chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 const PROGRAM = anchor.workspace.Dialect;
 
-let settingspk: anchor.web3.PublicKey;
+// let settingspk: anchor.web3.PublicKey;
 let threadpk: PublicKey;
 // new user
 const newkp = anchor.web3.Keypair.generate(); // invitee
@@ -31,14 +31,13 @@ transferTransaction.add(SystemProgram.transfer({
 
 describe('test settings', () => {
   it('creates a settings account for the user', async () => {
-    const {publicKey} = await settingsCreate(PROGRAM.provider.wallet, PROGRAM);
-    settingspk = publicKey;
-    const settingsAccount = await PROGRAM.account.settingsAccount.fetch(settingspk);
+    await settingsCreate(PROGRAM.provider.wallet, PROGRAM);
+    const settingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
     assert.ok(
-      settingsAccount.owner.toString() === 
+      settingsAccount.settings.owner.toString() === 
       PROGRAM.provider.wallet.publicKey.toString()
     );
-    assert.ok(settingsAccount.threads.length === 0);
+    assert.ok(settingsAccount.settings.threads.length === 0);
   });
 
   it('should fail to create a settings account a second time for the user', async () => {
@@ -65,19 +64,19 @@ describe('test threads', () => {
   // TODO: Remove test dependence on previous tests
   it('creates a thread account for the user', async () => {
     await PROGRAM.provider.send(transferTransaction);
-    const {publicKey} = await createThreadAccount(PROGRAM, PROGRAM.provider.wallet);
+    const {publicKey} = await threadCreate(PROGRAM, PROGRAM.provider.wallet);
     threadpk = publicKey;
     // TODO: check if invited users' settings accounts exist. if not, make them on their behalf
     const settingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
     assert.ok(settingsAccount.settings.threads.length === 1);
     assert.ok(settingsAccount.settings.threads[0].key.toString() === publicKey.toString());
 
-    const threadAccount = await getThreadAccount(
+    const threadAccount = await threadGet(
       PROGRAM,
       threadpk,
     );
-    assert.ok(threadAccount.data.members.length === 1);
-    assert.ok(threadAccount.data.members[0].key.toString() === PROGRAM.provider.wallet.publicKey.toString());
+    assert.ok(threadAccount.thread.members.length === 1);
+    assert.ok(threadAccount.thread.members[0].key.toString() === PROGRAM.provider.wallet.publicKey.toString());
   });
 
   it('adds another user to the thread', async () => {
@@ -102,18 +101,18 @@ describe('test threads', () => {
     assert.ok(settingsAccount.settings.threads.length === 1);
     assert.ok(settingsAccount.settings.threads[0].key.toString() === threadpk.toString());
 
-    const threadAccount = await getThreadAccount(
+    const threadAccount = await threadGet(
       PROGRAM,
       threadpk,
     );
-    assert.ok(threadAccount.data.members.length === 2);
-    assert.ok(threadAccount.data.members[1].key.toString() === newkp.publicKey.toString());
+    assert.ok(threadAccount.thread.members.length === 2);
+    assert.ok(threadAccount.thread.members[1].key.toString() === newkp.publicKey.toString());
   });
 });
 
 describe('test messages', () => {
   it('sends a message from alice to bob', async () => {
-    let threadAccount = await getThreadAccount(
+    let threadAccount = await threadGet(
       PROGRAM,
       threadpk,
     );
@@ -121,12 +120,12 @@ describe('test messages', () => {
     for (let i = 0; i < n; i++) { 
       const text = 'h'.repeat(i);
       console.log(`sending test message ${i + 1} of ${n}`);
-      await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
-      threadAccount = await getThreadAccount(PROGRAM, threadpk);
+      await addMessageToThread(PROGRAM, threadAccount, text);
+      threadAccount = await threadGet(PROGRAM, threadpk);
     }
-    const messages = await getMessages(PROGRAM, threadpk, threadAccount);
+    const messages = await getMessages(PROGRAM, threadAccount);
     for (let i = 0; i < n; i++) {
-      assert.ok(messages[i].data.text === 'h'.repeat(n - i - 1));
+      assert.ok(messages[i].message.text === 'h'.repeat(n - i - 1));
     }
   });
 });

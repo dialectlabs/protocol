@@ -43,7 +43,7 @@ type SettingsData = {
 
 type SettingsAccount = anchor.web3.AccountInfo<Buffer> & {
   settings: SettingsData,
-  publicKey: PublicKey | undefined,
+  publicKey: PublicKey,
 }
 
 export async function settingsGet(
@@ -52,7 +52,7 @@ export async function settingsGet(
   publicKey: PublicKey
 ): Promise<SettingsAccount> {
   const [settingspk,] = await settingsProgramAddressGet(program, publicKey);
-  const data: SettingsData = await program.account.settingsAccount.fetch(settingspk) as SettingsData;
+  const data = await program.account.settingsAccount.fetch(settingspk);
   const account = await connection.getAccountInfo(settingspk);
   return {
     ...account,
@@ -106,32 +106,47 @@ export async function settingsMutate(
 Threads
 */
 
-export async function createThreadAccount(program: anchor.Program, wallet: Wallet_): Promise<unknown> {
-  const threadkp = anchor.web3.Keypair.generate();
+type ThreadMember = {
+  key: PublicKey,
+}
+
+type ThreadData = {
+  owner: PublicKey,
+  members: ThreadMember[],
+  messageIdx: number,
+}
+
+type ThreadAccount = anchor.web3.AccountInfo<Buffer> & {
+  thread: ThreadData,
+  publicKey: PublicKey,
+}
+
+export async function threadCreate(program: anchor.Program, wallet: Wallet_): Promise<CreateResponse> {
+  const kp = anchor.web3.Keypair.generate();
   const [settingspk, nonce] = await settingsProgramAddressGet(program, wallet.publicKey);
   const tx = await program.rpc.createThreadAccount(
     new anchor.BN(nonce),
     {
       accounts: {
         owner: program.provider.wallet.publicKey,
-        threadAccount: threadkp.publicKey,
+        threadAccount: kp.publicKey,
         settingsAccount: settingspk,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
-      signers: [threadkp],
-      instructions: [await program.account.threadAccount.createInstruction(threadkp, 512)],
+      signers: [kp],
+      instructions: [await program.account.threadAccount.createInstruction(kp, 512)],
     },
   );
-  return {transaction: tx, publicKey: threadkp.publicKey};
+  return {tx, publicKey: kp.publicKey};
 }
 
-export async function getThreadAccount(
+export async function threadGet(
   program: anchor.Program,
   publicKey: PublicKey
-): Promise<unknown> {
+): Promise<ThreadAccount> {
   const data = await program.account.threadAccount.fetch(publicKey);
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  return {data, account: {...account, publicKey: `${publicKey?.toBase58()}`}};
+  return {...account, publicKey, thread: data} as ThreadAccount;
 }
 
 export async function addUserToThread(
@@ -163,8 +178,19 @@ export async function addUserToThread(
 Messages
 */
 
+type MessageData = {
+  owner: PublicKey,
+  text: string,
+  idx: number,
+}
+
+type MessageAccount = anchor.web3.AccountInfo<Buffer> & {
+  message: MessageData,
+  publicKey: PublicKey,
+}
+
 export async function findMessageProgramAddress(
-  program: anchor.Program, threadPubkey: unknown, messageIdx: string,
+  program: anchor.Program, threadPubkey: PublicKey, messageIdx: string,
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [
@@ -177,12 +203,11 @@ export async function findMessageProgramAddress(
 
 export async function addMessageToThread(
   program: anchor.Program,
-  threadPublicKey: PublicKey,
-  thread: unknown,
+  thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
 ): Promise<unknown> {
-  const [messagepk, nonce] = await findMessageProgramAddress(program, threadPublicKey, (thread.data.messageIdx + 1).toString());
+  const [messagepk, nonce] = await findMessageProgramAddress(program, thread.publicKey, (thread.thread.messageIdx + 1).toString());
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
     text,
@@ -190,7 +215,7 @@ export async function addMessageToThread(
       accounts: {
         sender: sender?.publicKey || program.provider.wallet.publicKey,
         messageAccount: messagepk,
-        threadAccount: threadPublicKey,
+        threadAccount: thread.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
@@ -202,22 +227,24 @@ export async function addMessageToThread(
 
 export async function getMessages(
   program: anchor.Program,
-  threadpk: PublicKey,
-  thread: unknown,
+  thread: ThreadAccount,
   batchSize?: number | undefined,
-): Promise<unknown[]> {
+): Promise<MessageAccount[]> {
   if (!batchSize) {
-    batchSize = 20;
+    batchSize = 5;
   }
-  const maxIdx = thread.data.messageIdx;
+  const maxIdx = thread.thread.messageIdx;
   const minIdx = Math.max(maxIdx - batchSize, 1);
   const idxs = Array(maxIdx - minIdx + 1).fill(null).map((_, i) => minIdx + i);
   // TODO: Batch RPC calls
   const messages = (await Promise.all(idxs.map(async (idx) => {
-    const [messagepk,] = await findMessageProgramAddress(program, threadpk, idx.toString());
+    const [messagepk,] = await findMessageProgramAddress(program, thread.publicKey, idx.toString());
     const data = await program.account.messageAccount.fetch(messagepk);
     const account = await program.provider.connection.getAccountInfo(messagepk);
-    return {data, account: {...account, publicKey: `${messagepk?.toBase58()}`}};
+    // return {data, account: {...account, publicKey: `${messagepk?.toBase58()}`}};
+    return {
+      ...account, message: data, publicKey: messagepk,
+    } as MessageAccount;
   }))).reverse(); // descending
   return messages;
 }
