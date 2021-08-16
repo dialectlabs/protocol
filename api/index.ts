@@ -230,8 +230,9 @@ export async function messagesGet(
   thread: ThreadAccount,
   batchSize?: number | undefined,
 ): Promise<MessageAccount[]> {
+  // TODO: Protect against invalid batch size
   if (!batchSize) {
-    batchSize = 5;
+    batchSize = 20;
   }
   const maxIdx = thread.thread.messageIdx;
   const minIdx = Math.max(maxIdx - batchSize, 1);

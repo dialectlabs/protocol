@@ -123,7 +123,7 @@ describe('test messages', () => {
       await messageCreate(PROGRAM, threadAccount, text);
       threadAccount = await threadGet(PROGRAM, threadpk);
     }
-    const messages = await messagesGet(PROGRAM, threadAccount);
+    const messages = await messagesGet(PROGRAM, threadAccount, n);
     for (let i = 0; i < n; i++) {
       assert.ok(messages[i].message.text === 'h'.repeat(n - i - 1));
     }
