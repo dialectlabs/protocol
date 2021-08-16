@@ -1,6 +1,5 @@
 import {CheckIcon} from '@heroicons/react/outline';
 import {PlusIcon} from '@heroicons/react/solid';
-import Link from 'next/link';
 import useSWR from 'swr';
 import React, { useState } from 'react';
 import { ProtectedPage } from '../Page';
@@ -8,7 +7,8 @@ import WalletAccount from './WalletAccount';
 import ProfileAccount from './ProfileAccount';
 import SettingsAccount from './SettingsAccount';
 import useWallet from '../../utils/WalletContext';
-import useApi, { settingsMutator } from '../../utils/ApiContext';
+import useApi from '../../utils/ApiContext';
+import { settingsMutator } from '../../api';
 import { getSettings } from '../../api';
 import Badge from '../utils/Badge';
 import Button from '../Button';

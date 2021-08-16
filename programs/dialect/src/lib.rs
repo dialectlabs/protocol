@@ -159,7 +159,7 @@ pub struct SettingsAccount {
 pub struct ThreadAccount {
     pub owner: Pubkey,
     pub members: Vec<Member>,
-    pub message_idx: u32,
+    pub message_idx: u32, // ~140 years @ 1 message / sec
 }
 
 #[account]

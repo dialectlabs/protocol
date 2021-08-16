@@ -153,10 +153,11 @@ describe('test messages', () => {
       PROGRAM,
       threadpk,
     );
-    for (let i = 0; i < 20; i++) { 
+    let n = 5;
+    for (let i = 0; i < n; i++) { 
       const text = 'h'.repeat(i);
-      console.log('text', text);
-      const tx = await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
+      console.log(`sending test message ${i + 1} of ${n}`);
+      await addMessageToThread(PROGRAM, threadpk, threadAccount, text);
       threadAccount = await getThreadAccount(PROGRAM, threadpk);
     }
     const messages = await getMessages(PROGRAM, threadpk, threadAccount);

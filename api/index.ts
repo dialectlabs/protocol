@@ -18,6 +18,26 @@ export async function _findSettingsProgramAddress(
   );
 }
 
+export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Connection): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  return await getAccountInfo(connection, wallet.publicKey);
+}
+
+export async function settingsMutator(_url: string, wallet: Wallet_, program: anchor.Program): Promise<unknown> {
+  const [settingspk, nonce] = await _findSettingsProgramAddress(program, wallet.publicKey);
+  const tx = await program.rpc.createUserSettingsAccount(
+    new anchor.BN(nonce),
+    {
+      accounts: {
+        owner: program.provider.wallet.publicKey,
+        settingsAccount: settingspk,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    }
+  );
+  return tx;
+}
+
 export async function findMessageProgramAddress(
   program: anchor.Program, threadPubkey: unknown, messageIdx: string,
 ): Promise<[anchor.web3.PublicKey, number]> {

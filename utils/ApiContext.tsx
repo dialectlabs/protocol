@@ -8,26 +8,6 @@ import {_findSettingsProgramAddress} from '../api';
 import idl from './dialect.json';
 import {getAccountInfo} from '../api';
 
-export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Connection): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await getAccountInfo(connection, wallet.publicKey);
-}
-
-export async function settingsMutator(_url: string, wallet: Wallet_, program: anchor.Program): Promise<unknown> {
-  const [settingspk, nonce] = await _findSettingsProgramAddress(program, wallet.publicKey);
-  const tx = await program.rpc.createUserSettingsAccount(
-    new anchor.BN(nonce),
-    {
-      accounts: {
-        owner: program.provider.wallet.publicKey,
-        settingsAccount: settingspk,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-    }
-  );
-  return tx;
-}
-
 type ValueType = {
   connection: Connection | null | undefined;
   program: anchor.Program | null;
