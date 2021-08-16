@@ -12,7 +12,15 @@ export async function getAccountInfo(connection: Connection, publicKey: PublicKe
   return await connection.getAccountInfo(publicKey);
 }
 
-export async function _findSettingsProgramAddress(
+export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Connection): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  return await getAccountInfo(connection, wallet.publicKey);
+}
+
+/*
+Settings
+*/
+
+async function settingsProgramAddressGet(
   program: anchor.Program, publicKey: anchor.web3.PublicKey
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
@@ -24,8 +32,42 @@ export async function _findSettingsProgramAddress(
   );
 }
 
-export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Connection): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await getAccountInfo(connection, wallet.publicKey);
+type SettingsThreadRef = {
+  key: PublicKey
+}
+
+type SettingsData = {
+  owner: PublicKey,
+  threads: SettingsThreadRef[],
+}
+
+type SettingsAccount = anchor.web3.AccountInfo<Buffer> & {
+  settings: SettingsData,
+  publicKey: PublicKey | undefined,
+}
+
+export async function settingsGet(
+  program: anchor.Program,
+  connection: Connection,
+  publicKey: PublicKey
+): Promise<SettingsAccount> {
+  const [settingspk,] = await settingsProgramAddressGet(program, publicKey);
+  const data: SettingsData = await program.account.settingsAccount.fetch(settingspk) as SettingsData;
+  const account = await connection.getAccountInfo(settingspk);
+  return {
+    ...account,
+    publicKey,
+    settings: data
+  } as SettingsAccount;
+}
+
+export async function settingsFetch(
+  _url: string, 
+  program: anchor.Program,
+  connection: Connection,
+  publicKey: PublicKey
+): Promise<unknown> {
+  return await settingsGet(program, connection, publicKey);
 }
 
 export async function settingsCreate(
@@ -35,7 +77,7 @@ export async function settingsCreate(
   signers?: anchor.web3.Keypair[] | undefined,
   instructions?: anchor.web3.TransactionInstruction[] | undefined,
 ): Promise<CreateResponse> {
-  const [publicKey, nonce] = await _findSettingsProgramAddress(program, owner || wallet.publicKey);
+  const [publicKey, nonce] = await settingsProgramAddressGet(program, owner || wallet.publicKey);
   const tx = await program.rpc.createUserSettingsAccount(
     new anchor.BN(nonce),
     {
@@ -60,59 +102,13 @@ export async function settingsMutate(
   return await settingsCreate(wallet, program);
 }
 
-export async function findMessageProgramAddress(
-  program: anchor.Program, threadPubkey: unknown, messageIdx: string,
-): Promise<[anchor.web3.PublicKey, number]> {
-  return await anchor.web3.PublicKey.findProgramAddress(
-    [
-      threadPubkey.toBuffer(),
-      Buffer.from('message_account'),
-      Buffer.from(messageIdx),
-    ], program.programId,
-  );
-}
-
-type SettingsThreadRef = {
-  key: PublicKey
-}
-
-type SettingsData = {
-  owner: PublicKey,
-  threads: SettingsThreadRef[],
-}
-
-type SettingsAccount = anchor.web3.AccountInfo<Buffer> & {
-  settings: SettingsData,
-  publicKey: PublicKey | undefined,
-}
-
-export async function settingsGet(
-  program: anchor.Program,
-  connection: Connection,
-  publicKey: PublicKey
-): Promise<SettingsAccount> {
-  const [settingspk,] = await _findSettingsProgramAddress(program, publicKey);
-  const data: SettingsData = await program.account.settingsAccount.fetch(settingspk) as SettingsData;
-  const account = await connection.getAccountInfo(settingspk);
-  return {
-    ...account,
-    publicKey,
-    settings: data
-  } as SettingsAccount;
-}
-
-export async function settingsFetch(
-  _url: string, 
-  program: anchor.Program,
-  connection: Connection,
-  publicKey: PublicKey
-): Promise<unknown> {
-  return await settingsGet(program, connection, publicKey);
-}
+/*
+Threads
+*/
 
 export async function createThreadAccount(program: anchor.Program, wallet: Wallet_): Promise<unknown> {
   const threadkp = anchor.web3.Keypair.generate();
-  const [settingspk, nonce] = await _findSettingsProgramAddress(program, wallet.publicKey);
+  const [settingspk, nonce] = await settingsProgramAddressGet(program, wallet.publicKey);
   const tx = await program.rpc.createThreadAccount(
     new anchor.BN(nonce),
     {
@@ -161,6 +157,22 @@ export async function addUserToThread(
     },
   );
   return tx;
+}
+
+/*
+Messages
+*/
+
+export async function findMessageProgramAddress(
+  program: anchor.Program, threadPubkey: unknown, messageIdx: string,
+): Promise<[anchor.web3.PublicKey, number]> {
+  return await anchor.web3.PublicKey.findProgramAddress(
+    [
+      threadPubkey.toBuffer(),
+      Buffer.from('message_account'),
+      Buffer.from(messageIdx),
+    ], program.programId,
+  );
 }
 
 export async function addMessageToThread(

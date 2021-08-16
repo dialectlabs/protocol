@@ -3,10 +3,7 @@ import { Connection } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 import { ProviderPropsType as PropsType } from './';
 import useWallet from './WalletContext';
-import {Wallet_} from './';
-import {_findSettingsProgramAddress} from '../api';
 import idl from './dialect.json';
-import {getAccountInfo} from '../api';
 
 type ValueType = {
   connection: Connection | null | undefined;
