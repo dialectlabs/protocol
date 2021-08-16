@@ -4,10 +4,10 @@ import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import {
-  addMessageToThread,
+  messageCreate,
   addUserToThread,
   threadCreate,
-  getMessages,
+  messagesGet,
   settingsGet,
   threadGet,
   settingsCreate,
@@ -120,10 +120,10 @@ describe('test messages', () => {
     for (let i = 0; i < n; i++) { 
       const text = 'h'.repeat(i);
       console.log(`sending test message ${i + 1} of ${n}`);
-      await addMessageToThread(PROGRAM, threadAccount, text);
+      await messageCreate(PROGRAM, threadAccount, text);
       threadAccount = await threadGet(PROGRAM, threadpk);
     }
-    const messages = await getMessages(PROGRAM, threadAccount);
+    const messages = await messagesGet(PROGRAM, threadAccount);
     for (let i = 0; i < n; i++) {
       assert.ok(messages[i].message.text === 'h'.repeat(n - i - 1));
     }
