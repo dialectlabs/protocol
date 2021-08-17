@@ -17,7 +17,7 @@ import * as React from 'react';
 import useDarkMode from '../../utils/DarkModeContext';
 import useWallet from '../../utils/WalletContext';
 import { useRouter } from 'next/router';
-import { getPublicKey } from '../../utils';
+import { display } from '../../utils';
 
 const networkNavigation = [
   {
@@ -55,7 +55,7 @@ export default function Navbar(): JSX.Element {
     onDisconnect: onWalletDisconnect,
   } = useWallet();
   const { darkMode, setDarkMode } = useDarkMode();
-  const displayPubkey = getPublicKey(wallet, true);
+  const displayPubkey = wallet?.publicKey ? display(wallet.publicKey) : undefined;
   return (
     <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

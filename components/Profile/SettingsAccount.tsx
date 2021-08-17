@@ -13,7 +13,6 @@ export default function SettingsAccount(): JSX.Element {
     ? ['/settings', program, connection, wallet.publicKey] 
     : null,
     settingsFetch);
-  console.log('data', data);
   const balance = data && data.lamports !== null && data.lamports !== undefined ? data.lamports / 1e9 : undefined;
   return (
     <WalletComponent publicKey={data?.publicKey.toString()} balance={balance} />

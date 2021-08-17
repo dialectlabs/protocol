@@ -9,6 +9,11 @@ export type ProviderPropsType = {
   children: JSX.Element;
 };
 
+export const display = (publicKey: PublicKey | string): string => {
+  const s = publicKey.toString();
+  return `${s.slice(0, 4)}...${s.slice(s.length - 4)}`;
+};
+
 export const getPublicKey = (wallet: Wallet | null | undefined, abbreviate = false): string | null => {
   if (!wallet || !wallet.connected) return null;
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import useSWR from 'swr';
-import Page from '../Page';
+import { ProtectedPage } from '../Page';
 import Messages from '../Messages';
 import useWallet from '../../utils/WalletContext';
 import useApi from '../../utils/ApiContext';
@@ -20,8 +20,8 @@ export default function Home(): JSX.Element {
     return <div />;
   }
   return (
-    <Page>
+    <ProtectedPage>
       <Messages />
-    </Page>
+    </ProtectedPage>
   );
 }

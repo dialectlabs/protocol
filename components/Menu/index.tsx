@@ -45,7 +45,7 @@ export default function Menu({
           >
             <TMenu.Items
               static
-              className="card-white flex flex-col origin-top-right absolute right-0 mt-2 w-60 shadow-lg py-1 focus:outline-none"
+              className="z-10 card-white flex flex-col origin-top-right absolute right-0 mt-2 w-60 shadow-lg py-1 focus:outline-none"
             >
               {items.map((item) => (
                 <TMenu.Item key={item.name}>

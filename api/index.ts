@@ -8,12 +8,17 @@ type CreateResponse = {
   nonce?: number | undefined,
 }
 
-export async function getAccountInfo(connection: Connection, publicKey: PublicKey): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+export async function accountInfoGet(connection: Connection, publicKey: PublicKey): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   return await connection.getAccountInfo(publicKey);
 }
 
+export async function accountInfoFetch(_url: string, connection: Connection, publicKeyStr: string): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  const publicKey = new anchor.web3.PublicKey(publicKeyStr);
+  return await accountInfoGet(connection, publicKey);
+}
+
 export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Connection): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await getAccountInfo(connection, wallet.publicKey);
+  return await accountInfoGet(connection, wallet.publicKey);
 }
 
 /*
@@ -56,7 +61,7 @@ export async function settingsGet(
   const account = await connection.getAccountInfo(settingspk);
   return {
     ...account,
-    publicKey,
+    publicKey: settingspk,
     settings: data
   } as SettingsAccount;
 }
