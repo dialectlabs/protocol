@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useState }  from 'react';
 import useSWR from 'swr';
-import { ArrowNarrowRightIcon, XIcon } from '@heroicons/react/outline';
+import { ArrowNarrowRightIcon, ArrowSmRightIcon, XIcon } from '@heroicons/react/outline';
 
 import MessageMember from './MessageMember';
 import useWallet from '../../utils/WalletContext';
@@ -17,6 +17,8 @@ export default function NewMessage(): JSX.Element {
   const [members, setMembers] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>(null);
   const [input, setInput] = useState<string>('');
+  const [text, setText] = useState<string>('');
+  const [disabled, setDisabled] = useState<boolean>(true);
   const { connection } = useApi();
   const myPublicKeyStr = wallet?.publicKey?.toString();
   useSWR(
@@ -50,9 +52,20 @@ export default function NewMessage(): JSX.Element {
     members.splice(idx, 1);
     setMembers([...members]);
   };
+  useEffect(() => {
+    if (text.length > 0 && text.length <= 280) {
+      setDisabled(false);
+    } else {
+      setDisabled(true);
+    }
+  }, [text]);
+  const onMessageSubmit = (event: FormEvent<HTMLFormElement>) => {
+    
+    event.preventDefault();
+  };
   return (
-    <div className='flex flex-col space-y-2 justify-start text-left w-full'>
-      <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-800'>
+    <div className='flex flex-col space-y-2 justify-between text-left w-full'>
+      <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
         <div className='text-xs dark:text-gray-400'>Members – {members.length + 1}/8</div>
         <div className='flex flex-wrap items-start'>
           {members.map((member, index) => (
@@ -105,6 +118,29 @@ export default function NewMessage(): JSX.Element {
               </div>
             </form>
           )}
+        </div>
+      </div>
+      <div className='flex flex-col px-3 pb-2'>
+        <form onSubmit={onMessageSubmit}>
+          <div className='relative flex items-center'>
+            <input
+              type='text'
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder='Write something'
+              className='w-full text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
+            />
+            <button className="absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed" disabled={disabled}>
+              <ArrowSmRightIcon className={`opacity-100 h-5 w-5 text-white text-white rounded-full bg-red-700 dark:bg-red-600 ${disabled ? 'opacity-70' : ''}`} />
+            </button>
+          </div>
+        </form>
+        <div className='flex justify-between'>
+          <div className='text-xs pl-1'>{text.length}/280</div>
+          <div className='flex text-xs items-center pr-1'>
+            enter
+            <ArrowNarrowRightIcon className='h-4 w-4' />
+          </div>
         </div>
       </div>
     </div>
