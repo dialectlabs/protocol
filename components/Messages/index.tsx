@@ -13,7 +13,7 @@ export default function Messages(): JSX.Element {
         <div className="w-1/3 border-r-2 dark:border-r dark:border-gray-600">
           <MessagesListHeader />
         </div>
-      <div className="w-2/3 flex py-2 px-6">
+      <div className="w-2/3 flex">
         {isNew ? (
           <NewMessage />
         ) : !messageId ? (
