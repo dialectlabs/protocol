@@ -23,7 +23,8 @@ export default function NewMessage(): JSX.Element {
   const myPublicKeyStr = wallet?.publicKey?.toString();
   useSWR(
     status === 'fetching' ? ['/accountInfo', connection, input] : null,
-    accountInfoFetch, {
+    accountInfoFetch,
+    {
       onSuccess: () => setStatus('valid'),
       onError: () => setStatus('invalid'),
     }
