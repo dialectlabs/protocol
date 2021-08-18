@@ -31,13 +31,15 @@ transferTransaction.add(SystemProgram.transfer({
 
 describe('test settings', () => {
   it('creates a settings account for the user', async () => {
-    await settingsCreate(PROGRAM.provider.wallet, PROGRAM);
-    const settingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
+    const settingsAccount = await settingsCreate(PROGRAM.provider.wallet, PROGRAM);
+    const gottenSettingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
     assert.ok(
       settingsAccount.settings.owner.toString() === 
       PROGRAM.provider.wallet.publicKey.toString()
     );
     assert.ok(settingsAccount.settings.threads.length === 0);
+    assert.ok(settingsAccount.publicKey.toString() == gottenSettingsAccount.publicKey.toString());
+    assert.ok(settingsAccount.settings.threads.length === gottenSettingsAccount.settings.threads.length);
   });
 
   it('should fail to create a settings account a second time for the user', async () => {
@@ -64,24 +66,25 @@ describe('test threads', () => {
   // TODO: Remove test dependence on previous tests
   it('creates a thread account for the user', async () => {
     await PROGRAM.provider.send(transferTransaction);
-    const {publicKey} = await threadCreate(PROGRAM, PROGRAM.provider.wallet);
-    threadpk = publicKey;
+    const threadAccount = await threadCreate(PROGRAM, PROGRAM.provider.wallet);
+    threadpk = threadAccount.publicKey;
     // TODO: check if invited users' settings accounts exist. if not, make them on their behalf
     const settingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
     assert.ok(settingsAccount.settings.threads.length === 1);
-    assert.ok(settingsAccount.settings.threads[0].key.toString() === publicKey.toString());
+    assert.ok(settingsAccount.settings.threads[0].key.toString() === threadAccount.publicKey.toString());
 
-    const threadAccount = await threadGet(
+    const gottenThreadAccount = await threadGet(
       PROGRAM,
       threadpk,
     );
     assert.ok(threadAccount.thread.members.length === 1);
     assert.ok(threadAccount.thread.members[0].key.toString() === PROGRAM.provider.wallet.publicKey.toString());
+    assert.ok(threadAccount.publicKey.toString() === gottenThreadAccount.publicKey.toString());
   });
 
   it('adds another user to the thread', async () => {
     // make settings account for new user first
-    const {publicKey, nonce} = await settingsCreate(
+    const settingsAccount = await settingsCreate(
       PROGRAM.provider.wallet,
       PROGRAM,
       newkp.publicKey,
@@ -92,14 +95,12 @@ describe('test threads', () => {
       PROGRAM,
       threadpk,
       newkp.publicKey,
-      publicKey,
-      nonce || 0, // TODO: do this better
     );
 
     // fetch user settings, confirm
-    const settingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, newkp.publicKey);
-    assert.ok(settingsAccount.settings.threads.length === 1);
-    assert.ok(settingsAccount.settings.threads[0].key.toString() === threadpk.toString());
+    const gottenSettingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, newkp.publicKey);
+    assert.ok(gottenSettingsAccount.settings.threads.length === 1);
+    assert.ok(gottenSettingsAccount.settings.threads[0].key.toString() === threadpk.toString());
 
     const threadAccount = await threadGet(
       PROGRAM,

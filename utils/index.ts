@@ -46,3 +46,7 @@ export class Wallet_ extends Wallet implements WalletInterface {
     return pk;
   }
 }
+
+export function sleep(ms: number): Promise<(value: (() => void) | PromiseLike<() => void>) => void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

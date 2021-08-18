@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
-import {Wallet_} from '../utils';
+import {Wallet_, sleep} from '../utils';
 
 type CreateResponse = {
   tx: unknown,
@@ -81,7 +81,7 @@ export async function settingsCreate(
   owner?: anchor.web3.PublicKey | undefined,
   signers?: anchor.web3.Keypair[] | undefined,
   instructions?: anchor.web3.TransactionInstruction[] | undefined,
-): Promise<CreateResponse> {
+): Promise<SettingsAccount> {
   const [publicKey, nonce] = await settingsProgramAddressGet(program, owner || wallet.publicKey);
   const tx = await program.rpc.createUserSettingsAccount(
     new anchor.BN(nonce),
@@ -96,7 +96,14 @@ export async function settingsCreate(
       instructions,
     }
   );
-  return {tx, publicKey, nonce};
+  try {
+    await waitForFinality(program, tx);
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+  
+  return await settingsGet(program, program.provider.connection, owner || wallet.publicKey);
 }
 
 export async function settingsMutate(
@@ -130,15 +137,13 @@ export async function threadMutate(
   _url: string,
   program: anchor.Program,
   wallet: Wallet_,
-): Promise<CreateResponse> {
+): Promise<ThreadAccount> {
   return await threadCreate(program, wallet);
 }
 
-export async function threadCreate(program: anchor.Program, wallet: Wallet_): Promise<CreateResponse> {
-  console.log('program.account.threadAccount', program.account);
+export async function threadCreate(program: anchor.Program, wallet: Wallet_): Promise<ThreadAccount> {
   const kp = anchor.web3.Keypair.generate();
   const [settingspk, nonce] = await settingsProgramAddressGet(program, wallet.publicKey);
-  console.log('creating...');
   const tx = await program.rpc.createThreadAccount(
     new anchor.BN(nonce),
     {
@@ -152,8 +157,10 @@ export async function threadCreate(program: anchor.Program, wallet: Wallet_): Pr
       instructions: [await program.account.threadAccount.createInstruction(kp, 512)],
     },
   );
-  console.log('done creating');
-  return {tx, publicKey: kp.publicKey};
+
+  await waitForFinality(program, tx);
+  return await threadGet(program, kp.publicKey);
+  // return {tx, publicKey: kp.publicKey};
 }
 
 export async function threadFetch(_url: string, program: anchor.Program, publicKey: PublicKey): Promise<ThreadAccount> {
@@ -170,19 +177,18 @@ export async function threadGet(
 }
 
 export async function userThreadMutate(_url: string, program: anchor.Program, thread: PublicKey, invitee: PublicKey): Promise<CreateResponse> {
-  const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
-  return await addUserToThread(program, thread, invitee, publicKey, nonce);
+  // const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
+  return await addUserToThread(program, thread, invitee);
 }
 
 export async function addUserToThread(
   program: anchor.Program,
   thread: PublicKey,
   invitee: PublicKey,
-  inviteeSettingsAccount: PublicKey,
-  nonce: number,
   signers?: anchor.web3.Keypair[] | null,
   instructions?: anchor.web3.TransactionInstruction[] | null
 ): Promise<CreateResponse> {
+  const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
   const tx = await program.rpc.addUserToThread(
     new anchor.BN(nonce),
     {
@@ -190,7 +196,7 @@ export async function addUserToThread(
         owner: program.provider.wallet.publicKey,
         invitee,
         threadAccount: thread,
-        inviteeSettingsAccount,
+        inviteeSettingsAccount: publicKey,
       },
       signers: signers || undefined,
       instructions: instructions || undefined,
@@ -273,7 +279,6 @@ export async function messagesGet(
     batchSize = 20;
   }
   const maxIdx = thread.thread.messageIdx;
-  console.log('messageIdx', maxIdx);
   const minIdx = Math.max(maxIdx - batchSize, 1);
   const idxs = Array(maxIdx - minIdx + 1).fill(null).map((_, i) => minIdx + i);
   // TODO: Batch RPC calls
@@ -286,4 +291,34 @@ export async function messagesGet(
     } as MessageAccount;
   }))).reverse(); // descending
   return messages;
+}
+
+
+/*
+Transactions
+*/
+
+async function waitForFinality(
+  program: anchor.Program,
+  transactionStr: string,
+  finality: anchor.web3.Finality | undefined = 'confirmed',
+  maxRetries = 10, // try 10 times
+  sleepDuration = 500, // wait 0.5s between tries
+): Promise<anchor.web3.TransactionResponse> {
+  let transaction: anchor.web3.TransactionResponse | null = null;
+  let n = 0;
+  while (transaction === null || n < maxRetries) {
+    // https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    transaction = await program.provider.connection.getTransaction(
+      transactionStr,
+      {commitment: finality},
+    );
+    console.log('transaction', transaction);
+    await sleep(sleepDuration);
+    n += 1;
+  }
+  if (!transaction) {
+    throw new Error('Transaction failed to finalize');
+  }
+  return transaction;
 }
