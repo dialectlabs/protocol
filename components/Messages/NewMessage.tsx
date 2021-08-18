@@ -6,8 +6,10 @@ import { ArrowNarrowRightIcon, ArrowSmRightIcon, XIcon } from '@heroicons/react/
 import MessageMember from './MessageMember';
 import useWallet from '../../utils/WalletContext';
 import { display } from '../../utils';
-import { accountInfoFetch, messageMutate, threadFetch, threadMutate, userThreadMutate } from '../../api';
+import { accountInfoFetch, newGroupMutate, messageMutate, threadFetch, threadMutate, userThreadMutate } from '../../api';
 import useApi from '../../utils/ApiContext';
+import { PublicKey } from '@solana/web3.js';
+import router from 'next/router';
 
 let timeout: NodeJS.Timeout;
 
@@ -66,68 +68,77 @@ export default function NewMessage(): JSX.Element {
     event.preventDefault();
     setCreating(true);
   };
+  const { data: thread } = useSWR( creating ? ['/m/new', program, wallet, new PublicKey(members[0]), text] : null, newGroupMutate, {
+    onSuccess: (data) => {
+      console.log('new group success', data);
+      router.push(`/m/${data.publicKey.toString()}`);
+    },
+    onError: (error) => {
+      console.log('error', error);
+    },
+  });
   // make the thread
-  const { data } = useSWR(
-    creating ? ['/m/new', program, wallet] : null,
-    threadMutate, {
-      onSuccess: () => {
-        console.log('success creating thread');
-        setCreating(false);
-        setAddingUsers(true); // trigger step 2
-      },
-      onError: (error) => {
-        console.log('error creating thread', error);
-        setCreating(false);
-      },
-    }
-  );
-  // add the new users
-  const {data: newUsersData} = useSWR(data && addingUsers ? ['/m/new/user', program, data.publicKey, new anchor.web3.PublicKey(members[0])] : null, userThreadMutate, {
-    onSuccess: () => {
-      console.log('success adding user');
-      setAddingUsers(false);
-      setFetchingThread(true); // trigger step 3
-    },
-    onError: (error) => {
-      console.log('error adding user', error);
-      setAddingUsers(false);
-    },
-  });
-  const {data: thread} = useSWR(
-    fetchingThread && data ? [
-      '/m/', program, data.publicKey
-    ] : null, threadFetch, {
-      onSuccess: () => {
-        console.log('success fetching thread');
-        setFetchingThread(false);
-        setAddingMessage(true); // trigger step 4
-      },
-      onError: (error) => {
-        console.log('error fetching thread', error);
-        setFetchingThread(false);
-      },
-    }
-  );
-  // send the message
-  const {data: messageData} = useSWR(
-    newUsersData && addingMessage ? [
-      '/m/new/message', program, thread, text
-    ] : null, messageMutate, {
-    onSuccess: () => {
-      console.log('success sending message');
-      setAddingUsers(false);
-    },
-    onError: (error) => {
-      console.log('error sending message', error);
-      setAddingMessage(false);
-    },
-  });
-  console.log('data', data);
-  console.log('creating', creating);
-  console.log('newUsersData', newUsersData);
-  console.log('thread', thread);
-  console.log('messageData', messageData);
-  const disabled = text.length <= 0 || text.length > 280 || creating || data !== undefined;
+  // const { data } = useSWR(
+  //   creating ? ['/m/new', program, wallet] : null,
+  //   threadMutate, {
+  //     onSuccess: () => {
+  //       console.log('success creating thread');
+  //       setCreating(false);
+  //       setAddingUsers(true); // trigger step 2
+  //     },
+  //     onError: (error) => {
+  //       console.log('error creating thread', error);
+  //       setCreating(false);
+  //     },
+  //   }
+  // );
+  // // add the new users
+  // const {data: updatedThread} = useSWR(data && addingUsers ? ['/m/new/user', program, data.publicKey, new anchor.web3.PublicKey(members[0])] : null, userThreadMutate, {
+  //   onSuccess: () => {
+  //     console.log('success adding user');
+  //     setAddingUsers(false);
+  //     setFetchingThread(true); // trigger step 3
+  //   },
+  //   onError: (error) => {
+  //     console.log('error adding user', error);
+  //     setAddingUsers(false);
+  //   },
+  // });
+  // const {data: thread} = useSWR(
+  //   fetchingThread && data ? [
+  //     '/m/', program, data.publicKey
+  //   ] : null, threadFetch, {
+  //     onSuccess: () => {
+  //       console.log('success fetching thread');
+  //       setFetchingThread(false);
+  //       setAddingMessage(true); // trigger step 4
+  //     },
+  //     onError: (error) => {
+  //       console.log('error fetching thread', error);
+  //       setFetchingThread(false);
+  //     },
+  //   }
+  // );
+  // // send the message
+  // const {data: messageData} = useSWR(
+  //   updatedThread && addingMessage ? [
+  //     '/m/new/message', program, thread, text
+  //   ] : null, messageMutate, {
+  //   onSuccess: () => {
+  //     console.log('success sending message');
+  //     setAddingUsers(false);
+  //   },
+  //   onError: (error) => {
+  //     console.log('error sending message', error);
+  //     setAddingMessage(false);
+  //   },
+  // });
+  // console.log('data', data);
+  // console.log('creating', creating);
+  // console.log('updatedThread', updatedThread);
+  // console.log('thread', thread);
+  // console.log('messageData', messageData);
+  const disabled = text.length <= 0 || text.length > 280 || creating || thread !== undefined;
   return (
     <div className='flex flex-col space-y-2 justify-between text-left w-full'>
       <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>

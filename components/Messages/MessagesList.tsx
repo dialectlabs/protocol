@@ -4,6 +4,7 @@ import useApi from '../../utils/ApiContext';
 import { useRouter } from 'next/router';
 import useWallet from '../../utils/WalletContext';
 import MessagePreview from './MessagePreview';
+import * as anchor from '@project-serum/anchor';
 import { settingsFetch, ThreadAccount, threadFetch } from '../../api';
 
 export default function MessagesList(): JSX.Element {
@@ -20,7 +21,9 @@ export default function MessagesList(): JSX.Element {
     settingsFetch,
   );
   console.log('data.settings', data?.settings);
-  const { data: thread } = useSWR(data ? ['/m/', program, data.settings.threads[0].key] : null, threadFetch, {
+  console.log('data.settings.threads[0].key', data?.settings?.threads[0]?.key);
+  console.log('from string', data && new anchor.web3.PublicKey(data?.settings?.threads[0]?.key).toString());
+  const { data: thread } = useSWR(data && data?.settings?.threads.length > 0 ? [`/m/${data.settings.threads[0].key.toString()}`, program, data.settings.threads[0].key] : null, threadFetch, {
     onSuccess: () => {
       console.log('success');
     },
@@ -30,7 +33,7 @@ export default function MessagesList(): JSX.Element {
   });
   console.log('settings', data);
   console.log('thread', thread);
-  const threads = [thread, thread];
+  const threads = [thread];
   return (
     <div className='flex flex-col space-y-2'>
       {threads.filter((thread) => thread !== undefined).map((thread, idx) => (

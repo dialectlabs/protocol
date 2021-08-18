@@ -8,8 +8,7 @@ import ProfileAccount from './ProfileAccount';
 import SettingsAccount from './SettingsAccount';
 import useWallet from '../../utils/WalletContext';
 import useApi from '../../utils/ApiContext';
-import { settingsMutate } from '../../api';
-import { settingsFetch } from '../../api';
+import { settingsFetch, settingsMutate } from '../../api';
 import Badge from '../utils/Badge';
 import Button from '../Button';
 import CircleProgress from '../utils/CircleProgress';
@@ -28,7 +27,7 @@ function SectionTitle({ title }: SectionTitleProps): JSX.Element {
 export default function Profile(): JSX.Element {
   const {wallet} = useWallet();
   const {program, connection} = useApi();
-  const { data, error } = useSWR(
+  const { data, error, mutate } = useSWR(
     wallet && program && connection ? ['/settings', program, connection, wallet.publicKey] : null,
     settingsFetch,
   );
@@ -41,6 +40,7 @@ export default function Profile(): JSX.Element {
     onSuccess: (data) => {
       console.log('succeeded', data);
       setIsCreatingSettings(false);
+      mutate(data);
     },
     onError: (error) => {
       console.log('error', error);

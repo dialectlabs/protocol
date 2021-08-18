@@ -2,11 +2,11 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 import {Wallet_, sleep} from '../utils';
 
-type CreateResponse = {
-  tx: unknown,
-  publicKey: PublicKey,
-  nonce?: number | undefined,
-}
+// type CreateResponse = {
+//   tx: unknown,
+//   publicKey: PublicKey,
+//   nonce?: number | undefined,
+// }
 
 export async function accountInfoGet(connection: Connection, publicKey: PublicKey): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   return await connection.getAccountInfo(publicKey);
@@ -110,7 +110,7 @@ export async function settingsMutate(
   _url: string,
   wallet: Wallet_,
   program: anchor.Program
-): Promise<unknown> {
+): Promise<SettingsAccount> {
   return await settingsCreate(wallet, program);
 }
 
@@ -163,7 +163,10 @@ export async function threadCreate(program: anchor.Program, wallet: Wallet_): Pr
   // return {tx, publicKey: kp.publicKey};
 }
 
-export async function threadFetch(_url: string, program: anchor.Program, publicKey: PublicKey): Promise<ThreadAccount> {
+export async function threadFetch(_url: string, program: anchor.Program, publicKey: PublicKey | string): Promise<ThreadAccount> {
+  if (typeof publicKey === 'string') {
+    publicKey = new anchor.web3.PublicKey(publicKey);
+  }
   return await threadGet(program, publicKey);
 }
 
@@ -173,10 +176,11 @@ export async function threadGet(
 ): Promise<ThreadAccount> {
   const data = await program.account.threadAccount.fetch(publicKey);
   const account = await program.provider.connection.getAccountInfo(publicKey);
+  console.log('returning threadaccount', {...account, publicKey, thread: data});
   return {...account, publicKey, thread: data} as ThreadAccount;
 }
 
-export async function userThreadMutate(_url: string, program: anchor.Program, thread: PublicKey, invitee: PublicKey): Promise<CreateResponse> {
+export async function userThreadMutate(_url: string, program: anchor.Program, thread: PublicKey, invitee: PublicKey): Promise<ThreadAccount> {
   // const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
   return await addUserToThread(program, thread, invitee);
 }
@@ -187,7 +191,7 @@ export async function addUserToThread(
   invitee: PublicKey,
   signers?: anchor.web3.Keypair[] | null,
   instructions?: anchor.web3.TransactionInstruction[] | null
-): Promise<CreateResponse> {
+): Promise<ThreadAccount> {
   const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
   const tx = await program.rpc.addUserToThread(
     new anchor.BN(nonce),
@@ -202,7 +206,8 @@ export async function addUserToThread(
       instructions: instructions || undefined,
     },
   );
-  return {tx, publicKey: thread};
+  await waitForFinality(program, tx);
+  return await threadGet(program, thread);
 }
 
 /*
@@ -258,7 +263,8 @@ export async function messageCreate(
     },
   );
   await waitForFinality(program, tx);
-  return await messagesGet(program, thread, 1);
+  const updatedThread = await threadGet(program, thread.publicKey);
+  return await messagesGet(program, updatedThread, 1);
 }
 
 export async function messagesFetch(
@@ -292,6 +298,13 @@ export async function messagesGet(
     } as MessageAccount;
   }))).reverse(); // descending
   return messages;
+}
+
+export async function newGroupMutate(_url: string, program: anchor.Program, wallet: Wallet_, invitee: PublicKey, text: string): Promise<ThreadAccount> {
+  let threadAccount = await threadCreate(program, wallet);
+  threadAccount = await addUserToThread(program, threadAccount.publicKey, invitee);
+  await messageCreate(program, threadAccount, text);
+  return await threadGet(program, threadAccount.publicKey);
 }
 
 

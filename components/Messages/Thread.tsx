@@ -3,42 +3,69 @@ import {useRouter} from 'next/router';
 import useSWR from 'swr';
 import { ArrowNarrowRightIcon, ArrowSmRightIcon } from '@heroicons/react/outline';
 import useApi from '../../utils/ApiContext';
+import useWallet from '../../utils/WalletContext';
 import * as anchor from '@project-serum/anchor';
-import {threadFetch} from '../../api';
+import {messageMutate, messagesFetch, threadFetch} from '../../api';
 import {display} from '../../utils';
 import MessageMember from './MessageMember';
+import Wallet from '../../../solana/sol-wallet-adapter/dist/cjs';
 
 export default function Thread(): JSX.Element {
   const router = useRouter();
+  const { wallet } = useWallet();
   const { program } = useApi();
   const { threadId } = router.query;
   const [text, setText] = useState<string>('');
   const [sending, setSending] = useState<boolean>(false);
   console.log('threadId', threadId);
-  // const {data: thread} = useSWR(
-  //   threadId ? [
-  //     '/m/', program, new anchor.web3.PublicKey(threadId),
-  //   ] : null, threadFetch, {
-  //     onSuccess: () => {
-  //       console.log('success fetching thread');
-  //     },
-  //     onError: (error) => {
-  //       console.log('error fetching thread', error);
-  //     },
-  //   }
-  // );
+  // const threadpk = threadId && new anchor.web3.PublicKey(threadId);
+  // console.log('threadpk', threadpk);
+  const {data: thread} = useSWR(
+    program && threadId ? [
+      `/m/${threadId}`, program, threadId,
+    ] : null,
+    threadFetch, {
+      onSuccess: (data) => {
+        console.log('success fetching thread', data);
+      },
+      onError: (error) => {
+        console.log('error fetching thread', error);
+      },
+      refreshInterval: 500
+    }
+  );
+  const {data: messages} = useSWR(threadId && program && thread ? [`/m/${threadId}/messages`, program, thread] : null, messagesFetch, {
+    onSuccess: (data) => {
+      console.log('success fetching messages', data);
+    },
+    onError: (error) => {
+      console.log('error fetching messages', error);
+    },
+  });
+
+  const {data: mutatedMessages} = useSWR(sending ? ['/messages/mutate', program, thread, text] : null, messageMutate, {
+    onSuccess: (data) => {
+      setSending(false);
+      setText('');
+      console.log('success sending message', data);
+    }, 
+    onError: (error) => {
+      setSending(false);
+      console.log('error sending message', error);
+    },
+  });
 
   const onMessageSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSending(true);
   };
-  // console.log('thread', thread);
-  const members = []; //thread?.thread.members;
+  console.log('outside thread', thread);
+  const members = wallet ? thread?.thread.members : [];
   const disabled = text.length <= 0 || text.length > 280 || sending;
   return (
     <div className='flex flex-col space-y-2 justify-between text-left w-full'>
       <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
-        <div className='text-xs dark:text-gray-400'>Members – {members && members.length + 1 || 0}/8</div>
+        <div className='text-xs dark:text-gray-400'>Members – {members && members.length || 0}/8</div>
         <div className='flex flex-wrap items-start'>
           {members?.map((member, index) => (
             <MessageMember
@@ -47,6 +74,18 @@ export default function Thread(): JSX.Element {
             />
           ))}
         </div>
+      </div>
+      <div className='px-3 py-2 flex-grow flex flex-col flex-col-reverse space-y-4 justify-start'>
+        {messages?.map((message, index) => (
+          <div key={index} className={`flex items-start space-x-2 w-full ${message.message.owner.toString() === wallet?.publicKey.toString() && 'justify-end'}`}>
+            <div className={`flex flex-col ${message.message.owner.toString() === wallet?.publicKey.toString() && 'items-end'}`}>
+              <div className='text-xs'>{message.message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(message.message.owner)}</div>
+              <div className='flex space-x-2 items-center text-sm text-gray-800 dark:text-gray-200'>
+                {message.message.text}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
       <div className='flex flex-col px-3 pb-2'>
         <form onSubmit={onMessageSubmit}>
