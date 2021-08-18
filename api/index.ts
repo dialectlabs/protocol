@@ -232,7 +232,7 @@ export async function messageProgramAddressGet(
   );
 }
 
-export async function messageMutate(_url: string, program: anchor.Program, thread: ThreadAccount, text: string, sender?: anchor.web3.Keypair | null): Promise<CreateResponse> {
+export async function messageMutate(_url: string, program: anchor.Program, thread: ThreadAccount, text: string, sender?: anchor.web3.Keypair | null): Promise<MessageAccount[]> {
   return await messageCreate(program, thread, text, sender);
 }
 
@@ -241,7 +241,7 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-): Promise<CreateResponse> {
+): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(program, thread.publicKey, (thread.thread.messageIdx + 1).toString());
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
@@ -257,7 +257,8 @@ export async function messageCreate(
       signers: [sender] || undefined,
     },
   );
-  return {tx, publicKey: messagepk, nonce};
+  await waitForFinality(program, tx);
+  return await messagesGet(program, thread, 1);
 }
 
 export async function messagesFetch(
@@ -306,16 +307,15 @@ async function waitForFinality(
   sleepDuration = 500, // wait 0.5s between tries
 ): Promise<anchor.web3.TransactionResponse> {
   let transaction: anchor.web3.TransactionResponse | null = null;
-  let n = 0;
-  while (transaction === null || n < maxRetries) {
-    // https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+  for (let n = 0; n < maxRetries; n++) {
     transaction = await program.provider.connection.getTransaction(
       transactionStr,
       {commitment: finality},
     );
-    console.log('transaction', transaction);
+    if (transaction) {
+      break;
+    }
     await sleep(sleepDuration);
-    n += 1;
   }
   if (!transaction) {
     throw new Error('Transaction failed to finalize');
