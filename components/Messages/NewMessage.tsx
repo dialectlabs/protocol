@@ -1,25 +1,34 @@
 import React, { FormEvent, useEffect, useState }  from 'react';
 import useSWR from 'swr';
+import * as anchor from '@project-serum/anchor';
 import { ArrowNarrowRightIcon, ArrowSmRightIcon, XIcon } from '@heroicons/react/outline';
 
 import MessageMember from './MessageMember';
 import useWallet from '../../utils/WalletContext';
 import { display } from '../../utils';
-import {accountInfoFetch} from '../../api';
+import { accountInfoFetch, messageMutate, threadFetch, threadMutate, userThreadMutate } from '../../api';
 import useApi from '../../utils/ApiContext';
 
 let timeout: NodeJS.Timeout;
 
-type Status = 'fetching' | 'timeout' | 'valid' | 'invalid' | 'duplicate' | null;
+type Status = 'fetching' | 
+              'timeout' | 
+              'valid' | 
+              'invalid' | 
+              'duplicate' | 
+              null;
 
 export default function NewMessage(): JSX.Element {
+  const { connection, program } = useApi();
   const { wallet } = useWallet();
   const [members, setMembers] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>(null);
   const [input, setInput] = useState<string>('');
   const [text, setText] = useState<string>('');
-  const [disabled, setDisabled] = useState<boolean>(true);
-  const { connection } = useApi();
+  const [creating, setCreating] = useState<boolean>(false);
+  const [fetchingThread, setFetchingThread] = useState<boolean>(false);
+  const [addingUsers, setAddingUsers] = useState<boolean>(false);
+  const [addingMessage, setAddingMessage] = useState<boolean>(false);
   const myPublicKeyStr = wallet?.publicKey?.toString();
   useSWR(
     status === 'fetching' ? ['/accountInfo', connection, input] : null,
@@ -53,17 +62,72 @@ export default function NewMessage(): JSX.Element {
     members.splice(idx, 1);
     setMembers([...members]);
   };
-  useEffect(() => {
-    if (text.length > 0 && text.length <= 280) {
-      setDisabled(false);
-    } else {
-      setDisabled(true);
-    }
-  }, [text]);
   const onMessageSubmit = (event: FormEvent<HTMLFormElement>) => {
-    
     event.preventDefault();
+    setCreating(true);
   };
+  // make the thread
+  const { data } = useSWR(
+    creating ? ['/m/new', program, wallet] : null,
+    threadMutate, {
+      onSuccess: () => {
+        console.log('success creating thread');
+        setCreating(false);
+        setAddingUsers(true); // trigger step 2
+      },
+      onError: (error) => {
+        console.log('error creating thread', error);
+        setCreating(false);
+      },
+    }
+  );
+  // add the new users
+  const {data: newUsersData} = useSWR(data && addingUsers ? ['/m/new/user', program, data.publicKey, new anchor.web3.PublicKey(members[0])] : null, userThreadMutate, {
+    onSuccess: () => {
+      console.log('success adding user');
+      setAddingUsers(false);
+      setFetchingThread(true); // trigger step 3
+    },
+    onError: (error) => {
+      console.log('error adding user', error);
+      setAddingUsers(false);
+    },
+  });
+  const {data: thread} = useSWR(
+    fetchingThread && data ? [
+      '/m/', program, data.publicKey
+    ] : null, threadFetch, {
+      onSuccess: () => {
+        console.log('success fetching thread');
+        setFetchingThread(false);
+        setAddingMessage(true); // trigger step 4
+      },
+      onError: (error) => {
+        console.log('error fetching thread', error);
+        setFetchingThread(false);
+      },
+    }
+  );
+  // send the message
+  const {data: messageData} = useSWR(
+    newUsersData && addingMessage ? [
+      '/m/new/message', program, thread, text
+    ] : null, messageMutate, {
+    onSuccess: () => {
+      console.log('success sending message');
+      setAddingUsers(false);
+    },
+    onError: (error) => {
+      console.log('error sending message', error);
+      setAddingMessage(false);
+    },
+  });
+  console.log('data', data);
+  console.log('creating', creating);
+  console.log('newUsersData', newUsersData);
+  console.log('thread', thread);
+  console.log('messageData', messageData);
+  const disabled = text.length <= 0 || text.length > 280 || creating || data !== undefined;
   return (
     <div className='flex flex-col space-y-2 justify-between text-left w-full'>
       <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>

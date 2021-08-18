@@ -121,14 +121,24 @@ type ThreadData = {
   messageIdx: number,
 }
 
-type ThreadAccount = anchor.web3.AccountInfo<Buffer> & {
+export type ThreadAccount = anchor.web3.AccountInfo<Buffer> & {
   thread: ThreadData,
   publicKey: PublicKey,
 }
 
+export async function threadMutate(
+  _url: string,
+  program: anchor.Program,
+  wallet: Wallet_,
+): Promise<CreateResponse> {
+  return await threadCreate(program, wallet);
+}
+
 export async function threadCreate(program: anchor.Program, wallet: Wallet_): Promise<CreateResponse> {
+  console.log('program.account.threadAccount', program.account);
   const kp = anchor.web3.Keypair.generate();
   const [settingspk, nonce] = await settingsProgramAddressGet(program, wallet.publicKey);
+  console.log('creating...');
   const tx = await program.rpc.createThreadAccount(
     new anchor.BN(nonce),
     {
@@ -142,7 +152,12 @@ export async function threadCreate(program: anchor.Program, wallet: Wallet_): Pr
       instructions: [await program.account.threadAccount.createInstruction(kp, 512)],
     },
   );
+  console.log('done creating');
   return {tx, publicKey: kp.publicKey};
+}
+
+export async function threadFetch(_url: string, program: anchor.Program, publicKey: PublicKey): Promise<ThreadAccount> {
+  return await threadGet(program, publicKey);
 }
 
 export async function threadGet(
@@ -154,6 +169,11 @@ export async function threadGet(
   return {...account, publicKey, thread: data} as ThreadAccount;
 }
 
+export async function userThreadMutate(_url: string, program: anchor.Program, thread: PublicKey, invitee: PublicKey): Promise<CreateResponse> {
+  const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
+  return await addUserToThread(program, thread, invitee, publicKey, nonce);
+}
+
 export async function addUserToThread(
   program: anchor.Program,
   thread: PublicKey,
@@ -162,7 +182,7 @@ export async function addUserToThread(
   nonce: number,
   signers?: anchor.web3.Keypair[] | null,
   instructions?: anchor.web3.TransactionInstruction[] | null
-): Promise<unknown> {
+): Promise<CreateResponse> {
   const tx = await program.rpc.addUserToThread(
     new anchor.BN(nonce),
     {
@@ -176,7 +196,7 @@ export async function addUserToThread(
       instructions: instructions || undefined,
     },
   );
-  return tx;
+  return {tx, publicKey: thread};
 }
 
 /*
@@ -206,12 +226,16 @@ export async function messageProgramAddressGet(
   );
 }
 
+export async function messageMutate(_url: string, program: anchor.Program, thread: ThreadAccount, text: string, sender?: anchor.web3.Keypair | null): Promise<CreateResponse> {
+  return await messageCreate(program, thread, text, sender);
+}
+
 export async function messageCreate(
   program: anchor.Program,
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-): Promise<unknown> {
+): Promise<CreateResponse> {
   const [messagepk, nonce] = await messageProgramAddressGet(program, thread.publicKey, (thread.thread.messageIdx + 1).toString());
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
@@ -227,7 +251,16 @@ export async function messageCreate(
       signers: [sender] || undefined,
     },
   );
-  return tx;
+  return {tx, publicKey: messagepk, nonce};
+}
+
+export async function messagesFetch(
+  _url: string,
+  program: anchor.Program,
+  thread: ThreadAccount,
+  batchSize?: number | undefined
+): Promise<MessageAccount[]> {
+  return await messagesGet(program, thread, batchSize);
 }
 
 export async function messagesGet(
@@ -240,6 +273,7 @@ export async function messagesGet(
     batchSize = 20;
   }
   const maxIdx = thread.thread.messageIdx;
+  console.log('messageIdx', maxIdx);
   const minIdx = Math.max(maxIdx - batchSize, 1);
   const idxs = Array(maxIdx - minIdx + 1).fill(null).map((_, i) => minIdx + i);
   // TODO: Batch RPC calls
@@ -247,7 +281,6 @@ export async function messagesGet(
     const [messagepk,] = await messageProgramAddressGet(program, thread.publicKey, idx.toString());
     const data = await program.account.messageAccount.fetch(messagepk);
     const account = await program.provider.connection.getAccountInfo(messagepk);
-    // return {data, account: {...account, publicKey: `${messagepk?.toBase58()}`}};
     return {
       ...account, message: data, publicKey: messagepk,
     } as MessageAccount;

@@ -1,13 +1,16 @@
 {
   "version": "0.0.0",
   "name": "dialect",
+  "metadata": {
+    "address": "Ao1pwNvZGnxkr2pc24cJUZrWRShAbVBDRDf3LTh7Tehs"
+  },
   "instructions": [
     {
       "name": "createUserSettingsAccount",
       "accounts": [
         {
           "name": "owner",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
@@ -32,6 +35,108 @@
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "createThreadAccount",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "threadAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "settingsAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "addUserToThread",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "invitee",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "threadAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "inviteeSettingsAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "addMessageToThread",
+      "accounts": [
+        {
+          "name": "sender",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "messageAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "threadAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u8"
+        },
+        {
+          "name": "text",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -48,9 +153,53 @@
             "name": "threads",
             "type": {
               "vec": {
-                "defined": "Thread"
+                "defined": "SettingsThreadRef"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ThreadAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": {
+                "defined": "Member"
+              }
+            }
+          },
+          {
+            "name": "messageIdx",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MessageAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "text",
+            "type": "string"
+          },
+          {
+            "name": "idx",
+            "type": "u32"
           }
         ]
       }
@@ -58,7 +207,19 @@
   ],
   "types": [
     {
-      "name": "Thread",
+      "name": "SettingsThreadRef",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Member",
       "type": {
         "kind": "struct",
         "fields": [
@@ -69,8 +230,5 @@
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "B4yurCpffSMgWefDVDG7YuLG4Vj6ErviihQmkdmrxGTY"
-  }
+  ]
 }
