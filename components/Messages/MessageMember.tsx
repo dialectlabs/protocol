@@ -1,5 +1,7 @@
 import React, {useState} from 'react';
 import { XIcon } from '@heroicons/react/outline';
+import useWallet from '../../utils/WalletContext';
+import { display } from '../../utils';
 
 type PropsType = {
   key: number,
@@ -10,6 +12,8 @@ type PropsType = {
 
 export default function MessageMember({key, member, deletable = false, onDelete = (_idx: number) => { _idx; }}: PropsType): JSX.Element {
   const [hover, setHover] = useState<boolean>(false);
+  const { wallet } = useWallet();
+  const isMe = wallet?.publicKey.toString() === member;
   return (
     <div
       key={key}
@@ -17,8 +21,9 @@ export default function MessageMember({key, member, deletable = false, onDelete 
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <span>{member}</span>
-      {deletable && hover ? (
+      <span>{`${display(member)}`}</span>
+      {isMe && (<span className='opacity-60'>{' (You)'}</span>)}
+      {deletable && hover && !isMe ? (
         <XIcon className='w-4 h-4 hover:cursor-pointer' onClick={() => deletable && onDelete(key)}/>
       ) : (
         <div className='w-2 h-2 rounded-full bg-green-500 dark:bg-green-600' />

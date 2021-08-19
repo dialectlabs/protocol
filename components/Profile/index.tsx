@@ -38,12 +38,10 @@ export default function Profile(): JSX.Element {
   // TODO: Mutate on success
   useSWR(isCreatingSettings ? ['/mutate/settings', wallet, program] : null, settingsMutate, {
     onSuccess: (data) => {
-      console.log('succeeded', data);
       setIsCreatingSettings(false);
       mutate(data);
     },
     onError: (error) => {
-      console.log('error', error);
       setIsCreatingSettings(false);
     },
   });

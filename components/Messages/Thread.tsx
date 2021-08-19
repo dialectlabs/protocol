@@ -17,41 +17,24 @@ export default function Thread(): JSX.Element {
   const { threadId } = router.query;
   const [text, setText] = useState<string>('');
   const [sending, setSending] = useState<boolean>(false);
-  console.log('threadId', threadId);
-  // const threadpk = threadId && new anchor.web3.PublicKey(threadId);
-  // console.log('threadpk', threadpk);
   const {data: thread} = useSWR(
     program && threadId ? [
       `/m/${threadId}`, program, threadId,
     ] : null,
     threadFetch, {
-      onSuccess: (data) => {
-        console.log('success fetching thread', data);
-      },
-      onError: (error) => {
-        console.log('error fetching thread', error);
-      },
       refreshInterval: 500
     }
   );
   const {data: messages} = useSWR(threadId && program && thread ? [`/m/${threadId}/messages`, program, thread] : null, messagesFetch, {
-    onSuccess: (data) => {
-      console.log('success fetching messages', data);
-    },
-    onError: (error) => {
-      console.log('error fetching messages', error);
-    },
   });
 
   const {data: mutatedMessages} = useSWR(sending ? ['/messages/mutate', program, thread, text] : null, messageMutate, {
     onSuccess: (data) => {
       setSending(false);
       setText('');
-      console.log('success sending message', data);
     }, 
     onError: (error) => {
       setSending(false);
-      console.log('error sending message', error);
     },
   });
 
@@ -59,7 +42,6 @@ export default function Thread(): JSX.Element {
     event.preventDefault();
     setSending(true);
   };
-  console.log('outside thread', thread);
   const members = wallet ? thread?.thread.members : [];
   const disabled = text.length <= 0 || text.length > 280 || sending;
   return (
@@ -70,16 +52,16 @@ export default function Thread(): JSX.Element {
           {members?.map((member, index) => (
             <MessageMember
               key={index}
-              member={display(member.key)}
+              member={member.key.toString()}
             />
           ))}
         </div>
       </div>
-      <div className='px-3 py-2 flex-grow flex flex-col flex-col-reverse space-y-4 justify-start'>
+      <div className='px-3 py-2 flex-grow h-full overflow-y-auto flex flex-col flex-col-reverse space-y-4 justify-start'>
         {messages?.map((message, index) => (
           <div key={index} className={`flex items-start space-x-2 w-full ${message.message.owner.toString() === wallet?.publicKey.toString() && 'justify-end'}`}>
             <div className={`flex flex-col ${message.message.owner.toString() === wallet?.publicKey.toString() && 'items-end'}`}>
-              <div className='text-xs'>{message.message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(message.message.owner)}</div>
+              <div className='text-xs opacity-50'>{message.message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(message.message.owner)}</div>
               <div className='flex space-x-2 items-center text-sm text-gray-800 dark:text-gray-200'>
                 {message.message.text}
               </div>
