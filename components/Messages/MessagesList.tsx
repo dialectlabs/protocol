@@ -20,8 +20,12 @@ export default function MessagesList(): JSX.Element {
       wallet?.publicKey
     ] : null,
     settingsFetch,
+    {
+      refreshInterval: 500
+    },
   );
   const { data: thread } = useSWR(data && data?.settings?.threads.length > 0 ? [`/m/${data.settings.threads[0].key.toString()}`, program, data.settings.threads[0].key] : null, threadFetch, {
+    refreshInterval: 500,
   });
   const threads = [thread];
   return (

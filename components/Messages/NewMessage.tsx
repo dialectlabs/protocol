@@ -73,7 +73,7 @@ export default function NewMessage(): JSX.Element {
     event.preventDefault();
     setCreating(true);
   };
-  const { data: thread } = useSWR( creating ? ['/m/new', program, wallet, new PublicKey(members[0]), text] : null, newGroupMutate, {
+  const { data: thread } = useSWR( creating ? ['/m/new', program, wallet, members.filter(m => m !== wallet?.publicKey.toString()), text] : null, newGroupMutate, {
     onSuccess: (data) => {
       router.push(`/m/${data.publicKey.toString()}`);
     },
@@ -103,15 +103,15 @@ export default function NewMessage(): JSX.Element {
                     placeholder='Enter a public key'
                     className='w-96 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
                   />
-                  <span className="mb-2 absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-2">
                     {(status === 'timeout' || status === 'fetching') ? (
                       null
                     ) : status === 'invalid' || status === 'duplicate' ? (
                       <XIcon className='w-4 h-4 mr-0 hover:cursor-pointer' onClick={() => setInput('')}/>
                     ) : status === 'valid' ? (
-                      <div className='w-2 h-2 rounded-full bg-green-500 dark:bg-green-600 mr-1' />
+                      <div className='w-2 h-2 rounded-full bg-green-500 dark:bg-green-600' />
                     ) : status === null ? (
-                      <div className='w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-600 mr-1' />
+                      <div className='w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-600' />
                     ) : null}
                   </span>
                 </div>

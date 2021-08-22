@@ -9,7 +9,7 @@ type ValueType = {
 export const DarkModeContext = createContext(null as ValueType | null);
 
 export const DarkModeContextProvider = (props: PropsType): JSX.Element => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   return (
     <DarkModeContext.Provider value={{ darkMode, setDarkMode }}>
       {props.children}

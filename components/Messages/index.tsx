@@ -11,7 +11,7 @@ export default function Messages(): JSX.Element {
   const threadId = router.query.threadId;
   const isNew = router.pathname === '/m/new';
   return (
-    <div className="card-gray w-full flex flex-1 rounded-md border dark:border-2 border-gray-50 dark:border-gray-700 dark:bg-gray-900 text-gray-700 dark:text-gray-400">
+    <div className="card-gray w-full flex flex-1 rounded-md border dark:border-2 border-gray-50 dark:border-gray-700 dark:bg-gray-900 text-gray-700 dark:text-gray-400 overflow-y-scroll">
         <div className="w-1/3 border-r-2 dark:border-r dark:border-gray-600">
           <MessagesListHeader />
           <MessagesList />

@@ -24,13 +24,14 @@ function App({ Component, pageProps }: AppProps): JSX.Element {
   const { darkMode } = useDarkMode();
 
   return (
-    <div className={darkMode ? 'dark' : ''}>
-      <div className="flex flex-col min-h-screen py-2 dark:bg-black">
-        <Navbar />
-        <main className="flex flex-col max-w-7xl mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 space-y-4">
+    <div className={darkMode ? 'dark h-screen' : ''}>
+      <div className="flex flex-col h-screen py-0 dark:bg-black">
+        <main className="flex flex-col max-w-7xl mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 space-y-4 h-screen">
+          <Navbar />
           <Component {...pageProps} />
+          <Footer />
         </main>
-        <Footer />
+
       </div>
     </div>
   );
