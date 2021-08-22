@@ -7,7 +7,7 @@ export default function Landing(): JSX.Element {
         <title>dialect</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <div>
+      <div className='flex flex-col flex-grow'>
         <h1 className="mt-24 md:mt-64 text-8xl font-crimson dark:text-gray-200">dialect</h1>
         <p className="text-lg text-center">
           On-chain, encrypted Solana messaging protocol.
