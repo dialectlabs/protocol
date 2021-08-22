@@ -72,17 +72,19 @@ export default function Thread(): JSX.Element {
       </div>
       <div className='flex flex-col px-3 pb-2'>
         <form onSubmit={onMessageSubmit}>
-          <div className='relative flex items-center'>
-            <input
-              type='text'
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder='Write something'
-              className='w-full text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
-            />
-            <button className="absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed" disabled={disabled}>
-              <ArrowSmRightIcon className={`opacity-100 h-5 w-5 text-white text-white rounded-full bg-red-700 dark:bg-red-600 ${disabled ? 'opacity-70' : ''}`} />
-            </button>
+          <div className='relative'>
+            <div className='visible text-sm break-all py-1 pl-2 pr-11'>{text || 'h'}</div>
+            <div className='absolute w-full h-full top-0 flex flex-grow items-center'>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder='Write something'
+                className='resize-none h-full w-full text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
+              />
+              <button className="absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed" disabled={disabled}>
+                <ArrowSmRightIcon className={`opacity-100 h-5 w-5 text-white text-white rounded-full bg-red-700 dark:bg-red-600 ${disabled ? 'opacity-70' : ''}`} />
+              </button>
+            </div>
           </div>
         </form>
         <div className='flex justify-between'>
