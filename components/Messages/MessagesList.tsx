@@ -29,7 +29,7 @@ export default function MessagesList(): JSX.Element {
   });
   const threads = [thread];
   return (
-    <div className='flex flex-col space-y-2'>
+    <div className='flex flex-col flex-grow overflow-y-scroll'>
       {threads.filter((thread) => thread !== undefined).map((thread, idx) => (
         <div
           key={idx}

@@ -57,7 +57,7 @@ export default function Thread(): JSX.Element {
           ))}
         </div>
       </div>
-      <div className='px-3 py-2 flex-grow overflow-y-auto flex flex-col flex-col-reverse space-y-4 justify-start'>
+      <div className='px-3 py-2 flex-grow overflow-y-auto flex flex-col flex-col-reverse space-y-2 space-y-reverse justify-start flex-col-reverse'>
         {messages?.map((message, index) => (
           <div key={index} className={`flex items-start space-x-2 w-full ${message.message.owner.toString() === wallet?.publicKey.toString() && 'justify-end'}`}>
             <div className={`flex flex-col ${message.message.owner.toString() === wallet?.publicKey.toString() && 'items-end'}`}>
