@@ -26,7 +26,7 @@ export default function MessagePreview({thread}: PropsType): JSX.Element {
       {otherMembers && otherMembers.length > 0 &&
       <div className='text-gray-800 dark:text-white'>{otherMembersStr}</div>}
       {messages && messages?.length > 0 && (
-        <div className='text-sm text-gray-600 dark:text-gray-400'><span className='opacity-50'>{messages[0].message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(messages[0].message.owner)}:</span>{' '}{messages[0].message.text}</div>
+        <div className='text-sm text-gray-600 dark:text-gray-400 truncate overflow-ellipsis'><span className='opacity-50'>{messages[0].message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(messages[0].message.owner)}:</span>{' '}{messages[0].message.text}</div>
       )}
     </div>
   );

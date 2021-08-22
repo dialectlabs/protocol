@@ -1,7 +1,7 @@
 import React, { FormEvent, useState } from 'react';
 import {useRouter} from 'next/router';
 import useSWR from 'swr';
-import { ArrowNarrowRightIcon, ArrowSmRightIcon } from '@heroicons/react/outline';
+import { ArrowNarrowRightIcon, ArrowSmRightIcon, UserIcon } from '@heroicons/react/outline';
 import useApi from '../../utils/ApiContext';
 import useWallet from '../../utils/WalletContext';
 import * as anchor from '@project-serum/anchor';
@@ -59,10 +59,11 @@ export default function Thread(): JSX.Element {
       </div>
       <div className='px-3 py-2 flex-grow overflow-y-auto flex flex-col flex-col-reverse space-y-2 space-y-reverse justify-start flex-col-reverse'>
         {messages?.map((message, index) => (
-          <div key={index} className={`flex items-start space-x-2 w-full ${message.message.owner.toString() === wallet?.publicKey.toString() && 'justify-end'}`}>
+          <div key={index} className={`flex items-start space-x-3 ${message.message.owner.toString() === wallet?.publicKey.toString() && 'flex-row-reverse space-x-reverse'}`}>
+            <UserIcon className='w-7 h-7 bg-gray-200 dark:bg-gray-700 p-2 rounded-full'/>
             <div className={`flex flex-col ${message.message.owner.toString() === wallet?.publicKey.toString() && 'items-end'}`}>
               <div className='text-xs opacity-50'>{message.message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(message.message.owner)}</div>
-              <div className='flex space-x-2 items-center text-sm text-gray-800 dark:text-gray-200'>
+              <div className={`flex break-all space-x-2 items-center text-sm text-gray-800 dark:text-gray-200 ${message.message.owner.toString() === wallet?.publicKey.toString() && 'text-right'}`}>
                 {message.message.text}
               </div>
             </div>
