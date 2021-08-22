@@ -42,6 +42,12 @@ export default function Thread(): JSX.Element {
     event.preventDefault();
     setSending(true);
   };
+  const onEnterPress = (e: any) => {
+    if(e.keyCode == 13 && e.shiftKey == false) {
+      e.preventDefault();
+      setSending(true);
+    }
+  };
   const members = wallet ? thread?.thread.members : [];
   const disabled = text.length <= 0 || text.length > 280 || sending;
   return (
@@ -78,6 +84,7 @@ export default function Thread(): JSX.Element {
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                onKeyDown={onEnterPress}
                 placeholder='Write something'
                 className='resize-none h-full w-full text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
               />
