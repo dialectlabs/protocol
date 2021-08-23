@@ -87,6 +87,7 @@ export default function NewMessage(): JSX.Element {
           {members.map((member, index) => (
             <MessageMember
               key={index}
+              index={index}
               member={member}
               deletable
               onDelete={onDelete}
