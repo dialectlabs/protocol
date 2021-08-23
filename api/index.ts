@@ -210,16 +210,6 @@ export async function threadsGet(program: anchor.Program, publicKeys: PublicKey[
     if (accountInfo === null) {
       throw new Error(`Account does not exist ${publicKeys[idx].toString()}`);
     }
-    // // Assert the account discriminator is correct.
-    // const expectedDiscriminator = await stateDiscriminator(
-    //   'ThreadAccount' // TOOD: Fix this
-    // );
-    // if (expectedDiscriminator.compare(accountInfo.account.data.slice(0, 8))) {
-    //   throw new Error('Invalid account discriminator');
-    // }
-    // return program.coder.state.decode(accountInfo.account.data) as ThreadAccount;
-
-    // Assert the account discriminator is correct.
     const discriminator = await accountDiscriminator('ThreadAccount');
     if (discriminator.compare(accountInfo.account.data.slice(0, 8))) {
       throw new Error('Invalid account discriminator');
@@ -346,15 +336,24 @@ export async function messagesGet(
   const minIdx = Math.max(maxIdx - batchSize, 1);
   const idxs = Array(maxIdx - minIdx + 1).fill(null).map((_, i) => minIdx + i);
   // TODO: Batch RPC calls
-  const messages = (await Promise.all(idxs.map(async (idx) => {
+  const publicKeys = await Promise.all(idxs.map(async (idx) => {
     const [messagepk,] = await messageProgramAddressGet(program, thread.publicKey, idx.toString());
-    const data = await program.account.messageAccount.fetch(messagepk);
-    const account = await program.provider.connection.getAccountInfo(messagepk);
-    return {
-      ...account, message: data, publicKey: messagepk,
-    } as MessageAccount;
-  }))).reverse(); // descending
-  return messages;
+    return messagepk;
+  }));
+  const accountInfos = await anchor.utils.rpc.getMultipleAccounts(program.provider.connection, publicKeys);
+  const messages = (await Promise.all(accountInfos.map(async (accountInfo, idx) => {
+    // TODO: Code block ported from anchor. Use there.
+    if (accountInfo === null) {
+      throw new Error(`Account does not exist ${publicKeys[idx].toString()}`);
+    }
+    const discriminator = await accountDiscriminator('MessageAccount');
+    if (discriminator.compare(accountInfo.account.data.slice(0, 8))) {
+      throw new Error('Invalid account discriminator');
+    }
+
+    return {...accountInfo.account, publicKey: publicKeys[idx], message: program.account.messageAccount.coder.accounts.decode('MessageAccount', accountInfo.account.data)} as MessageAccount;
+  })));
+  return messages.reverse();
 }
 
 export async function newGroupMutate(_url: string, program: anchor.Program, wallet: Wallet_, invitees: PublicKey[] | string[], text: string): Promise<ThreadAccount> {

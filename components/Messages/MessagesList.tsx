@@ -30,7 +30,12 @@ export default function MessagesList(): JSX.Element {
       setPublicKeys(data.settings.threads.map(thread => thread.key.toString()));
     }
   }, [data]);
-  const { data: threads } = useSWR(data && data?.settings?.threads.length > 0 ? ['/threads', program, publicKeys] : null, threadsFetch, {
+  const { data: threads } = useSWR(
+    data && data?.settings?.threads.length > 0 ? [
+      '/threads',
+      program,
+      publicKeys
+    ] : null, threadsFetch, {
     refreshInterval: 500,
   });
   return (
