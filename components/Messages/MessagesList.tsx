@@ -30,22 +30,11 @@ export default function MessagesList(): JSX.Element {
       setPublicKeys(data.settings.threads.map(thread => thread.key.toString()));
     }
   }, [data]);
-  // const { data: thread } = useSWR(data && data?.settings?.threads.length > 0 ? [`/m/${data.settings.threads[0].key.toString()}`, program, data.settings.threads[0].key.toString()] : null, threadFetch, {
-  //   refreshInterval: 500,
-  // });
   const { data: threads } = useSWR(data && data?.settings?.threads.length > 0 ? ['/threads', program, publicKeys] : null, threadsFetch, {
-    onSuccess: data => {
-      console.log('threads success', data);
-    },
-    onError: error => {
-      console.log('threads error', error);
-    },
-    // refreshInterval: 500,
+    refreshInterval: 500,
   });
-  // console.log('program.account.threadsAccount', program?.account.threadAccount);
-  // const threads = [thread];
   return (
-    <div className='flex flex-col flex-grow h-full overflow-y-scroll'>
+    <div className='flex flex-col flex-grow overflow-y-auto'>
       {threads && threads.filter((thread) => thread !== undefined).map((thread, idx) => (
         <div
           key={idx}
