@@ -79,8 +79,8 @@ export default function Thread(): JSX.Element {
       <div className='flex flex-col px-3 pb-2'>
         <form onSubmit={onMessageSubmit}>
           <div className='relative'>
-            <div className='visible text-sm break-all py-1 pl-2 pr-11'>{text || 'h'}</div>
-            <div className='absolute w-full h-full top-0 flex flex-grow items-center'>
+            <div className='visible text-sm break-words py-1 pl-2 pr-11'>{text || 'h'}</div>
+            <div className='absolute top-0 w-full h-full flex flex-grow items-center'>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -96,10 +96,12 @@ export default function Thread(): JSX.Element {
         </form>
         <div className='flex justify-between'>
           <div className='text-xs pl-1'>{text.length}/280</div>
-          <div className='flex text-xs items-center pr-1'>
-            enter
-            <ArrowNarrowRightIcon className='h-4 w-4' />
-          </div>
+          {!disabled && (
+            <div className='flex text-xs items-center pr-1'>
+              enter
+              <ArrowNarrowRightIcon className='h-4 w-4' />
+            </div>
+          )}
         </div>
       </div>
     </div>
