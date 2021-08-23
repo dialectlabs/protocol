@@ -8,12 +8,6 @@ body {
 }
 
 @layer base {
-  html, body {
-    @apply bg-white dark:bg-black;
-  }
-  div, span {
-
-  }
   h1 {
     @apply text-8xl text-center;
   }
