@@ -1,11 +1,24 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
+import { sha256 } from 'js-sha256';
 import {Wallet_, sleep} from '../utils';
 
-// type CreateResponse = {
-//   tx: unknown,
-//   publicKey: PublicKey,
-//   nonce?: number | undefined,
+// TODO: Ported from anchor. Use there.
+// Calculates unique 8 byte discriminator prepended to all anchor state accounts.
+// Calculates unique 8 byte discriminator prepended to all anchor accounts.
+export async function accountDiscriminator(name: string): Promise<Buffer> {
+  return Buffer.from(sha256.digest(`account:${name}`)).slice(0, 8);
+}
+
+export async function decode<T = unknown>(accountName: string, ix: Buffer): T {
+  // Chop off the discriminator before decoding.
+  const data = ix.slice(8);
+  const layout = this.accountLayouts.get(accountName);
+  return layout.decode(data);
+}
+// export async function stateDiscriminator(name: string): Promise<Buffer> {
+//   const ns = anchor.utils.features.isSet('anchor-deprecated-state') ? 'account' : 'state';
+//   return Buffer.from(sha256.digest(`${ns}:${name}`)).slice(0, 8);
 // }
 
 export async function accountInfoGet(connection: Connection, publicKey: PublicKey): Promise<anchor.web3.AccountInfo<Buffer> | null> {
@@ -70,8 +83,11 @@ export async function settingsFetch(
   _url: string, 
   program: anchor.Program,
   connection: Connection,
-  publicKey: PublicKey
+  publicKey: PublicKey | string,
 ): Promise<SettingsAccount> {
+  if (typeof publicKey === 'string') {
+    publicKey = new anchor.web3.PublicKey(publicKey);
+  }
   return await settingsGet(program, connection, publicKey);
 }
 
@@ -160,7 +176,6 @@ export async function threadCreate(program: anchor.Program, wallet: Wallet_): Pr
 
   await waitForFinality(program, tx);
   return await threadGet(program, kp.publicKey);
-  // return {tx, publicKey: kp.publicKey};
 }
 
 export async function threadFetch(_url: string, program: anchor.Program, publicKey: PublicKey | string): Promise<ThreadAccount> {
@@ -179,8 +194,43 @@ export async function threadGet(
   return {...account, publicKey, thread: data} as ThreadAccount;
 }
 
+export async function threadsFetch(_url: string, program: anchor.Program, publicKeys: PublicKey[] | string[]): Promise<ThreadAccount[]> {
+  if (publicKeys.length < 1) return [];
+  console.log('publicKeys', publicKeys);
+  if (typeof publicKeys[0] === 'string') {
+    publicKeys = publicKeys.map(publicKey => new anchor.web3.PublicKey(publicKey));
+  }
+  return await threadsGet(program, publicKeys as PublicKey[]);
+}
+
+export async function threadsGet(program: anchor.Program, publicKeys: PublicKey[]): Promise<ThreadAccount[]> {
+  const accountInfos = await anchor.utils.rpc.getMultipleAccounts(program.provider.connection, publicKeys);
+  const threads = (await Promise.all(accountInfos.map(async (accountInfo, idx) => {
+    // TODO: Code block ported from anchor. Use there.
+    if (accountInfo === null) {
+      throw new Error(`Account does not exist ${publicKeys[idx].toString()}`);
+    }
+    // // Assert the account discriminator is correct.
+    // const expectedDiscriminator = await stateDiscriminator(
+    //   'ThreadAccount' // TOOD: Fix this
+    // );
+    // if (expectedDiscriminator.compare(accountInfo.account.data.slice(0, 8))) {
+    //   throw new Error('Invalid account discriminator');
+    // }
+    // return program.coder.state.decode(accountInfo.account.data) as ThreadAccount;
+
+    // Assert the account discriminator is correct.
+    const discriminator = await accountDiscriminator('ThreadAccount');
+    if (discriminator.compare(accountInfo.account.data.slice(0, 8))) {
+      throw new Error('Invalid account discriminator');
+    }
+
+    return {...accountInfo.account, publicKey: publicKeys[idx], thread: program.account.threadAccount.coder.accounts.decode('ThreadAccount', accountInfo.account.data)} as ThreadAccount;
+  })));
+  return threads;
+}
+
 export async function userThreadMutate(_url: string, program: anchor.Program, thread: PublicKey, invitee: PublicKey): Promise<ThreadAccount> {
-  // const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
   return await addUserToThread(program, thread, invitee);
 }
 
