@@ -11,6 +11,7 @@ import {display} from '../../utils';
 import MessageMember from './MessageMember';
 import Wallet from '../../../solana/sol-wallet-adapter/dist/cjs';
 import Badge from '../utils/Badge';
+import ThreadHeader from './ThreadHeader';
 
 export default function Thread(): JSX.Element {
   const router = useRouter();
@@ -54,26 +55,7 @@ export default function Thread(): JSX.Element {
   const displayFetchDisclaimer: boolean = messages && messages[messages.length - 1]?.message?.idx > 1 || false;
   return (
     <div className='flex flex-col space-y-2 justify-between text-left w-full'>
-      <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
-        <div className='flex items-center space-x-2 mb-1'>
-          <div className='text-xs dark:text-gray-400'>Members – {members && members.length || 0}/8</div>
-          <Badge color='gray' bold>
-            <div className='flex space-x-1 items-center'>
-              <ExclamationIcon className='w-4 h-4' />
-              <span>unencrypted</span>
-            </div>
-          </Badge>
-        </div>
-        <div className='flex flex-wrap items-start'>
-          {members?.map((member, index) => (
-            <MessageMember
-              key={index}
-              index={index}
-              member={member.key.toString()}
-            />
-          ))}
-        </div>
-      </div>
+      <ThreadHeader members={members?.map(m => m.key.toString()) || []} />
       <div className='px-3 py-2 flex-grow overflow-y-auto flex flex-col flex-col-reverse space-y-2 space-y-reverse justify-start flex-col-reverse'>
         {messages?.map((message, index) => (
           <div key={index} className={`flex items-start space-x-3 ${message.message.owner.toString() === wallet?.publicKey.toString() && 'flex-row-reverse space-x-reverse'}`}>

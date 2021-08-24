@@ -10,6 +10,7 @@ import { accountInfoFetch, newGroupMutate, messageMutate, threadFetch, threadMut
 import useApi from '../../utils/ApiContext';
 import { PublicKey } from '@solana/web3.js';
 import router from 'next/router';
+import ThreadHeader from './ThreadHeader';
 
 let timeout: NodeJS.Timeout;
 
@@ -28,10 +29,8 @@ export default function NewMessage(): JSX.Element {
   const [input, setInput] = useState<string>('');
   const [text, setText] = useState<string>('');
   const [creating, setCreating] = useState<boolean>(false);
-  const [fetchingThread, setFetchingThread] = useState<boolean>(false);
-  const [addingUsers, setAddingUsers] = useState<boolean>(false);
-  const [addingMessage, setAddingMessage] = useState<boolean>(false);
   const myPublicKeyStr = wallet?.publicKey?.toString();
+
   useEffect(() => {
     if (wallet && members.length < 1) {
       members.push(wallet.publicKey.toString());
@@ -89,62 +88,14 @@ export default function NewMessage(): JSX.Element {
   const disabled = text.length <= 0 || text.length > 280 || creating || thread !== undefined;
   return (
     <div className='flex flex-col space-y-2 justify-between text-left w-full'>
-      <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
-        <div className='text-xs dark:text-gray-400'>Members – {members.length}/8</div>
-        <div className='flex flex-wrap items-start'>
-          {members.map((member, index) => (
-            <MessageMember
-              key={index}
-              index={index}
-              member={member}
-              deletable
-              onDelete={onDelete}
-            />
-          ))}
-          {members.length < 8 && (
-            <form className='m-0' onSubmit={onSubmit}>
-              <div className='flex flex-col'>
-                <div className='relative flex items-center'>
-                  <input
-                    type='text'
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder='Enter a public key'
-                    className='w-96 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
-                  />
-                  <span className="absolute inset-y-0 right-0 flex items-center pr-2">
-                    {(status === 'timeout' || status === 'fetching') ? (
-                      null
-                    ) : status === 'invalid' || status === 'duplicate' ? (
-                      <XIcon className='w-4 h-4 mr-0 hover:cursor-pointer' onClick={() => setInput('')}/>
-                    ) : status === 'valid' ? (
-                      <div className='w-2 h-2 rounded-full bg-green-500 dark:bg-green-600' />
-                    ) : status === null ? (
-                      <div className='w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-600' />
-                    ) : null}
-                  </span>
-                </div>
-                <div className='flex justify-between'>
-                  <div className='text-xs'>
-                    {
-                      status === 'valid' ? 'Valid address' :
-                      status === 'invalid' ? 'Invalid address' :
-                      status === 'duplicate' ? 'Duplicate address' :
-                      null
-                    }
-                  </div>
-                  {status === 'valid' && (
-                    <div className='flex text-xs items-center'>
-                      enter
-                      <ArrowNarrowRightIcon className='h-4 w-4' />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
+      <ThreadHeader
+        members={members}
+        editing
+        input={input}
+        setInput={setInput}
+        onInputSubmit={onSubmit}
+        status={status}
+      />
       <div className='flex flex-col px-3 pb-2'>
         <form onSubmit={onMessageSubmit}>
           <div className='relative flex items-center'>
