@@ -12,7 +12,7 @@ export default function Messages(): JSX.Element {
   const isNew = router.pathname === '/m/new';
   return (
     <div className="card-gray w-full flex flex-1 rounded-md border dark:border-2 border-gray-50 dark:border-gray-700 dark:bg-gray-900 text-gray-700 dark:text-gray-400 overflow-y-scroll">
-        <div className="w-1/3 h-full border-r-2 dark:border-r dark:border-gray-600">
+        <div className="w-1/3 flex flex-col border-r-2 dark:border-r dark:border-gray-600">
           <MessagesListHeader />
           <MessagesList />
         </div>
