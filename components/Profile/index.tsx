@@ -71,7 +71,7 @@ export default function Profile(): JSX.Element {
         <div className='grid grid-cols-1 sm:grid-cols-3 pt-4 pb-16 flex'>
           <div className='cols-span-1 flex items-center space-x-3'>
             <div><SectionTitle title='profile' /></div>
-            <div><Badge text={'coming soon'} color='gray' /></div>
+            <div><Badge color='gray'>coming soon</Badge></div>
           </div>
           <div className='sm:hidden mb-4 border-t border-gray-300 dark:border-gray-700' />
           <div className='cols-span-1 sm:cols-span-2'>
@@ -84,7 +84,7 @@ export default function Profile(): JSX.Element {
         <div className='grid grid-cols-1 sm:grid-cols-3 pt-4 pb-16 flex'>
           <div className='cols-span-1 flex items-center space-x-3'>
             <div><SectionTitle title='settings' /></div>
-            {settingsNeedsCreating && (<div><Badge text={'needs creating'} /></div>)}
+            {settingsNeedsCreating && (<div><Badge>needs creating</Badge></div>)}
           </div>
           <div className='sm:hidden mb-4 border-t border-gray-300 dark:border-gray-700' />
           <div className='cols-span-1 sm:cols-span-2'>

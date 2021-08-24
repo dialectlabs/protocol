@@ -2,6 +2,7 @@ import React, { FormEvent, useState } from 'react';
 import {useRouter} from 'next/router';
 import useSWR from 'swr';
 import { ArrowNarrowRightIcon, ArrowSmRightIcon, UserIcon } from '@heroicons/react/outline';
+import { ExclamationIcon } from '@heroicons/react/solid';
 import useApi from '../../utils/ApiContext';
 import useWallet from '../../utils/WalletContext';
 import * as anchor from '@project-serum/anchor';
@@ -9,6 +10,7 @@ import {messageMutate, messagesFetch, threadFetch} from '../../api';
 import {display} from '../../utils';
 import MessageMember from './MessageMember';
 import Wallet from '../../../solana/sol-wallet-adapter/dist/cjs';
+import Badge from '../utils/Badge';
 
 export default function Thread(): JSX.Element {
   const router = useRouter();
@@ -25,8 +27,7 @@ export default function Thread(): JSX.Element {
       refreshInterval: 500
     }
   );
-  const {data: messages} = useSWR(threadId && program && thread ? [`/m/${threadId}/messages`, program, thread] : null, messagesFetch, {
-  });
+  const {data: messages} = useSWR(threadId && program && thread ? [`/m/${threadId}/messages`, program, thread] : null, messagesFetch);
 
   const {data: mutatedMessages} = useSWR(sending ? ['/messages/mutate', program, thread?.publicKey.toString(), text] : null, messageMutate, {
     onSuccess: (data) => {
@@ -50,14 +51,24 @@ export default function Thread(): JSX.Element {
   };
   const members = wallet ? thread?.thread.members : [];
   const disabled = text.length <= 0 || text.length > 280 || sending;
+  const displayFetchDisclaimer: boolean = messages && messages[messages.length - 1]?.message?.idx > 1 || false;
   return (
     <div className='flex flex-col space-y-2 justify-between text-left w-full'>
       <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
-        <div className='text-xs dark:text-gray-400'>Members – {members && members.length || 0}/8</div>
+        <div className='flex items-center space-x-2 mb-1'>
+          <div className='text-xs dark:text-gray-400'>Members – {members && members.length || 0}/8</div>
+          <Badge color='gray' bold>
+            <div className='flex space-x-1 items-center'>
+              <ExclamationIcon className='w-4 h-4' />
+              <span>unencrypted</span>
+            </div>
+          </Badge>
+        </div>
         <div className='flex flex-wrap items-start'>
           {members?.map((member, index) => (
             <MessageMember
               key={index}
+              index={index}
               member={member.key.toString()}
             />
           ))}
@@ -75,6 +86,7 @@ export default function Thread(): JSX.Element {
             </div>
           </div>
         ))}
+        {displayFetchDisclaimer && (<div className='w-full text-center italic text-xs opacity-70'>&mdash; Fetching older messages coming soon &mdash;</div>)}
       </div>
       <div className='flex flex-col px-3 pb-2'>
         <form onSubmit={onMessageSubmit}>

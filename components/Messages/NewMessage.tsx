@@ -67,14 +67,22 @@ export default function NewMessage(): JSX.Element {
     setInput('');
   };
   const onDelete = (idx: number) => {
+    members.splice(idx, 1);
     setMembers([...members]);
   };
   const onMessageSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCreating(true);
   };
-  const { data: thread } = useSWR( creating ? ['/m/new', program, wallet, members.filter(m => m !== wallet?.publicKey.toString()), text] : null, newGroupMutate, {
+  const { data: thread } = useSWR( creating ? [
+    '/m/new',
+    program,
+    wallet,
+    members.filter(m => m !== wallet?.publicKey.toString()),
+    text
+  ] : null, newGroupMutate, {
     onSuccess: (data) => {
+      setCreating(false);
       router.push(`/m/${data.publicKey.toString()}`);
     },
   });
