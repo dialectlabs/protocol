@@ -196,7 +196,6 @@ export async function threadGet(
 
 export async function threadsFetch(_url: string, program: anchor.Program, publicKeys: PublicKey[] | string[]): Promise<ThreadAccount[]> {
   if (publicKeys.length < 1) return [];
-  console.log('publicKeys', publicKeys);
   if (typeof publicKeys[0] === 'string') {
     publicKeys = publicKeys.map(publicKey => new anchor.web3.PublicKey(publicKey));
   }

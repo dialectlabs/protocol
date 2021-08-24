@@ -28,7 +28,6 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
     if (wallet?.publicKey) {
       anchor.setProvider(new anchor.Provider(connection, wallet, anchor.Provider.defaultOptions()));
       const program = new anchor.Program(idl as anchor.Idl, new anchor.web3.PublicKey(idl.metadata.address));
-      console.log('program.idl', program.idl);
       setProgram(program);
     }
   }, [wallet?.publicKey]);
