@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import * as React from 'react';
-import Badge from '../utils/Badge';
+
 export default function Landing(): JSX.Element {
   return (
     <>
