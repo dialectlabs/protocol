@@ -1,4 +1,4 @@
-import React, { FormEvent, useState } from 'react';
+import React, { KeyboardEvent, FormEvent, useState } from 'react';
 import {useRouter} from 'next/router';
 import useSWR from 'swr';
 import { ArrowNarrowRightIcon, ArrowSmRightIcon, UserIcon } from '@heroicons/react/outline';
@@ -12,6 +12,7 @@ import MessageMember from './MessageMember';
 import Wallet from '../../../solana/sol-wallet-adapter/dist/cjs';
 import Badge from '../utils/Badge';
 import ThreadHeader from './ThreadHeader';
+import MessageInput from './MessageInput';
 
 export default function Thread(): JSX.Element {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function Thread(): JSX.Element {
     event.preventDefault();
     setSending(true);
   };
-  const onEnterPress = (e: any) => {
+  const onEnterPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if(e.keyCode == 13 && e.shiftKey == false) {
       e.preventDefault();
       setSending(true);
@@ -70,34 +71,13 @@ export default function Thread(): JSX.Element {
         ))}
         {displayFetchDisclaimer && (<div className='w-full text-center italic text-xs opacity-70'>&mdash; Fetching older messages coming soon &mdash;</div>)}
       </div>
-      <div className='flex flex-col px-3 pb-2'>
-        <form onSubmit={onMessageSubmit}>
-          <div className='relative'>
-            <div className='visible text-sm break-words py-1 pl-2 pr-11'>{text || 'h'}</div>
-            <div className='absolute top-0 w-full h-full flex flex-grow items-center'>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={onEnterPress}
-                placeholder='Write something'
-                className='resize-none h-full w-full text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-black border rounded-md px-2 py-1 border-gray-400 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-600 pr-10'
-              />
-              <button className="absolute inset-y-0 right-0 flex items-center pr-3 disabled:cursor-not-allowed" disabled={disabled}>
-                <ArrowSmRightIcon className={`opacity-100 h-5 w-5 text-white text-white rounded-full bg-red-700 dark:bg-red-600 ${disabled ? 'opacity-70' : ''}`} />
-              </button>
-            </div>
-          </div>
-        </form>
-        <div className='flex justify-between'>
-          <div className='text-xs pl-1'>{text.length}/280</div>
-          {!disabled && (
-            <div className='flex text-xs items-center pr-1'>
-              enter
-              <ArrowNarrowRightIcon className='h-4 w-4' />
-            </div>
-          )}
-        </div>
-      </div>
+      <MessageInput
+        text={text}
+        setText={setText}
+        onSubmit={onMessageSubmit}
+        onEnterPress={onEnterPress}
+        disabled={disabled}
+      />
     </div>
   );
 }

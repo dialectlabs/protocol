@@ -9,7 +9,7 @@ type PropsType = {
   members: string[],
   editing?: boolean,
   input?: string,
-  status: string | null,
+  status?: string | null,
   setInput?: (s: string) => void,
   onInputSubmit?: (event: FormEvent<HTMLFormElement>) => void,
 };
