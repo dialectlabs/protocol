@@ -10,12 +10,12 @@ export async function accountDiscriminator(name: string): Promise<Buffer> {
   return Buffer.from(sha256.digest(`account:${name}`)).slice(0, 8);
 }
 
-export async function decode<T = unknown>(accountName: string, ix: Buffer): Promise<T> {
-  // Chop off the discriminator before decoding.
-  const data = ix.slice(8);
-  const layout = this.accountLayouts.get(accountName);
-  return layout.decode(data);
-}
+// export async function decode<T = unknown>(accountName: string, ix: Buffer): Promise<T> {
+//   // Chop off the discriminator before decoding.
+//   const data = ix.slice(8);
+//   const layout = this.accountLayouts.get(accountName);
+//   return layout.decode(data);
+// }
 // export async function stateDiscriminator(name: string): Promise<Buffer> {
 //   const ns = anchor.utils.features.isSet('anchor-deprecated-state') ? 'account' : 'state';
 //   return Buffer.from(sha256.digest(`${ns}:${name}`)).slice(0, 8);
