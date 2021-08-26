@@ -9,7 +9,6 @@ import * as anchor from '@project-serum/anchor';
 import {messageMutate, messagesFetch, threadFetch} from '../../api';
 import {display} from '../../utils';
 import MessageMember from './MessageMember';
-import Wallet from '../../../solana/sol-wallet-adapter/dist/cjs';
 import Badge from '../utils/Badge';
 import ThreadHeader from './ThreadHeader';
 import MessageInput from './MessageInput';
