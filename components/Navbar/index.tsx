@@ -25,8 +25,8 @@ const networkNavigation = [
     disabled: true,
     networkName: 'mainnet-beta',
   },
-  { name: 'devnet (coming soon)', disabled: true, networkName: 'devnet' },
   { name: 'testnet (coming soon)', disabled: true, networkName: 'testnet' },
+  { name: 'devnet', disabled: false, networkName: 'devnet' },
   { name: 'localnet', disabled: false, networkName: 'localnet' },
 ];
 
