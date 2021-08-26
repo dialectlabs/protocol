@@ -10,7 +10,7 @@ export async function accountDiscriminator(name: string): Promise<Buffer> {
   return Buffer.from(sha256.digest(`account:${name}`)).slice(0, 8);
 }
 
-export async function decode<T = unknown>(accountName: string, ix: Buffer): T {
+export async function decode<T = unknown>(accountName: string, ix: Buffer): Promise<T> {
   // Chop off the discriminator before decoding.
   const data = ix.slice(8);
   const layout = this.accountLayouts.get(accountName);
