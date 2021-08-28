@@ -57,7 +57,7 @@ export default function Menu({
                         active && !item.disabled
                           ? 'bg-gray-100 dark:bg-gray-700'
                           : 'cursor-default',
-                        `flex flex-grow space-x-2 items-center block px-4 py-2 text-sm ${
+                        `flex flex-grow space-x-2 items-center block text-sm ${
                           !item.disabled ? 'text-gray-800' : 'text-gray-400'
                         } ${
                           !item.disabled

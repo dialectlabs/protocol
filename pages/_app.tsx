@@ -1,12 +1,13 @@
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
-import * as React from 'react';
+import React, { useEffect } from 'react';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 import { WalletContextProvider } from '../utils/WalletContext';
 import { ApiContextProvider } from '../utils/ApiContext';
 import {ThemeProvider} from 'next-themes';
+import { useTheme } from 'next-themes';
 
 function AppWithContext(props: AppProps): JSX.Element {
   return (
@@ -21,6 +22,8 @@ function AppWithContext(props: AppProps): JSX.Element {
 }
 
 function App({ Component, pageProps }: AppProps): JSX.Element {
+  const {setTheme} = useTheme();
+  useEffect(() => setTheme('dark'), []);
 
   return (
     <div className='min-h-screen'>

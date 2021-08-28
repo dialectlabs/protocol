@@ -18,7 +18,7 @@ type ValueType = {
 };
 export const WalletContext = createContext<ValueType | null>({
   wallet: null,
-  networkName: 'localnet',
+  networkName: process.env.ENVIRONMENT as Cluster | 'localnet' || 'localnet',
   setNetworkName: (_: Cluster | 'localnet') => {
     _;
   },
@@ -32,7 +32,7 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
   >(null);
   const [urlWallet, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
-    'localnet'
+    process.env.ENVIRONMENT as Cluster || 'localnet'
   );
   const network: string = useMemo(() => {
     if (networkName === 'localnet') {

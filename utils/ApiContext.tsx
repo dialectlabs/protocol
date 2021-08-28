@@ -18,8 +18,9 @@ export const ApiContext = createContext<ValueType | null>({
 
 export const ApiContextProvider = (props: PropsType): JSX.Element => {
   const { wallet } = useWallet();
+  const env: 'localnet' | 'devnet' = process.env.ENVIRONMENT as 'localnet' | 'devnet' || 'devnet';
   const connection = new Connection(
-    programs.devnet.clusterAddress,
+    programs[env].clusterAddress,
     'recent',
   );
   const [program, setProgram] = useState<anchor.Program | null>(null);

@@ -1,3 +1,4 @@
+// TDOO: Ported from github.com/project-serum/sol-wallet-adapter. Use that as a dep instead.
 import EventEmitter from 'eventemitter3';
 import { PublicKey, Transaction } from '@solana/web3.js';
 import bs58 from 'bs58';

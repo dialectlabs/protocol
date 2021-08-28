@@ -13,11 +13,11 @@ import {
   XIcon,
 } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
-import * as React from 'react';
+import React, { useEffect } from 'react';
 import useWallet from '../../utils/WalletContext';
 import { useRouter } from 'next/router';
 import { display } from '../../utils';
-import {useTheme} from 'next-themes';
+import { useTheme } from 'next-themes';
 
 const networkNavigation = [
   {
@@ -155,9 +155,9 @@ export default function Navbar(): JSX.Element {
                     {networkName === 'localnet' ? (
                       <BeakerIcon className="btn-txt w-5 h-5" />
                     ) : networkName === 'devnet' ? (
-                      <CubeIcon className="btn-txt w-5 h-5" />
-                    ) : networkName === 'testnet' ? (
                       <CubeTransparentIcon className="btn-txt w-5 h-5" />
+                    ) : networkName === 'testnet' ? (
+                      <CubeIcon className="btn-txt w-5 h-5" />
                     ) : (
                       <LightningBoltIcon className="btn-txt w-5 h-5" />
                     )}
@@ -168,18 +168,18 @@ export default function Navbar(): JSX.Element {
                   onClick: () =>
                     setNetworkName(item.networkName as Cluster | 'localnet'),
                   itemChildren: (
-                    <>
+                    <div className={`flex items-center px-4 py-2 space-x-2 flex-grow hover:bg-gray-100 dark:hover:bg-gray-800 ${networkName === item.networkName && 'bg-gray-100 dark:bg-gray-800'}`}>
                       {item.networkName === 'localnet' ? (
                         <BeakerIcon className="w-4 h-4" />
                       ) : item.networkName === 'devnet' ? (
-                        <CubeIcon className="w-5 h-5" />
-                      ) : item.networkName === 'testnet' ? (
                         <CubeTransparentIcon className="w-5 h-5" />
+                      ) : item.networkName === 'testnet' ? (
+                        <CubeIcon className="w-5 h-5" />
                       ) : (
                         <LightningBoltIcon className="w-4 h-4" />
                       )}
                       <span>{item.name}</span>
-                    </>
+                    </div>
                   ),
                 }))}
               />
