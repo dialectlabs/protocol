@@ -1,5 +1,5 @@
 import { Cluster, clusterApiUrl } from '@solana/web3.js';
-import Wallet from '@project-serum/sol-wallet-adapter';
+import Wallet from './Wallet';
 import React, {
   createContext,
   useContext,
