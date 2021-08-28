@@ -56,7 +56,7 @@ export default function Navbar(): JSX.Element {
   } = useWallet();
   const {theme, setTheme} = useTheme();
   console.log('networkName', networkName);
-  console.log('process.env.ENVIRONMENT', process.env);
+  console.log('process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT', process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT);
   
   const displayPubkey = wallet?.publicKey ? display(wallet.publicKey) : undefined;
   return (
