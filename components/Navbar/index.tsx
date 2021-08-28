@@ -55,6 +55,8 @@ export default function Navbar(): JSX.Element {
     onDisconnect: onWalletDisconnect,
   } = useWallet();
   const {theme, setTheme} = useTheme();
+  console.log('networkName', networkName);
+  console.log('process.env.ENVIRONMENT', process.env);
   
   const displayPubkey = wallet?.publicKey ? display(wallet.publicKey) : undefined;
   return (
