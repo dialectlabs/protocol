@@ -13,7 +13,7 @@ import {
   XIcon,
 } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
-import React, { useEffect } from 'react';
+import React from 'react';
 import useWallet from '../../utils/WalletContext';
 import { useRouter } from 'next/router';
 import { display } from '../../utils';
@@ -119,7 +119,7 @@ export default function Navbar(): JSX.Element {
                       }
                     },
                     itemChildren: (
-                      <>
+                      <div className='flex items-center px-4 py-2 space-x-2 flex-grow hover:bg-gray-100 dark:hover:bg-gray-800'>
                         {item.name === 'Profile' ? (
                           <UserCircleIcon className="w-4 h-4" />
                         ) : item.name === 'Disconnect' ? (
@@ -128,7 +128,7 @@ export default function Navbar(): JSX.Element {
                           <ChatIcon className="w-4 h-4" />
                         )}
                         <span>{item.name}</span>
-                      </>
+                      </div>
                     ),
                   }))}
                 />
