@@ -7,11 +7,10 @@ import Navbar from '../components/Navbar';
 import { WalletContextProvider } from '../utils/WalletContext';
 import { ApiContextProvider } from '../utils/ApiContext';
 import {ThemeProvider} from 'next-themes';
-import { useTheme } from 'next-themes';
 
 function AppWithContext(props: AppProps): JSX.Element {
   return (
-    <ThemeProvider attribute='class'>
+    <ThemeProvider attribute='class' defaultTheme='dark'>
       <WalletContextProvider>
         <ApiContextProvider>
           <App {...props} />
@@ -22,9 +21,6 @@ function AppWithContext(props: AppProps): JSX.Element {
 }
 
 function App({ Component, pageProps }: AppProps): JSX.Element {
-  const {setTheme} = useTheme();
-  useEffect(() => setTheme('dark'), []);
-
   return (
     <div className='min-h-screen'>
       <div className="flex flex-col h-screen py-0 dark:bg-black">
