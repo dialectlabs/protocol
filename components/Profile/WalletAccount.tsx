@@ -5,8 +5,8 @@ import useWallet from '../../utils/WalletContext';
 import useSWR from 'swr';
 
 type WalletComponentType = {
-  publicKey: string | undefined;
-  balance: number | undefined;
+  publicKey?: string | undefined;
+  balance?: number | undefined;
 }
 
 export function WalletComponent({publicKey, balance}: WalletComponentType): JSX.Element {
