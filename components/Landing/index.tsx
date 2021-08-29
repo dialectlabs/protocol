@@ -37,12 +37,12 @@ export default function Landing(): JSX.Element {
       </Head>
       <div className='flex flex-col flex-grow'>
         <h1 className="mt-24 md:mt-64 text-8xl font-crimson dark:text-gray-200">dialect</h1>
-        <p className="text-lg text-center">
+        <p className="mb-12 sm:mb-24 text-lg text-center">
           <div className='flex flex-grow justify-center'>
             <div>On-chain Solana messaging protocol. Encryption coming soon.</div>
           </div>
         </p>
-        <p className="mt-12 sm:mt-24 text-lg text-center">
+        <p className="text-lg text-center">
           <div className='flex flex-col flex-grow items-center space-y-2'>
             <div>Drop us a line.</div>
             <button
