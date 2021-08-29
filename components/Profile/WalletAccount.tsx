@@ -33,14 +33,14 @@ export function WalletComponent({copyable, publicKey, balance}: WalletComponentT
       {copyable ? (
 
         <button
-        className='text-lg flex items-center space-x-2 dark:text-gray-400'
+        className='text-md flex items-center space-x-1 text-gray-600 dark:text-gray-400'
         onClick={handleCopy}
         >
-          <p className='dark:text-gray-300'>{publicKey}</p>
+          <code className='text-black dark:text-gray-300'>{publicKey}</code>
           {copied ? (
-            <CheckIcon className='w-5 h-5 text-green-500' />
+            <div><CheckIcon className='w-4 h-4 text-green-500' /></div>
           ) : (
-            <ClipboardCopyIcon className='w-5 h-5' />
+            <div><ClipboardCopyIcon className='w-4 h-4' /></div>
           )}
         </button>
       ) : (

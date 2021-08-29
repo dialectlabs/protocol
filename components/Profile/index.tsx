@@ -53,7 +53,7 @@ export default function Profile(): JSX.Element {
   return (
     <ProtectedPage title={'Profile'}>
       <div className='flex flex-col flex-grow'>
-        <p className="text-gray-500 dark:text-gray-400 text-center">Manage your profile, message settings, &etc.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center">Manage your profile, message settings, etc.</p>
         <div className='h-12' />
 
         <div className='hidden sm:block border-t border-gray-300 dark:border-gray-700' />
