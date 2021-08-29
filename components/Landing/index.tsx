@@ -1,7 +1,9 @@
 import Head from 'next/head';
 import {CheckIcon, ClipboardCopyIcon} from '@heroicons/react/outline';
+import { PlayIcon } from '@heroicons/react/solid';
 import React, {useEffect, useState} from 'react';
 import copy from 'copy-to-clipboard';
+import Button from '../Button';
 
 export default function Landing(): JSX.Element {
   const [copied, setCopied] = useState<boolean>(false);
@@ -33,15 +35,26 @@ export default function Landing(): JSX.Element {
         <meta property="og:url" content={'dialect.to'} key="ogurl" />
         
         <meta name="twitter:card" content="summary_large_image" />
-        <meta property="og:image" content={'https://dialect-public.s3.us-west-2.amazonaws.com/dialect.png'} />
+        <meta property="og:image" content={''} />
       </Head>
       <div className='flex flex-col flex-grow'>
-        <h1 className="mt-24 md:mt-64 text-8xl font-crimson dark:text-gray-200">dialect</h1>
-        <p className="mb-12 sm:mb-24 text-lg text-center">
+        <h1 className="mt-24 md:mt-48 text-8xl font-crimson dark:text-gray-200">dialect</h1>
+        <p className="mb-8 sm:mb-14 text-lg text-center">
           <div className='flex flex-grow justify-center'>
             <div>On-chain Solana messaging protocol. Encryption coming soon.</div>
           </div>
         </p>
+        <div className='flex justify-center text-center'>
+          <a rel="noreferrer" href='https://youtu.be/yaLHR1Ivr5g' target='_blank' className='mb-8 sm:mb-16 rounded-md px-4 py-3 hover:bg-gray-200 dark:hover:bg-gray-900'>
+            <div className='flex justify-center'>
+              <div className='mb-2 p-2 rounded-full bg-gray-200 dark:bg-gray-900'>
+                <PlayIcon className='m-auto text-gray-600 dark:text-gray-200 w-12 h-12' />
+              </div>
+            </div>
+            <div className='text-lg text-gray-600 dark:text-gray-400'>Watch a demo</div>
+          </a>
+        </div>
+        
         <p className="text-lg text-center">
           <div className='flex flex-col flex-grow items-center space-y-2'>
             <div>Drop us a line.</div>
