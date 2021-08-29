@@ -82,7 +82,7 @@ export default function Navbar(): JSX.Element {
                 className="border-none bg-none"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               >
-                {theme === 'light' ? (
+                {theme === 'dark' ? (
                   <SunIcon
                     className="icon mr-4 h-5 w-5"
                     aria-hidden="true"
