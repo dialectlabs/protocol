@@ -51,7 +51,7 @@ export default function Landing(): JSX.Element {
                 <PlayIcon className='m-auto text-gray-600 dark:text-gray-200 w-12 h-12' />
               </div>
             </div>
-            <div className='text-lg text-gray-600 dark:text-gray-400'>Watch a demo</div>
+            <div className='text-lg text-gray-500 dark:text-gray-400'>Watch a demo</div>
           </a>
         </div>
         
