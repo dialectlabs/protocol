@@ -7,6 +7,7 @@ import useSWR from 'swr';
 type WalletComponentType = {
   publicKey?: string | undefined;
   balance?: number | undefined;
+  copyable?: boolean;
 }
 
 export function WalletComponent({publicKey, balance}: WalletComponentType): JSX.Element {

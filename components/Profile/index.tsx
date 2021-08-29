@@ -56,9 +56,10 @@ export default function Profile(): JSX.Element {
 
         <div className='hidden sm:block border-t border-gray-300 dark:border-gray-700' />
 
-        <div className='grid grid-cols-1 sm:grid-cols-3 pt-4 pb-16 flex'>
+        <div className='grid grid-cols-1 gap-2 sm:grid-cols-3 pt-4 pb-16 flex'>
           <div className='cols-span-1'>
             <SectionTitle title='wallet' />
+            <p className='mt-1 text-sm italic'>Your wallet public key is your address for sending and receiving messages.</p>
           </div>
           <div className='sm:hidden mb-4 border-t border-gray-300 dark:border-gray-700' />
           <div className='cols-span-1 sm:cols-span-2'>
@@ -68,10 +69,13 @@ export default function Profile(): JSX.Element {
 
         <div className='hidden sm:block border-t border-gray-300 dark:border-gray-700' />
 
-        <div className='grid grid-cols-1 sm:grid-cols-3 pt-4 pb-16 flex'>
-          <div className='cols-span-1 flex items-center space-x-3'>
-            <div><SectionTitle title='profile' /></div>
-            <div><Badge color='gray'>coming soon</Badge></div>
+        <div className='grid grid-cols-1 sm:grid-cols-3 pt-4 pb-16 flex items-start'>
+          <div className='cols-span-1 '>
+            <div className='flex items-center space-x-3'>
+              <SectionTitle title='profile' />
+              <div><Badge color='gray'>coming soon</Badge></div>
+            </div>
+            <p className='mt-1 text-sm italic'>Solana name service usernames, NFT avatars, etc.</p>
           </div>
           <div className='sm:hidden mb-4 border-t border-gray-300 dark:border-gray-700' />
           <div className='cols-span-1 sm:cols-span-2'>
@@ -81,10 +85,13 @@ export default function Profile(): JSX.Element {
 
         <div className='hidden sm:block border-t border-gray-300 dark:border-gray-700' />
         
-        <div className='grid grid-cols-1 sm:grid-cols-3 pt-4 pb-16 flex'>
-          <div className='cols-span-1 flex items-center space-x-3'>
-            <div><SectionTitle title='settings' /></div>
-            {settingsNeedsCreating && (<div><Badge>needs creating</Badge></div>)}
+        <div className='grid grid-cols-1 gap-3 sm:grid-cols-3 pt-4 pb-16 flex items-start'>
+          <div className='cols-span-1'>
+            <div className='flex space-x-3 items-center'>
+              <SectionTitle title='settings' />
+              {settingsNeedsCreating && (<div><Badge>needs creating</Badge></div>)}
+            </div>
+            <p className='mt-1 text-sm italic'>Your settings account stores information about your threads. You don&apos;t need to use this public key.</p>
           </div>
           <div className='sm:hidden mb-4 border-t border-gray-300 dark:border-gray-700' />
           <div className='cols-span-1 sm:cols-span-2'>
