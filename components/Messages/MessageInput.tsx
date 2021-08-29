@@ -1,5 +1,9 @@
 import React, { KeyboardEvent, FormEvent } from 'react';
+import useSWR from 'swr';
 import { ArrowNarrowRightIcon, ArrowSmRightIcon } from '@heroicons/react/outline';
+import useWallet from '../../utils/WalletContext';
+import useApi from '../../utils/ApiContext';
+import {ownerFetcher} from '../../api';
 
 type PropsType = {
   text: string,
@@ -10,6 +14,10 @@ type PropsType = {
 }
 
 export default function MessageInput({text, setText, onSubmit, onEnterPress, disabled}: PropsType): JSX.Element {
+  const { connection } = useApi();
+  const { wallet } = useWallet();
+  const {data} = useSWR(connection && wallet ? ['/owner', wallet, connection] : null, ownerFetcher);
+  const balance: number | undefined = data?.lamports ? data.lamports / 1e9 : undefined;
   return (
     <div className='flex flex-col px-3 pb-2'>
       <form onSubmit={onSubmit}>
@@ -30,7 +38,10 @@ export default function MessageInput({text, setText, onSubmit, onEnterPress, dis
         </div>
       </form>
       <div className='flex justify-between'>
-        <div className='text-xs pl-1'>{text.length}/280</div>
+        <div className='flex space-x-3'>
+          <div className='text-xs pl-1'>{text.length}/280</div>
+          <div className='text-xs'>⊙ {balance || '–'}</div>
+        </div>
         {!disabled && (
           <div className='flex text-xs items-center pr-1'>
             enter
