@@ -1,4 +1,4 @@
-import {CheckIcon} from '@heroicons/react/outline';
+import {CheckIcon, ArrowNarrowRightIcon} from '@heroicons/react/outline';
 import {PlusIcon} from '@heroicons/react/solid';
 import useSWR from 'swr';
 import React, { useState } from 'react';
@@ -35,10 +35,12 @@ export default function Profile(): JSX.Element {
   const settingsNeedsCreating: boolean = !loading && !data;
   
   const [isCreatingSettings, setIsCreatingSettings] = useState(false);
+  const [justCreated, setJustCreated] = useState(false);
   // TODO: Mutate on success
   useSWR(isCreatingSettings ? ['/mutate/settings', wallet, program] : null, settingsMutate, {
     onSuccess: (data) => {
       setIsCreatingSettings(false);
+      setJustCreated(true);
       mutate(data);
     },
     onError: (error) => {
@@ -99,7 +101,16 @@ export default function Profile(): JSX.Element {
           </div>
         </div>
         <div className='flex justify-end'>
-        {settingsNeedsCreating ? (
+        {justCreated ? (
+          <Button
+            onClick={() => router.push('/')}
+          >
+            <>
+              <div className='btn-txt'>Continue</div>
+              <ArrowNarrowRightIcon className='ml-2 w-5' />
+            </>
+          </Button>
+        ) : settingsNeedsCreating ? (
           <Button
             disabled={disabled}
             onClick={() => setIsCreatingSettings(true)}
