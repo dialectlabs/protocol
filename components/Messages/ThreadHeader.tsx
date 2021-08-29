@@ -18,7 +18,9 @@ export default function ThreadHeader({members, editing, input, setInput, onInput
   return (
     <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
       <div className='flex items-center space-x-2 mb-1'>
-        <div className='text-xs dark:text-gray-400'>Members – {members && members.length || 0}/8</div>
+        <div className='text-xs dark:text-gray-400'>
+          {`${members.length}${editing ? '/8' : ''} ${!editing && members.length === 1 ? 'member' : 'members'}`}
+        </div>
         <Badge color='gray' bold>
           <div className='flex space-x-1 items-center'>
             <ExclamationIcon className='w-4 h-4' />
