@@ -40,7 +40,7 @@ export default function Landing(): JSX.Element {
       <div className='flex flex-col flex-grow'>
         <h1 className="mt-24 md:mt-48 text-8xl font-crimson dark:text-gray-200">dialect</h1>
         <p className="mb-8 sm:mb-14 text-lg text-center">
-          <div className='flex flex-grow justify-center'>
+          <div className='flex justify-center'>
             <div>On-chain Solana messaging protocol. Encryption coming soon.</div>
           </div>
         </p>
@@ -56,7 +56,7 @@ export default function Landing(): JSX.Element {
         </div>
         
         <p className="text-lg text-center">
-          <div className='flex flex-col flex-grow items-center space-y-2'>
+          <div className='flex flex-col items-center space-y-2'>
             <div>Drop us a line.</div>
             <button
               className='text-sm flex items-center space-x-1 text-gray-600 dark:text-gray-400 px-3 py-1 border rounded-md border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-900'
