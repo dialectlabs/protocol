@@ -32,7 +32,7 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
   >(null);
   const [urlWallet, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
-    process.env.ENVIRONMENT as Cluster || 'localnet'
+    process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster || 'localnet'
   );
   const network: string = useMemo(() => {
     if (networkName === 'localnet') {
