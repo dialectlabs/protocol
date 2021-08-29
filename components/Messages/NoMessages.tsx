@@ -31,7 +31,7 @@ export default function NoMessages(): JSX.Element {
       </button>
       <p className="mt-6 sm:mt-12 text-lg text-center">
         <div className='flex flex-col flex-grow items-center space-y-2 text-gray-400 dark:text-gray-700'>
-          <p className='text-sm text-gray-400 dark:text-gray-700'>Say hello.</p>
+          <div className='text-sm text-gray-400 dark:text-gray-700'>Say hello</div>
           <button
             className='text-xs flex items-center space-x-1 px-3 py-1 border rounded-md border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-900'
             onClick={handleCopy}
