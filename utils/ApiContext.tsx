@@ -29,7 +29,6 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
   }, [networkName]);
   const [program, setProgram] = useState<anchor.Program | null>(null);
 
-  console.log('programs[env].programAddress', programs[networkName].programAddress);
   useEffect(() => {
     if (wallet?.publicKey && connection && networkName) {
       anchor.setProvider(new anchor.Provider(connection, wallet, anchor.Provider.defaultOptions()));

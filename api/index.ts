@@ -203,8 +203,6 @@ export async function threadsFetch(_url: string, program: anchor.Program, public
 }
 
 export async function threadsGet(program: anchor.Program, publicKeys: PublicKey[]): Promise<ThreadAccount[]> {
-  console.log('program', program);
-  console.log('process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT', process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT);
   const accountInfos = await anchor.utils.rpc.getMultipleAccounts(program.provider.connection, publicKeys);
   const threads = (await Promise.all(accountInfos.map(async (accountInfo, idx) => {
     // TODO: Code block ported from anchor. Use there.

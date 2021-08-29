@@ -13,7 +13,7 @@ import {
   XIcon,
 } from '@heroicons/react/outline';
 import { PlusIcon } from '@heroicons/react/solid';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import useWallet from '../../utils/WalletContext';
 import { useRouter } from 'next/router';
 import { display } from '../../utils';
@@ -55,8 +55,11 @@ export default function Navbar(): JSX.Element {
     onDisconnect: onWalletDisconnect,
   } = useWallet();
   const {theme, setTheme} = useTheme();
-  console.log('networkName', networkName);
-  console.log('process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT', process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT);
+  const [isLight, setIsLight] = useState(false);
+  // needed bc raw use of theme isn't giving the right icon below
+  useEffect(() => {
+    setIsLight(theme === 'light');
+  }, [theme]);
   
   const displayPubkey = wallet?.publicKey ? display(wallet.publicKey) : undefined;
   return (
@@ -82,7 +85,7 @@ export default function Navbar(): JSX.Element {
                 className="border-none bg-none"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               >
-                {theme === 'dark' ? (
+                {!isLight ? (
                   <SunIcon
                     className="icon mr-4 h-5 w-5"
                     aria-hidden="true"
