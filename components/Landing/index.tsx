@@ -57,9 +57,9 @@ export default function Landing(): JSX.Element {
         
         <p className="text-lg text-center">
           <div className='flex flex-col items-center space-y-2'>
-            <div>Drop us a line.</div>
+            <div className='text-lg'>Drop us a line</div>
             <button
-              className='text-sm flex items-center space-x-1 text-gray-600 dark:text-gray-400 px-3 py-1 border rounded-md border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-900'
+              className='text-sm flex items-center space-x-1 text-gray-600 dark:text-gray-400 px-3 py-1 border rounded-md border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 break-all'
               onClick={handleCopy}
             >
               <code className='text-black dark:text-gray-300'>{publicKey}</code>
