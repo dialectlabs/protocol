@@ -62,7 +62,7 @@ export default function Thread(): JSX.Element {
             <UserIcon className='w-7 h-7 bg-gray-200 dark:bg-gray-700 p-2 rounded-full'/>
             <div className={`flex flex-col ${message.message.owner.toString() === wallet?.publicKey.toString() && 'items-end'}`}>
               <div className='text-xs opacity-50'>{message.message.owner.toString() === wallet?.publicKey.toString() ? 'You' : display(message.message.owner)}</div>
-              <div className={`flex break-all space-x-2 items-center text-sm text-gray-800 dark:text-gray-200 ${message.message.owner.toString() === wallet?.publicKey.toString() && 'text-right'}`}>
+              <div className={`flex break-word space-x-2 items-center text-sm text-gray-800 dark:text-gray-200 ${message.message.owner.toString() === wallet?.publicKey.toString() ? 'text-right ml-8' : 'mr-8'}`}>
                 {message.message.text}
               </div>
             </div>
