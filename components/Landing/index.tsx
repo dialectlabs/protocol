@@ -45,7 +45,7 @@ export default function Landing(): JSX.Element {
           </div>
         </p>
         <div className='flex justify-center text-center'>
-          <a rel="noreferrer" href='https://youtu.be/yaLHR1Ivr5g' target='_blank' className='mb-8 sm:mb-16 rounded-md px-4 py-3 hover:bg-gray-200 dark:hover:bg-gray-900'>
+          <a rel="noreferrer" href='https://youtu.be/PePalNLsU-k' target='_blank' className='mb-8 sm:mb-16 rounded-md px-4 py-3 hover:bg-gray-200 dark:hover:bg-gray-900'>
             <div className='flex justify-center'>
               <div className='mb-2 p-2 rounded-full bg-gray-200 dark:bg-gray-900'>
                 <PlayIcon className='m-auto text-gray-600 dark:text-gray-200 w-12 h-12' />
