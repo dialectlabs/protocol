@@ -12,9 +12,10 @@ type PropsType = {
   status?: string | null,
   setInput?: (s: string) => void,
   onInputSubmit?: (event: FormEvent<HTMLFormElement>) => void,
+  onMemberDelete?: (idx: number) => void,
 };
 
-export default function ThreadHeader({members, editing, input, setInput, onInputSubmit, status}: PropsType): JSX.Element {
+export default function ThreadHeader({members, editing, input, setInput, onInputSubmit, status, onMemberDelete}: PropsType): JSX.Element {
   return (
     <div className='px-3 py-2 border-b border-gray-200 dark:border-gray-800'>
       <div className='flex items-center space-x-2 mb-1'>
@@ -34,6 +35,8 @@ export default function ThreadHeader({members, editing, input, setInput, onInput
             key={index}
             index={index}
             member={member}
+            deletable={editing}
+            onDelete={onMemberDelete}
           />
         ))}
         {editing && members.length < 8 && (
@@ -50,7 +53,7 @@ export default function ThreadHeader({members, editing, input, setInput, onInput
                 <span className="absolute inset-y-0 right-0 flex items-center pr-2">
                   {(status === 'timeout' || status === 'fetching') ? (
                     null
-                  ) : status === 'invalid' || status === 'duplicate' ? (
+                  ) : status === 'invalid' || status === 'duplicate' || status === 'noAccount' ? (
                     <XIcon className='w-4 h-4 mr-0 hover:cursor-pointer' onClick={() => setInput && setInput('')}/>
                   ) : status === 'valid' ? (
                     <div className='w-2 h-2 rounded-full bg-green-500 dark:bg-green-600' />
@@ -65,6 +68,7 @@ export default function ThreadHeader({members, editing, input, setInput, onInput
                     status === 'valid' ? 'Valid address' :
                     status === 'invalid' ? 'Invalid address' :
                     status === 'duplicate' ? 'Duplicate address' :
+                    status === 'noAccount' ? 'User has not signed up. Automated invites coming soon.' :
                     null
                   }
                 </div>

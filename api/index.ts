@@ -34,6 +34,23 @@ export async function ownerFetcher(_url: string, wallet: Wallet_, connection: Co
   return await accountInfoGet(connection, wallet.publicKey);
 }
 
+export async function validMemberFetch(_url: string, program: anchor.Program, publicKeyStr: string): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  const publicKey = new anchor.web3.PublicKey(publicKeyStr);
+  let accountInfo: anchor.web3.AccountInfo<Buffer> | null = null;
+  // try {
+  accountInfo = await program.provider.connection.getAccountInfo(publicKey);
+  if (!accountInfo) {
+    throw new Error('Account not found');
+  }
+
+  const [settingsAccount,] = await settingsProgramAddressGet(program, publicKey);
+  const settingsAccountInfo = await program.provider.connection.getAccountInfo(settingsAccount);
+  if (!settingsAccountInfo) {
+    throw new Error('Account has not signed up');
+  }
+  return accountInfo;
+}
+
 /*
 Settings
 */

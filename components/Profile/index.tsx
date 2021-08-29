@@ -77,7 +77,7 @@ export default function Profile(): JSX.Element {
               <SectionTitle title='profile' />
               <div><Badge color='gray'>coming soon</Badge></div>
             </div>
-            <p className='mt-1 text-sm italic'>Solana name service usernames, NFT avatars, etc.</p>
+            <p className='mt-1 text-sm italic'>Solana name service handles, NFT avatars, etc.</p>
           </div>
           <div className='sm:hidden sm:col-span-2 mb-4 border-t border-gray-300 dark:border-gray-700' />
           <div className='col-span-1 sm:col-span-2'>

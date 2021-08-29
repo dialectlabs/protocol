@@ -6,7 +6,7 @@ import { ArrowNarrowRightIcon, ArrowSmRightIcon, XIcon } from '@heroicons/react/
 import MessageMember from './MessageMember';
 import useWallet from '../../utils/WalletContext';
 import { display } from '../../utils';
-import { accountInfoFetch, newGroupMutate, messageMutate, threadFetch, threadMutate, userThreadMutate } from '../../api';
+import { validMemberFetch, newGroupMutate, messageMutate, threadFetch, threadMutate, userThreadMutate } from '../../api';
 import useApi from '../../utils/ApiContext';
 import { PublicKey } from '@solana/web3.js';
 import router from 'next/router';
@@ -20,10 +20,11 @@ type Status = 'fetching' |
               'valid' | 
               'invalid' | 
               'duplicate' | 
+              'noAccount' |
               null;
 
 export default function NewMessage(): JSX.Element {
-  const { connection, program } = useApi();
+  const { program } = useApi();
   const { wallet } = useWallet();
   const [members, setMembers] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>(null);
@@ -39,11 +40,22 @@ export default function NewMessage(): JSX.Element {
     }
   }, [wallet]);
   useSWR(
-    status === 'fetching' ? ['/accountInfo', connection, input] : null,
-    accountInfoFetch,
+    status === 'fetching' ? ['/member', program, input] : null,
+    validMemberFetch,
     {
-      onSuccess: () => setStatus('valid'),
-      onError: () => setStatus('invalid'),
+      onSuccess: () => {
+        setStatus('valid');
+      },
+      onError: (e) => {
+        switch (e.message) {
+          case 'Account has not signed up':
+            setStatus('noAccount');
+            break;
+          default:
+            setStatus('invalid');
+            break;  
+        }
+      },
     }
   ); 
   useEffect(() => {
@@ -66,7 +78,7 @@ export default function NewMessage(): JSX.Element {
     setMembers([...members]);
     setInput('');
   };
-  const onDelete = (idx: number) => {
+  const onMemberDelete = (idx: number) => {
     members.splice(idx, 1);
     setMembers([...members]);
   };
@@ -102,6 +114,7 @@ export default function NewMessage(): JSX.Element {
         setInput={setInput}
         onInputSubmit={onSubmit}
         status={status}
+        onMemberDelete={onMemberDelete}
       />
       <MessageInput
         text={text}
