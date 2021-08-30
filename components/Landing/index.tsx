@@ -38,7 +38,7 @@ export default function Landing(): JSX.Element {
         <meta property="og:image" content={''} />
       </Head>
       <div className='flex flex-col flex-grow'>
-        <h1 className="mt-24 md:mt-48 text-8xl font-crimson dark:text-gray-200">dialect</h1>
+        <h1 className="mt-12 sm:mt-36 text-5xl sm:text-8xl font-crimson dark:text-gray-200">dialect</h1>
         <p className="mb-8 sm:mb-14 text-lg text-center">
           <div className='flex justify-center'>
             <div>On-chain Solana messaging protocol. Encryption coming soon.</div>
@@ -55,7 +55,7 @@ export default function Landing(): JSX.Element {
           </a>
         </div>
         
-        <p className="text-lg text-center">
+        <p className="text-lg text-center mb-24 sm:mb-36">
           <div className='flex flex-col items-center space-y-2'>
             <div className='text-lg'>Drop us a line</div>
             <button
