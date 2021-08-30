@@ -7,7 +7,7 @@ import Button from '../Button';
 
 export default function Landing(): JSX.Element {
   const [copied, setCopied] = useState<boolean>(false);
-  const publicKey = 'D14LECT8t6ya4s9zk6Xk1w79rSBtCQXhqN9J5j4RGoY9';
+  const publicKey = 'D1ALECTfeCZt9bAbPWtJk7ntv24vDYGPmyS7swp7DY5h';
   useEffect(() => {
     if (copied) {
       setTimeout(() => {
