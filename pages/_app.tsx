@@ -28,14 +28,14 @@ function App({ Component, pageProps }: AppProps): JSX.Element {
     <div className='min-h-screen'>
       <div className="flex flex-col h-screen py-0 dark:bg-black">
         <main className="relative flex flex-col max-w-7xl mx-auto w-full flex-1 px-4 sm:px-6 lg:px-8 h-screen">
-          {/* {networkName === 'devnet' && (
-            <div className='z-10 absolute top-0 left-1/2 transform -translate-x-1/2 flex justify-center'>
+          {networkName === 'devnet' && (
+            <div className='z-10 fixed top-0 left-1/2 transform -translate-x-1/2 flex justify-center'>
               <div className='flex items-center text-xs text-center text-white bg-red-700 dark:bg-red-600 px-2 py-1 rounded-b-md border border-white dark:border-black'>
-                <ExclamationIcon className='w-4 h-4' />
-                devnet issues, degraded functionality
+                {/* <ExclamationIcon className='w-4 h-4' /> */}
+                devnet
               </div>
             </div>
-          )} */}
+          )}
           <Navbar />
           <Component {...pageProps} />
           <Footer />
