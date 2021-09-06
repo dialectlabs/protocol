@@ -9,7 +9,7 @@ import { settingsFetch, ThreadAccount, threadFetch, threadsFetch } from '../../a
 
 export default function MessagesList(): JSX.Element {
   const router = useRouter();
-  const {threadId} = router.query;
+  const { threadId } = router.query;
   const { wallet } = useWallet();
   const { connection, program } = useApi();
   const [publicKeys, setPublicKeys] = useState<string[]>([]);
@@ -36,6 +36,9 @@ export default function MessagesList(): JSX.Element {
       program,
       publicKeys
     ] : null, threadsFetch, {
+    onError: (err) => {
+      console.error('err', err);
+    },
     refreshInterval: 500,
   });
   return (

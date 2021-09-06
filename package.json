@@ -1,12 +1,14 @@
 {
-  "name": "dialect",
+  "name": "@dialect/web3",
   "version": "0.0.1",
   "description": "",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/cbosborn/dialect"
+    "url": "https://github.com/dialectlabs/protcol"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
