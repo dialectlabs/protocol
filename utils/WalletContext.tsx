@@ -77,6 +77,8 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
   );
 };
 
-export default function useWallet(): ValueType {
+export function useWallet(): ValueType {
   return useContext(WalletContext) as ValueType;
 }
+
+export default useWallet;

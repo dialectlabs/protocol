@@ -26,7 +26,7 @@ export const getPublicKey = (wallet: Wallet | null | undefined, abbreviate = fal
 /**
  * Wallet interface for objects that can be used to sign provider transactions. Copied from https://github.com/project-serum/anchor.
  */
- interface WalletInterface {
+interface WalletInterface {
   signTransaction(tx: Transaction): Promise<Transaction>;
   signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
   publicKey: PublicKey;
