@@ -7,8 +7,7 @@
     "type": "git",
     "url": "https://github.com/dialectlabs/protcol"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.ts",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -32,16 +31,16 @@
     "mocha": "^9.0.3",
     "next": "11.0.1",
     "next-themes": "^0.0.15",
+    "swr": "^0.5.6",
     "react": "17.0.2",
     "react-dom": "17.0.2",
-    "swr": "^0.5.6"
+    "@types/react": "17.0.16"
   },
   "devDependencies": {
     "@types/bs58": "^4.0.1",
     "@types/chai": "^4.2.21",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^9.0.0",
-    "@types/react": "17.0.16",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "autoprefixer": "^10.2.6",
     "eslint": "7.32.0",
@@ -52,6 +51,8 @@
     "ts-mocha": "^8.0.0",
     "ts-node": "^10.2.0",
     "typescript": "^4.3.5"
+  },
+  "peerDependencies": {
   },
   "browser": {
     "fs": false,

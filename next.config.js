@@ -10,6 +10,10 @@ module.exports = {
       path: false,
       os: false
     };
+    config.externals = {
+      'react': 'react',
+      'react-dom': 'react-dom',
+    };
     return config;
   },
 };
