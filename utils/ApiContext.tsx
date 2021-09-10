@@ -46,6 +46,8 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
   );
 };
 
-export default function useApi(): ValueType {
+export function useApi(): ValueType {
     return useContext(ApiContext) as ValueType;
 }
+
+export default useApi;
