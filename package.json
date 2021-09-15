@@ -3,11 +3,12 @@
   "version": "0.0.1",
   "description": "",
   "private": true,
+  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dialectlabs/protcol"
+    "url": "https://github.com/dialectlabs/protocol"
   },
-  "main": "./index.ts",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
