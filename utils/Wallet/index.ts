@@ -7,6 +7,7 @@ type InjectedProvider = { postMessage: (params: unknown) => void };
 
 // const MOCK_WALLET_PK = process.env.MOCK_WALLET_PK;
 const MOCK_WALLET_PK = 'GTkEx4vdnMfLc8uDxGEbJsxtw8k5pcxtLwHzSMbL7bU1';
+// const MOCK_WALLET_PK = null;
 export default class Wallet extends EventEmitter {
   private _providerUrl: URL | undefined;
   private _injectedProvider?: InjectedProvider;
@@ -49,12 +50,6 @@ export default class Wallet extends EventEmitter {
       error?: string;
     }>
   ): void => {
-    if (MOCK_WALLET_PK) {
-      const newPublicKey = new PublicKey(MOCK_WALLET_PK);
-      this._publicKey = newPublicKey;
-      this.emit('connect', this._publicKey);
-      return;
-    }
     if (
       (this._injectedProvider && e.source === window) ||
       (e.origin === this._providerUrl?.origin && e.source === this._popup)
@@ -86,6 +81,12 @@ export default class Wallet extends EventEmitter {
   };
 
   private handleConnect() {
+    if (MOCK_WALLET_PK) {
+      const newPublicKey = new PublicKey(MOCK_WALLET_PK);
+      this._publicKey = newPublicKey;
+      this.emit('connect', this._publicKey);
+      return;
+    }
     if (!this._handlerAdded) {
       this._handlerAdded = true;
       window.addEventListener('message', this.handleMessage);
