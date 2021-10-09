@@ -170,7 +170,7 @@ pub struct MessageAccount {
     pub owner: Pubkey, // sender
     pub text: String,  // TODO: use [u8; 280]
     pub idx: u32,      // not sure we need this
-    pub encrypted : bool,
+    pub encrypted: bool,
 }
 
 /*
