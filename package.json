@@ -27,32 +27,32 @@
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "copy-to-clipboard": "^3.3.1",
+    "ed2curve": "0.3.0",
     "js-sha256": "^0.9.0",
     "mocha": "^9.0.3",
     "next": "11.0.1",
     "next-themes": "^0.0.15",
-    "swr": "^0.5.6"
+    "swr": "^0.5.6",
+    "tweetnacl": "1.0.3"
   },
   "devDependencies": {
     "@types/bs58": "^4.0.1",
     "@types/chai": "^4.2.21",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^9.0.0",
+    "@types/react": "17.0.16",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "autoprefixer": "^10.2.6",
     "eslint": "7.32.0",
     "eslint-config-next": "11.0.1",
     "eslint-plugin-react": "^7.24.0",
     "postcss": "^8.3.5",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
     "tailwindcss": "^2.2.4",
     "ts-mocha": "^8.0.0",
     "ts-node": "^10.2.0",
-    "typescript": "^4.3.5",
-    "react": "file:../dialect/node_modules/react",
-    "react-dom": "file:../dialect/node_modules/react-dom",
-    "@types/react": "file:/../dialect/node_modules/@types/react"
-  },
-  "peerDependencies": {
+    "typescript": "^4.3.5"
   },
   "browser": {
     "fs": false,
