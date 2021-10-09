@@ -3,6 +3,10 @@ import * as anchor from '@project-serum/anchor';
 import { sha256 } from 'js-sha256';
 import {Wallet_, sleep} from '../utils';
 
+// @ts-ignore
+import ed2curve from 'ed2curve'; 
+import nacl from 'tweetnacl';
+
 // TODO: Ported from anchor. Use there.
 // Calculates unique 8 byte discriminator prepended to all anchor state accounts.
 // Calculates unique 8 byte discriminator prepended to all anchor accounts.
@@ -304,16 +308,71 @@ export async function messageMutate(
   return await messageCreate(program, thread, text, sender);
 }
 
+function getOtherPublicKey(members : ThreadMember[], key : PublicKey) : PublicKey {
+  return members.filter((member) => member.key !== key)[0].key;
+}
+
+function getMessageEncryptionNonce(messagepk : PublicKey) : Uint8Array {
+  return new Uint8Array(messagepk.toBuffer()).slice(0, 24);
+}
+
+const IN_NODE =
+  typeof process !== "undefined" &&
+  process.release &&
+  process.release.name === "node";
+
+export let base64Encode : (buffer : Uint8Array) => string; 
+export let base64Decode : (str : string) => Uint8Array;
+if(IN_NODE){
+  base64Encode = function(buffer : Uint8Array) : string {
+    return Buffer.from(buffer).toString('base64');
+  }
+  base64Decode = function(str : string) : Uint8Array {
+    return new Uint8Array(Buffer.from(str, 'base64'));
+  }
+  
+} else {
+  base64Encode = function(buffer : Uint8Array) : string {
+    // @ts-ignore
+    return btoa(String.fromCharCode.apply(null, buffer));
+  }
+
+  base64Decode = function(str : string ) : Uint8Array {
+      return new Uint8Array(atob(str).split('').map(function (c) { return c.charCodeAt(0); }));
+  }
+}
+
 export async function messageCreate(
   program: anchor.Program,
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
+  encrypted: boolean = false,
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(program, thread.publicKey, (thread.thread.messageIdx + 1).toString());
+  
+  let textBuffer = new TextEncoder().encode(text);
+  if(encrypted){
+    if(thread.thread.members.length !== 2){
+      throw new Error("Can only encrypt messages in threads with two members.");
+    }
+    if(!sender){
+      throw new Error("Sender must be provided to encrypt messages.");
+    }
+    
+    const targetPublicKey = getOtherPublicKey(thread.thread.members, sender.publicKey);
+    // Encrypt message
+    const encryptionNonce = getMessageEncryptionNonce(messagepk);
+    textBuffer = encryptMessage(textBuffer, sender, targetPublicKey, encryptionNonce);
+  }
+  
+
+  const text64Encoded = base64Encode(textBuffer);
+
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
-    text,
+    text64Encoded,
+    encrypted,
     {
       accounts: {
         sender: sender?.publicKey || program.provider.wallet.publicKey,
@@ -343,6 +402,7 @@ export async function messagesGet(
   program: anchor.Program,
   thread: ThreadAccount,
   batchSize?: number | undefined,
+  receiver?: anchor.web3.Keypair,
 ): Promise<MessageAccount[]> {
   // TODO: Protect against invalid batch size
   if (!batchSize) {
@@ -356,18 +416,33 @@ export async function messagesGet(
     const [messagepk,] = await messageProgramAddressGet(program, thread.publicKey, idx.toString());
     return messagepk;
   }));
-  const accountInfos = await anchor.utils.rpc.getMultipleAccounts(program.provider.connection, publicKeys);
-  const messages = (await Promise.all(accountInfos.map(async (accountInfo, idx) => {
+  const messageAccountInfos = await anchor.utils.rpc.getMultipleAccounts(program.provider.connection, publicKeys);
+  const messages = (await Promise.all(messageAccountInfos.map(async (messageAccountInfo, idx) => {
     // TODO: Code block ported from anchor. Use there.
-    if (accountInfo === null) {
+    if (messageAccountInfo === null) {
       throw new Error(`Account does not exist ${publicKeys[idx].toString()}`);
     }
     const discriminator = await accountDiscriminator('MessageAccount');
-    if (discriminator.compare(accountInfo.account.data.slice(0, 8))) {
+    if (discriminator.compare(messageAccountInfo.account.data.slice(0, 8))) {
       throw new Error('Invalid account discriminator');
     }
 
-    return {...accountInfo.account, publicKey: publicKeys[idx], message: program.account.messageAccount.coder.accounts.decode('MessageAccount', accountInfo.account.data)} as MessageAccount;
+    let message = program.account.messageAccount.coder.accounts.decode('MessageAccount', messageAccountInfo.account.data);
+    let messageBuffer = base64Decode(message.text);
+    if(message.encrypted && receiver){
+      if(thread.thread.members.length !== 2){
+        throw new Error("Can only decrypt messages in threads with two members.");
+      }
+      messageAccountInfo.publicKey;
+      const sourcePublicKey = getOtherPublicKey(thread.thread.members, receiver.publicKey);
+      const encryptionNonce = getMessageEncryptionNonce(messageAccountInfo.publicKey);
+      messageBuffer = decryptMessage(messageBuffer, receiver, sourcePublicKey, encryptionNonce)!;
+      if(!messageBuffer){
+        throw new Error("Failed to decrypt");
+      }
+    }
+    message.text = new TextDecoder().decode(messageBuffer);
+    return {...messageAccountInfo.account, publicKey: publicKeys[idx], message } as MessageAccount;
   })));
   return messages.reverse();
 }
@@ -412,3 +487,22 @@ async function waitForFinality(
   }
   return transaction;
 }
+
+// TODO: instead use separate diffie-helman key with public key signed by the RSA private key.
+export function encryptMessage(
+  msg: Uint8Array,
+  sAccount: anchor.web3.Keypair,
+  rPublicKey: PublicKey,
+  nonce: Uint8Array,
+): Uint8Array {
+  const dhKeys = ed2curve.convertKeyPair({ publicKey: sAccount.publicKey.toBuffer(), secretKey: sAccount.secretKey });
+  const dhrPk = ed2curve.convertPublicKey(rPublicKey);
+  return nacl.box(msg, nonce, dhrPk, dhKeys.secretKey);
+}
+
+export function decryptMessage(msg: Uint8Array, account: anchor.web3.Keypair, fromPk: PublicKey, nonce: Uint8Array): Uint8Array | null {
+  const dhKeys = ed2curve.convertKeyPair({ publicKey: account.publicKey.toBuffer(), secretKey: account.secretKey });
+  const dhrPk = ed2curve.convertPublicKey(fromPk);
+  return nacl.box.open(msg, nonce, dhrPk, dhKeys.secretKey);
+}
+

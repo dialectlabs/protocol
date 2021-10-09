@@ -11,6 +11,10 @@ import {
   settingsGet,
   threadGet,
   settingsCreate,
+  base64Encode,
+  base64Decode,
+  encryptMessage,
+  decryptMessage,
 } from '../api';
 
 chai.use(chaiAsPromised);
@@ -111,6 +115,28 @@ describe('test threads', () => {
   });
 });
 
+describe('b64 encode', () => {
+  it('encode-decode-inverse', async () => {
+    const data = new Uint8Array([1,2,3,4,5,6,7,7,8]);
+    let encoded = base64Encode(data);
+    let decoded = base64Decode(encoded);
+    assert.strictEqual(decoded.constructor.name, data.constructor.name);
+    assert.strictEqual(data.toString(), decoded.toString());
+  });
+});
+
+describe('encrypt-decrypt', () => {
+  it('encode-decode-inverse', async () => {
+    const text = "Hello world!";
+    const nonce = new Uint8Array(Array.from({length : 24}, (v, idx) => idx));
+    const data = new TextEncoder().encode(text);
+    const encrypted = encryptMessage(data,  PROGRAM.provider.wallet.payer, newkp.publicKey, nonce);
+    const decrypted = decryptMessage(encrypted,  newkp, PROGRAM.provider.wallet.publicKey, nonce);
+    const result = new TextDecoder().decode(decrypted!);
+    assert.strictEqual(text, result);
+  });
+});
+
 describe('test messages', () => {
   it('sends a message from alice to bob', async () => {
     let threadAccount = await threadGet(
@@ -125,7 +151,26 @@ describe('test messages', () => {
     }
     const messages = await messagesGet(PROGRAM, threadAccount, n);
     for (let i = 0; i < n; i++) {
-      assert.ok(messages[i].message.text === 'h'.repeat(n - i - 1));
+      assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
+    }
+  });
+});
+
+describe('test encrypted messages', () => {
+  it('sends a message from alice to bob', async () => {
+    let threadAccount = await threadGet(
+      PROGRAM,
+      threadpk,
+    );
+    const n = 5;
+    for (let i = 0; i < n; i++) { 
+      const text = 'h'.repeat(i);
+      await messageCreate(PROGRAM, threadAccount, text, PROGRAM.provider.wallet.payer, true);
+      threadAccount = await threadGet(PROGRAM, threadpk);
+    }
+    const messages = await messagesGet(PROGRAM, threadAccount, n, newkp);
+    for (let i = 0; i < n; i++) {
+      assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
     }
   });
 });
