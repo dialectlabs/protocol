@@ -5,6 +5,9 @@ import bs58 from 'bs58';
 
 type InjectedProvider = { postMessage: (params: unknown) => void };
 
+// const MOCK_WALLET_PK = process.env.MOCK_WALLET_PK;
+const MOCK_WALLET_PK = 'GTkEx4vdnMfLc8uDxGEbJsxtw8k5pcxtLwHzSMbL7bU1';
+// const MOCK_WALLET_PK = null;
 export default class Wallet extends EventEmitter {
   private _providerUrl: URL | undefined;
   private _injectedProvider?: InjectedProvider;
@@ -30,7 +33,7 @@ export default class Wallet extends EventEmitter {
       }).toString();
     } else {
       throw new Error(
-        'provider parameter must be an injected provider or a URL string.',
+        'provider parameter must be an injected provider or a URL string.'
       );
     }
   }
@@ -45,7 +48,7 @@ export default class Wallet extends EventEmitter {
       };
       result?: string;
       error?: string;
-    }>,
+    }>
   ): void => {
     if (
       (this._injectedProvider && e.source === window) ||
@@ -78,6 +81,12 @@ export default class Wallet extends EventEmitter {
   };
 
   private handleConnect() {
+    if (MOCK_WALLET_PK) {
+      const newPublicKey = new PublicKey(MOCK_WALLET_PK);
+      this._publicKey = newPublicKey;
+      this.emit('connect', this._publicKey);
+      return;
+    }
     if (!this._handlerAdded) {
       this._handlerAdded = true;
       window.addEventListener('message', this.handleMessage);
@@ -89,12 +98,14 @@ export default class Wallet extends EventEmitter {
         resolve();
       });
     } else {
-      window.name = 'parent';
-      this._popup = window.open(
-        this._providerUrl?.toString(),
-        '_blank',
-        'location,resizable,width=460,height=675',
-      );
+      if (!MOCK_WALLET_PK) {
+        window.name = 'parent';
+        this._popup = window.open(
+          this._providerUrl?.toString(),
+          '_blank',
+          'location,resizable,width=460,height=675'
+        );
+      }
       return new Promise((resolve) => {
         this.once('connect', resolve);
       });
@@ -143,7 +154,7 @@ export default class Wallet extends EventEmitter {
             method,
             params,
           },
-          this._providerUrl?.origin ?? '',
+          this._providerUrl?.origin ?? ''
         );
 
         if (!this.autoApprove) {
@@ -188,7 +199,7 @@ export default class Wallet extends EventEmitter {
 
   async sign(
     data: Uint8Array,
-    display: unknown,
+    display: unknown
   ): Promise<{
     signature: Buffer;
     publicKey: PublicKey;
@@ -220,7 +231,7 @@ export default class Wallet extends EventEmitter {
   }
 
   async signAllTransactions(
-    transactions: Transaction[],
+    transactions: Transaction[]
   ): Promise<Transaction[]> {
     const response = (await this.sendRequest('signAllTransactions', {
       messages: transactions.map((tx) => bs58.encode(tx.serializeMessage())),
