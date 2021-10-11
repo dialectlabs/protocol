@@ -302,7 +302,6 @@ export async function messageCreate(
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
     text,
-    false,
     {
       accounts: {
         sender: sender?.publicKey || program.provider.wallet.publicKey,
