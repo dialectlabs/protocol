@@ -4,15 +4,13 @@
   "description": "",
   "private": true,
   "module": "./dist/index.js",
-  "main": "./dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/dialectlabs/protocol"
   },
+  "main": "./lib/es/index.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "rm -rf lib && tsc",
     "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
     "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
     "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}"
@@ -39,22 +37,20 @@
     "@types/chai": "^4.2.21",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^9.0.0",
+    "@types/react": "file:/../dialect/node_modules/@types/react",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "autoprefixer": "^10.2.6",
     "eslint": "7.32.0",
     "eslint-config-next": "11.0.1",
     "eslint-plugin-react": "^7.24.0",
     "postcss": "^8.3.5",
-    "tailwindcss": "^2.2.4",
-    "ts-mocha": "^8.0.0",
-    "ts-node": "^10.2.0",
-    "typescript": "^4.3.5",
     "react": "file:../dialect/node_modules/react",
     "react-dom": "file:../dialect/node_modules/react-dom",
-    "@types/react": "file:/../dialect/node_modules/@types/react"
+    "tailwindcss": "^2.2.4",
+    "ts-mocha": "^8.0.0",
+    "ts-node": "^10.2.0"
   },
-  "peerDependencies": {
-  },
+  "peerDependencies": {},
   "browser": {
     "fs": false,
     "path": false,

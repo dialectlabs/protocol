@@ -16,7 +16,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "outDir": "./dist",
+    "outDir": "lib/es",
     "noEmit": false
   },
   "include": [
