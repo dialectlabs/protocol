@@ -11,6 +11,10 @@ import {
   settingsGet,
   threadGet,
   settingsCreate,
+  base64Encode,
+  base64Decode,
+  encryptMessage,
+  decryptMessage,
 } from '../api';
 
 chai.use(chaiAsPromised);
@@ -23,23 +27,38 @@ let threadpk: PublicKey;
 const newkp = anchor.web3.Keypair.generate(); // invitee
 
 const transferTransaction = new Transaction();
-transferTransaction.add(SystemProgram.transfer({
-  fromPubkey: PROGRAM.provider.wallet.publicKey,
-  toPubkey: newkp.publicKey,
-  lamports: 1000000000
-}));
+transferTransaction.add(
+  SystemProgram.transfer({
+    fromPubkey: PROGRAM.provider.wallet.publicKey,
+    toPubkey: newkp.publicKey,
+    lamports: 1000000000,
+  })
+);
 
 describe('test settings', () => {
   it('creates a settings account for the user', async () => {
-    const settingsAccount = await settingsCreate(PROGRAM.provider.wallet, PROGRAM);
-    const gottenSettingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
+    const settingsAccount = await settingsCreate(
+      PROGRAM.provider.wallet,
+      PROGRAM
+    );
+    const gottenSettingsAccount = await settingsGet(
+      PROGRAM,
+      PROGRAM.provider.connection,
+      PROGRAM.provider.wallet.publicKey
+    );
     assert.ok(
-      settingsAccount.settings.owner.toString() === 
-      PROGRAM.provider.wallet.publicKey.toString()
+      settingsAccount.settings.owner.toString() ===
+        PROGRAM.provider.wallet.publicKey.toString()
     );
     assert.ok(settingsAccount.settings.threads.length === 0);
-    assert.ok(settingsAccount.publicKey.toString() == gottenSettingsAccount.publicKey.toString());
-    assert.ok(settingsAccount.settings.threads.length === gottenSettingsAccount.settings.threads.length);
+    assert.ok(
+      settingsAccount.publicKey.toString() ==
+        gottenSettingsAccount.publicKey.toString()
+    );
+    assert.ok(
+      settingsAccount.settings.threads.length ===
+        gottenSettingsAccount.settings.threads.length
+    );
   });
 
   it('should fail to create a settings account a second time for the user', async () => {
@@ -50,15 +69,17 @@ describe('test settings', () => {
 
   it('should fail to create a settings account for the wrong user', async () => {
     const newkp = anchor.web3.Keypair.generate(); // new user
-    chai.expect(
-      settingsCreate(
-        PROGRAM.provider.wallet,
-        PROGRAM,
-        newkp.publicKey,
-        [newkp],
-        [await PROGRAM.account.settingsAccount.createInstruction(newkp)], // TODO: is this failing bc newkp is not for the settingsAccount?
+    chai
+      .expect(
+        settingsCreate(
+          PROGRAM.provider.wallet,
+          PROGRAM,
+          newkp.publicKey,
+          [newkp],
+          [await PROGRAM.account.settingsAccount.createInstruction(newkp)] // TODO: is this failing bc newkp is not for the settingsAccount?
+        )
       )
-    ).to.eventually.be.rejectedWith(Error);  // 0x92 (A seeds constraint was violated)
+      .to.eventually.be.rejectedWith(Error); // 0x92 (A seeds constraint was violated)
   });
 });
 
@@ -69,17 +90,27 @@ describe('test threads', () => {
     const threadAccount = await threadCreate(PROGRAM, PROGRAM.provider.wallet);
     threadpk = threadAccount.publicKey;
     // TODO: check if invited users' settings accounts exist. if not, make them on their behalf
-    const settingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, PROGRAM.provider.wallet.publicKey);
-    assert.ok(settingsAccount.settings.threads.length === 1);
-    assert.ok(settingsAccount.settings.threads[0].key.toString() === threadAccount.publicKey.toString());
-
-    const gottenThreadAccount = await threadGet(
+    const settingsAccount = await settingsGet(
       PROGRAM,
-      threadpk,
+      PROGRAM.provider.connection,
+      PROGRAM.provider.wallet.publicKey
     );
+    assert.ok(settingsAccount.settings.threads.length === 1);
+    assert.ok(
+      settingsAccount.settings.threads[0].key.toString() ===
+        threadAccount.publicKey.toString()
+    );
+
+    const gottenThreadAccount = await threadGet(PROGRAM, threadpk);
     assert.ok(threadAccount.thread.members.length === 1);
-    assert.ok(threadAccount.thread.members[0].key.toString() === PROGRAM.provider.wallet.publicKey.toString());
-    assert.ok(threadAccount.publicKey.toString() === gottenThreadAccount.publicKey.toString());
+    assert.ok(
+      threadAccount.thread.members[0].key.toString() ===
+        PROGRAM.provider.wallet.publicKey.toString()
+    );
+    assert.ok(
+      threadAccount.publicKey.toString() ===
+        gottenThreadAccount.publicKey.toString()
+    );
   });
 
   it('adds another user to the thread', async () => {
@@ -88,44 +119,98 @@ describe('test threads', () => {
       PROGRAM.provider.wallet,
       PROGRAM,
       newkp.publicKey,
-      [newkp],
+      [newkp]
     );
     // thread owner invites new user to thread
-    await addUserToThread(
-      PROGRAM,
-      threadpk,
-      newkp.publicKey,
-    );
+    await addUserToThread(PROGRAM, threadpk, newkp.publicKey);
 
     // fetch user settings, confirm
-    const gottenSettingsAccount = await settingsGet(PROGRAM, PROGRAM.provider.connection, newkp.publicKey);
-    assert.ok(gottenSettingsAccount.settings.threads.length === 1);
-    assert.ok(gottenSettingsAccount.settings.threads[0].key.toString() === threadpk.toString());
-
-    const threadAccount = await threadGet(
+    const gottenSettingsAccount = await settingsGet(
       PROGRAM,
-      threadpk,
+      PROGRAM.provider.connection,
+      newkp.publicKey
     );
+    assert.ok(gottenSettingsAccount.settings.threads.length === 1);
+    assert.ok(
+      gottenSettingsAccount.settings.threads[0].key.toString() ===
+        threadpk.toString()
+    );
+
+    const threadAccount = await threadGet(PROGRAM, threadpk);
     assert.ok(threadAccount.thread.members.length === 2);
-    assert.ok(threadAccount.thread.members[1].key.toString() === newkp.publicKey.toString());
+    assert.ok(
+      threadAccount.thread.members[1].key.toString() ===
+        newkp.publicKey.toString()
+    );
+  });
+});
+
+describe('b64 encode', () => {
+  it('encode-decode-inverse', async () => {
+    const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 7, 8]);
+    let encoded = base64Encode(data);
+    let decoded = base64Decode(encoded);
+    assert.strictEqual(decoded.constructor.name, data.constructor.name);
+    assert.strictEqual(data.toString(), decoded.toString());
+  });
+});
+
+describe('encrypt-decrypt', () => {
+  it('encode-decode-inverse', async () => {
+    const text = 'Hello world!';
+    const nonce = new Uint8Array(Array.from({ length: 24 }, (v, idx) => idx));
+    const data = new TextEncoder().encode(text);
+    const encrypted = encryptMessage(
+      data,
+      PROGRAM.provider.wallet.payer,
+      newkp.publicKey,
+      nonce
+    );
+    const decrypted = decryptMessage(
+      encrypted,
+      newkp,
+      PROGRAM.provider.wallet.publicKey,
+      nonce
+    );
+    const result = new TextDecoder().decode(decrypted!);
+    assert.strictEqual(text, result);
   });
 });
 
 describe('test messages', () => {
   it('sends a message from alice to bob', async () => {
-    let threadAccount = await threadGet(
-      PROGRAM,
-      threadpk,
-    );
+    let threadAccount = await threadGet(PROGRAM, threadpk);
     const n = 5;
-    for (let i = 0; i < n; i++) { 
+    for (let i = 0; i < n; i++) {
       const text = 'h'.repeat(i);
       await messageCreate(PROGRAM, threadAccount, text);
       threadAccount = await threadGet(PROGRAM, threadpk);
     }
     const messages = await messagesGet(PROGRAM, threadAccount, n);
     for (let i = 0; i < n; i++) {
-      assert.ok(messages[i].message.text === 'h'.repeat(n - i - 1));
+      assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
+    }
+  });
+});
+
+describe('test encrypted messages', () => {
+  it('sends a message from alice to bob', async () => {
+    let threadAccount = await threadGet(PROGRAM, threadpk);
+    const n = 5;
+    for (let i = 0; i < n; i++) {
+      const text = 'h'.repeat(i);
+      await messageCreate(
+        PROGRAM,
+        threadAccount,
+        text,
+        PROGRAM.provider.wallet.payer,
+        true
+      );
+      threadAccount = await threadGet(PROGRAM, threadpk);
+    }
+    const messages = await messagesGet(PROGRAM, threadAccount, n, newkp);
+    for (let i = 0; i < n; i++) {
+      assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
     }
   });
 });
