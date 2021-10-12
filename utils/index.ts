@@ -24,15 +24,6 @@ export const getPublicKey = (wallet: EmbeddedWallet | null | undefined, abbrevia
   return `${pubkeyStr?.slice(0, 4)}...${pubkeyStr?.slice(pubkeyStr?.length - 4)}` || null;
 };
 
-/**
- * Wallet interface for objects that can be used to sign provider transactions. Copied from https://github.com/project-serum/anchor.
- */
-// interface WalletInterface {
-//   signTransaction(tx: Transaction): Promise<Transaction>;
-//   signAllTransactions(txs: Transaction[]): Promise<Transaction[]>;
-//   publicKey: PublicKey;
-// }
-
 export class Wallet_ extends EmbeddedWallet {
   // anchor needs a non-optional publicKey attribute, sollet says it's optional, so we need to fix it here.
   get publicKey(): PublicKey {
