@@ -3,15 +3,14 @@
   "version": "0.0.1",
   "description": "",
   "private": true,
+  "module": "./dist/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dialectlabs/protcol"
+    "url": "https://github.com/dialectlabs/protocol"
   },
-  "main": "./index.ts",
+  "main": "./lib/es/index.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "rm -rf lib && tsc",
     "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
     "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
     "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}"
@@ -54,6 +53,7 @@
     "ts-node": "^10.2.0",
     "typescript": "^4.3.5"
   },
+  "peerDependencies": {},
   "browser": {
     "fs": false,
     "path": false,
