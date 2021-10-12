@@ -2,6 +2,7 @@
 import EventEmitter from 'eventemitter3';
 import { PublicKey, Transaction } from '@solana/web3.js';
 import bs58 from 'bs58';
+export * from './EmbeddedWallet';
 
 type InjectedProvider = { postMessage: (params: unknown) => void };
 
