@@ -61,6 +61,52 @@ export async function validMemberFetch(
 }
 
 /*
+Watcher
+*/
+type WatcherData = {
+  threads: SettingsThreadRef[];
+};
+
+async function watcherProgramAddressGet(
+  program: anchor.Program
+): Promise<[anchor.web3.PublicKey, number]> {
+  return await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from('watcher_account')],
+    program.programId
+  );
+}
+
+export async function watcherCreate(
+  program: anchor.Program,
+  owner?: anchor.web3.PublicKey
+) {
+  const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
+  const tx = await program.rpc.createWatcherAccount(
+    new anchor.BN(watcher_nonce),
+    {
+      accounts: {
+        owner: owner || program.provider.wallet.publicKey,
+        watcherAccount: watcherpk,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    }
+  );
+  await waitForFinality(program, tx);
+}
+
+export async function watcherThreadsGet(
+  program: anchor.Program
+): Promise<SettingsThreadRef[]> {
+  const [watcherpk] = await watcherProgramAddressGet(program);
+  const watcherDataObject = await program.account.watcherAccount.fetch(
+    watcherpk
+  );
+  const watcherData = watcherDataObject as WatcherData;
+  return watcherData.threads;
+}
+
+/*
 Settings
 */
 
@@ -136,12 +182,7 @@ export async function settingsCreate(
     signers,
     instructions,
   });
-  try {
-    await waitForFinality(program, tx);
-  } catch (e) {
-    console.error(e);
-    throw e;
-  }
+  await waitForFinality(program, tx);
 
   return await settingsGet(
     program,
@@ -190,22 +231,28 @@ export async function threadCreate(
   wallet: Wallet_
 ): Promise<ThreadAccount> {
   const kp = anchor.web3.Keypair.generate();
-  const [settingspk, nonce] = await settingsProgramAddressGet(
+  const [settingspk, settings_nonce] = await settingsProgramAddressGet(
     program,
     wallet.publicKey
   );
-  const tx = await program.rpc.createThreadAccount(new anchor.BN(nonce), {
-    accounts: {
-      owner: program.provider.wallet.publicKey,
-      threadAccount: kp.publicKey,
-      settingsAccount: settingspk,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-    },
-    signers: [kp],
-    instructions: [
-      await program.account.threadAccount.createInstruction(kp, 512),
-    ],
-  });
+  const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
+  const tx = await program.rpc.createThreadAccount(
+    new anchor.BN(settings_nonce),
+    new anchor.BN(watcher_nonce),
+    {
+      accounts: {
+        owner: program.provider.wallet.publicKey,
+        threadAccount: kp.publicKey,
+        settingsAccount: settingspk,
+        watcherAccount: watcherpk,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      },
+      signers: [kp],
+      instructions: [
+        await program.account.threadAccount.createInstruction(kp, 512),
+      ],
+    }
+  );
 
   await waitForFinality(program, tx);
   return await threadGet(program, kp.publicKey);
@@ -565,6 +612,27 @@ Transactions
 */
 
 async function waitForFinality(
+  program: anchor.Program,
+  transactionStr: string,
+  finality: anchor.web3.Finality | undefined = 'confirmed',
+  maxRetries = 10, // try 10 times
+  sleepDuration = 500 // wait 0.5s between tries
+): Promise<anchor.web3.TransactionResponse> {
+  try {
+    return await waitForFinality_inner(
+      program,
+      transactionStr,
+      finality,
+      maxRetries,
+      sleepDuration
+    );
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
+
+async function waitForFinality_inner(
   program: anchor.Program,
   transactionStr: string,
   finality: anchor.web3.Finality | undefined = 'confirmed',
