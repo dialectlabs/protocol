@@ -30,12 +30,13 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
   const [program, setProgram] = useState<anchor.Program | null>(null);
 
   useEffect(() => {
+    console.log('use effect...', wallet?.publicKey, networkName, connection);
     if (wallet?.publicKey && connection && networkName) {
       anchor.setProvider(new anchor.Provider(connection, wallet, anchor.Provider.defaultOptions()));
       const program = new anchor.Program(idl as anchor.Idl, new anchor.web3.PublicKey(programs[networkName].programAddress));
       setProgram(program);
     }
-  }, [wallet?.publicKey, networkName, connection]);
+  }, [wallet?.publicKey?.toString(), networkName, connection]);
   return (
     <ApiContext.Provider value={{
       connection: connection,
