@@ -316,6 +316,7 @@ type MessageData = {
   owner: PublicKey;
   text: string;
   idx: number;
+  timestamp: Date;
 };
 
 type MessageAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -427,10 +428,10 @@ export async function messageCreate(
   }
 
   const text64Encoded = base64Encode(textBuffer);
-
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
     text64Encoded,
+    new anchor.BN(Date.now()),
     encrypted,
     {
       accounts: {
@@ -528,6 +529,7 @@ export async function messagesGet(
         }
       }
       message.text = new TextDecoder().decode(messageBuffer);
+      message.timestamp = new Date(message.timestamp.toNumber());
       return {
         ...messageAccountInfo.account,
         publicKey: publicKeys[idx],
