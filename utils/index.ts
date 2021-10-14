@@ -5,6 +5,12 @@ import {
   Transaction,
 } from '@solana/web3.js';
 
+import * as idl_ from './dialect.json';
+import * as programs_ from './programs.json';
+
+export const idl = idl_;
+export const programs = programs_;
+
 export type ProviderPropsType = {
   children: JSX.Element;
 };

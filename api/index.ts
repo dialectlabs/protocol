@@ -67,7 +67,7 @@ type WatcherData = {
   threads: SettingsThreadRef[];
 };
 
-async function watcherProgramAddressGet(
+export async function watcherProgramAddressGet(
   program: anchor.Program
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
@@ -79,7 +79,7 @@ async function watcherProgramAddressGet(
 export async function watcherCreate(
   program: anchor.Program,
   owner?: anchor.web3.PublicKey
-) {
+): Promise<void> {
   const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
   const tx = await program.rpc.createWatcherAccount(
     new anchor.BN(watcher_nonce),
@@ -168,10 +168,12 @@ export async function settingsCreate(
   signers?: anchor.web3.Keypair[] | undefined,
   instructions?: anchor.web3.TransactionInstruction[] | undefined
 ): Promise<SettingsAccount> {
+  console.log("creating...");
   const [publicKey, nonce] = await settingsProgramAddressGet(
     program,
     owner || wallet.publicKey
   );
+  console.log("got address...");
   const tx = await program.rpc.createUserSettingsAccount(new anchor.BN(nonce), {
     accounts: {
       owner: owner || program.provider.wallet.publicKey,
@@ -442,7 +444,7 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-  encrypted: boolean = false
+  encrypted = false,
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
     program,
