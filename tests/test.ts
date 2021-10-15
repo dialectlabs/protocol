@@ -4,6 +4,8 @@ import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import {
+  watcherCreate,
+  watcherThreadsGet,
   messageCreate,
   addUserToThread,
   threadCreate,
@@ -34,6 +36,12 @@ transferTransaction.add(
     lamports: 1000000000,
   })
 );
+
+describe('test watcher create', () => {
+  it('creates a watcher account', async () => {
+    await watcherCreate(PROGRAM);
+  });
+});
 
 describe('test settings', () => {
   it('creates a settings account for the user', async () => {
@@ -229,5 +237,13 @@ describe('test encrypted messages', () => {
     for (let i = 0; i < n; i++) {
       assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
     }
+  });
+});
+
+describe('test watcher', () => {
+  it('watcher can see thread list', async () => {
+    let threads = await watcherThreadsGet(PROGRAM);
+    assert.strictEqual(threads.length, 1);
+    assert.strictEqual(threads[0].key.toString(), threadpk.toString());
   });
 });
