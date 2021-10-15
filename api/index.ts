@@ -34,7 +34,10 @@ export async function ownerFetcher(
   wallet: Wallet_,
   connection: Connection
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await accountInfoGet(connection, wallet.publicKey);
+  console.log("wallet.publickey", wallet.publicKey.toString());
+  const r = await accountInfoGet(connection, wallet.publicKey);
+  console.log("owner", r);
+  return r;
 }
 
 export async function validMemberFetch(
@@ -184,13 +187,16 @@ export async function settingsCreate(
     signers,
     instructions,
   });
+  console.log("made tx...");
   await waitForFinality(program, tx);
-
-  return await settingsGet(
+  console.log("awaited finality...")
+  const sett = await settingsGet(
     program,
     program.provider.connection,
     owner || wallet.publicKey
   );
+  console.log("got sett...");
+  return sett;
 }
 
 export async function settingsMutate(
