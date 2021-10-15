@@ -174,6 +174,10 @@
           "type": "string"
         },
         {
+          "name": "timestamp",
+          "type": "i64"
+        },
+        {
           "name": "encrypted",
           "type": "bool"
         }
@@ -259,6 +263,10 @@
             "type": "u32"
           },
           {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
             "name": "encrypted",
             "type": "bool"
           }
@@ -291,8 +299,5 @@
         ]
       }
     }
-  ],
-  "metadata": {
-    "address": "4vksJTXq7eswTGbZskQMu55cfaU4mgfX6333SmvUznMo"
-  }
+  ]
 }
