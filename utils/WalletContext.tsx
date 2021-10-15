@@ -13,16 +13,18 @@ type ValueType = {
   wallet: Wallet_ | null | undefined;
   networkName: Cluster | 'localnet';
   setNetworkName: (networkName: Cluster | 'localnet') => void;
-  onConnect: () => void;
+  onConnect: (_: Uint8Array | null) => void;
   onDisconnect: () => void;
 };
 export const WalletContext = createContext<ValueType | null>({
   wallet: null,
-  networkName: process.env.ENVIRONMENT as Cluster | 'localnet' || 'devnet',
+  networkName: process.env.ENVIRONMENT as Cluster | 'localnet' || 'localnet',
   setNetworkName: (_: Cluster | 'localnet') => {
     _;
   },
-  onConnect: () => undefined,
+  onConnect: (_: Uint8Array | null) => {
+    _;
+  },
   onDisconnect: () => undefined,
 });
 
@@ -30,9 +32,10 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
   const [selectedWallet, setSelectedWallet] = useState<
     Wallet_ | null
   >(null);
-  const [urlWallet, setUrlWallet] = useState<Wallet | null>(null);
+  const [privateKey, setPrivateKey] = useState<Uint8Array | null>(null);
+  const [, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
-    process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster || 'devnet'
+    process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster || 'localnet'
   );
   const network: string = useMemo(() => {
     if (networkName === 'localnet') {
@@ -47,29 +50,26 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     setUrlWallet(w);
   }, [providerUrl, network]);
 
-  const [, setConnected] = useState(false);
   useEffect(() => {
-    if (selectedWallet) {
-      selectedWallet.on('connect', () => {
-        setConnected(true);
-      });
-      selectedWallet.on('disconnect', () => {
-        setConnected(false);
-      });
-      void selectedWallet.connect();
-      return () => {
-        void selectedWallet.disconnect();
-      };
+    if (privateKey) {
+      console.log("setting private key...")
+      setSelectedWallet(Wallet_.embedded(privateKey));
+    } else {
+      console.log("UNsetting private key...")
+      setSelectedWallet(null);
     }
-  }, [selectedWallet]);
+  }, [privateKey]);
+
   return (
     <WalletContext.Provider
       value={{
         wallet: selectedWallet,
         networkName,
         setNetworkName,
-        onConnect: () => setSelectedWallet(urlWallet as Wallet_),
-        onDisconnect: () => setSelectedWallet(null),
+        onConnect: (privateKey: Uint8Array | null) => {
+          setPrivateKey(privateKey);
+        },
+        onDisconnect: () => setPrivateKey(null),
       }}
     >
       {props.children}

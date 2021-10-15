@@ -35,7 +35,7 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
       const program = new anchor.Program(idl as anchor.Idl, new anchor.web3.PublicKey(programs[networkName].programAddress));
       setProgram(program);
     }
-  }, [wallet?.publicKey, networkName, connection]);
+  }, [wallet?.publicKey?.toString(), networkName, connection]);
   return (
     <ApiContext.Provider value={{
       connection: connection,

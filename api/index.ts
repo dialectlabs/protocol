@@ -34,7 +34,10 @@ export async function ownerFetcher(
   wallet: Wallet_,
   connection: Connection
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await accountInfoGet(connection, wallet.publicKey);
+  console.log("wallet.publickey", wallet.publicKey.toString());
+  const r = await accountInfoGet(connection, wallet.publicKey);
+  console.log("owner", r);
+  return r;
 }
 
 export async function validMemberFetch(
@@ -67,7 +70,7 @@ type WatcherData = {
   threads: SettingsThreadRef[];
 };
 
-async function watcherProgramAddressGet(
+export async function watcherProgramAddressGet(
   program: anchor.Program
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
@@ -79,7 +82,7 @@ async function watcherProgramAddressGet(
 export async function watcherCreate(
   program: anchor.Program,
   owner?: anchor.web3.PublicKey
-) {
+): Promise<void> {
   const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
   const tx = await program.rpc.createWatcherAccount(
     new anchor.BN(watcher_nonce),
@@ -168,10 +171,12 @@ export async function settingsCreate(
   signers?: anchor.web3.Keypair[] | undefined,
   instructions?: anchor.web3.TransactionInstruction[] | undefined
 ): Promise<SettingsAccount> {
+  console.log("creating...");
   const [publicKey, nonce] = await settingsProgramAddressGet(
     program,
     owner || wallet.publicKey
   );
+  console.log("got address...");
   const tx = await program.rpc.createUserSettingsAccount(new anchor.BN(nonce), {
     accounts: {
       owner: owner || program.provider.wallet.publicKey,
@@ -182,13 +187,16 @@ export async function settingsCreate(
     signers,
     instructions,
   });
+  console.log("made tx...");
   await waitForFinality(program, tx);
-
-  return await settingsGet(
+  console.log("awaited finality...")
+  const sett = await settingsGet(
     program,
     program.provider.connection,
     owner || wallet.publicKey
   );
+  console.log("got sett...");
+  return sett;
 }
 
 export async function settingsMutate(
@@ -442,7 +450,7 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-  encrypted: boolean = false
+  encrypted = false,
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
     program,
