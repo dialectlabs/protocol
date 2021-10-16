@@ -257,9 +257,6 @@ export async function threadCreate(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [kp],
-      // instructions: [
-      //   await program.account.threadAccount.createInstruction(kp, 512),
-      // ],
     }
   );
 
