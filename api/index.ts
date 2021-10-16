@@ -254,6 +254,7 @@ export async function threadCreate(
         settingsAccount: settingspk,
         watcherAccount: watcherpk,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [kp],
       instructions: [
@@ -598,7 +599,8 @@ export async function newGroupMutate(
   program: anchor.Program,
   wallet: Wallet_,
   invitees: PublicKey[] | string[],
-  text: string
+  text: string,
+  sender?: anchor.web3.Keypair | null
 ): Promise<ThreadAccount> {
   if (typeof invitees[0] === 'string') {
     invitees = invitees.map((invitee) => new anchor.web3.PublicKey(invitee));
@@ -611,7 +613,7 @@ export async function newGroupMutate(
       invitee as anchor.web3.PublicKey
     );
   });
-  await messageCreate(program, threadAccount, text);
+  await messageCreate(program, threadAccount, text, sender);
   return await threadGet(program, threadAccount.publicKey);
 }
 
