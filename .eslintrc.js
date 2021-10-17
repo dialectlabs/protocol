@@ -28,15 +28,15 @@ module.exports = {
       files: ['*.ts', '*.tsx'],
       extends: [
         'plugin:@typescript-eslint/eslint-recommended',
-        'plugin:@typescript-eslint/recommended'
+        'plugin:@typescript-eslint/recommended',
       ],
       parser: '@typescript-eslint/parser',
-      plugins: ['@typescript-eslint']
-    }
+      plugins: ['@typescript-eslint'],
+    },
   ],
   settings: {
     react: {
-      version: 'detect'
-    }
-  }
+      version: 'detect',
+    },
+  },
 };

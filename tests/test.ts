@@ -4,6 +4,8 @@ import * as anchor from '@project-serum/anchor';
 import assert from 'assert';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import {
+  watcherCreate,
+  watcherThreadsGet,
   messageCreate,
   addUserToThread,
   threadCreate,
@@ -34,6 +36,12 @@ transferTransaction.add(
     lamports: 1000000000,
   })
 );
+
+describe('test watcher create', () => {
+  it('creates a watcher account', async () => {
+    await watcherCreate(PROGRAM);
+  });
+});
 
 describe('test settings', () => {
   it('creates a settings account for the user', async () => {
@@ -181,14 +189,31 @@ describe('test messages', () => {
   it('sends a message from alice to bob', async () => {
     let threadAccount = await threadGet(PROGRAM, threadpk);
     const n = 5;
+    const computed_timestamps = [];
+    const sent_texts: string[] = [];
     for (let i = 0; i < n; i++) {
       const text = 'h'.repeat(i);
+      sent_texts.unshift(text);
       await messageCreate(PROGRAM, threadAccount, text);
+      computed_timestamps.push(new Date().valueOf());
       threadAccount = await threadGet(PROGRAM, threadpk);
     }
+
     const messages = await messagesGet(PROGRAM, threadAccount, n);
+    const received_timestamps = messages.map((m) =>
+      m.message.timestamp.valueOf()
+    );
+    const message_texts = messages.map((m) => m.message.text);
     for (let i = 0; i < n; i++) {
-      assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
+      // Check that timestamps are sorta close to when we sent the message.
+      assert.ok(
+        Math.abs(computed_timestamps[i] - received_timestamps[i]) < 10_000
+      );
+      assert.strictEqual(message_texts[i], sent_texts[i]);
+    }
+    // Check that time stamps are sorted.
+    for (let i = 0; i < n - 1; i++) {
+      assert.ok(received_timestamps[i] > received_timestamps[i + 1]);
     }
   });
 });
@@ -212,5 +237,13 @@ describe('test encrypted messages', () => {
     for (let i = 0; i < n; i++) {
       assert.strictEqual(messages[i].message.text, 'h'.repeat(n - i - 1));
     }
+  });
+});
+
+describe('test watcher', () => {
+  it('watcher can see thread list', async () => {
+    let threads = await watcherThreadsGet(PROGRAM);
+    assert.strictEqual(threads.length, 1);
+    assert.strictEqual(threads[0].key.toString(), threadpk.toString());
   });
 });

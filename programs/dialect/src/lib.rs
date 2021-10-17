@@ -1,22 +1,33 @@
 use anchor_lang::prelude::*;
 
+declare_id!("3eyY8Q6W1SQTuMj6bM6V8PfccjAiB4VvNikQQtD7f8Sr");
+
 /*
 Entrypoints
 */
 #[program]
 mod dialect {
     use super::*;
-    pub fn create_user_settings_account(
-        ctx: Context<CreateSettingsAccount>,
-        _nonce: u8,
+    pub fn create_watcher_account(
+        _ctx: Context<CreateWatcherAccount>,
+        _watcher_nonce: u8,
     ) -> ProgramResult {
-        let settings_account = &mut ctx.accounts.settings_account;
-        settings_account.owner = *ctx.accounts.owner.key;
-        settings_account.threads = vec![];
         Ok(())
     }
 
-    pub fn create_thread_account(ctx: Context<CreateThreadAccount>, _nonce: u8) -> ProgramResult {
+    pub fn create_user_settings_account(
+        ctx: Context<CreateSettingsAccount>,
+        _settings_nonce: u8,
+    ) -> ProgramResult {
+        ctx.accounts.settings_account.owner = *ctx.accounts.owner.key;
+        Ok(())
+    }
+
+    pub fn create_thread_account(
+        ctx: Context<CreateThreadAccount>,
+        _settings_nonce: u8,
+        _watcher_nonce: u8,
+    ) -> ProgramResult {
         // set the owner of the thread account
         let thread_account = &mut ctx.accounts.thread_account;
         thread_account.owner = *ctx.accounts.owner.key;
@@ -27,20 +38,19 @@ mod dialect {
         // iniialize message_idx
         thread_account.message_idx = 0;
         // add the thread to the owner's settings.threads
-        let settings_account = &mut ctx.accounts.settings_account;
-        let threads = &mut settings_account.threads;
-        let mut new_threads = vec![SettingsThreadRef {
-            key: *ctx.accounts.thread_account.to_account_info().key,
-        }];
-        threads.append(&mut new_threads);
+        let thread = ThreadRef {
+            key: *thread_account.to_account_info().key,
+        };
+        ctx.accounts.settings_account.threads.push(thread);
+        ctx.accounts.watcher_account.threads.push(thread);
         Ok(())
     }
 
-    pub fn add_user_to_thread(ctx: Context<AddUserToThread>, _nonce: u8) -> ProgramResult {
+    pub fn add_user_to_thread(ctx: Context<AddUserToThread>, _settings_nonce: u8) -> ProgramResult {
         // add the thread to user settings.threads
         let invitee_settings_account = &mut ctx.accounts.invitee_settings_account;
         let threads = &mut invitee_settings_account.threads;
-        let mut new_threads = vec![SettingsThreadRef {
+        let mut new_threads = vec![ThreadRef {
             key: *ctx.accounts.thread_account.to_account_info().key,
         }];
         threads.append(&mut new_threads);
@@ -55,8 +65,9 @@ mod dialect {
 
     pub fn add_message_to_thread(
         ctx: Context<AddMessageToThread>,
-        _nonce: u8,
+        _message_nonce: u8,
         text: String,
+        timestamp: i64,
         encrypted: bool,
     ) -> ProgramResult {
         // TODO: Verify that sender is a member of the thread
@@ -68,6 +79,7 @@ mod dialect {
         message_account.owner = *ctx.accounts.sender.key;
         message_account.text = text;
         message_account.idx = thread_account.message_idx;
+        message_account.timestamp = timestamp;
         message_account.encrypted = encrypted;
         Ok(())
     }
@@ -77,13 +89,30 @@ mod dialect {
 Contexts
 */
 #[derive(Accounts)]
-#[instruction(_nonce: u8)]
+#[instruction(watcher_nonce: u8)]
+pub struct CreateWatcherAccount<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    #[account(init,
+        seeds = [b"watcher_account".as_ref()],
+        bump = watcher_nonce,
+        payer = owner,
+        space = 512,
+    )]
+    pub watcher_account: ProgramAccount<'info, WatcherAccount>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(settings_nonce: u8)]
 pub struct CreateSettingsAccount<'info> {
     #[account(signer, mut)]
     pub owner: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [owner.key.as_ref(), b"settings_account", &[_nonce]],
+        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
+        bump = settings_nonce,
         payer = owner,
         space = 512,
     )]
@@ -92,24 +121,33 @@ pub struct CreateSettingsAccount<'info> {
     pub system_program: AccountInfo<'info>,
 }
 
+// TODO: rename ProgramAccount to Account
 #[derive(Accounts)]
-#[instruction(_nonce: u8)]
+#[instruction(settings_nonce: u8, watcher_nonce: u8)]
 pub struct CreateThreadAccount<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
-    #[account(init)]
+    #[account(init, payer = owner, space = 512)]
     pub thread_account: ProgramAccount<'info, ThreadAccount>,
     #[account(
         mut,
-        seeds = [owner.key.as_ref(), b"settings_account", &[_nonce]],
+        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
+        bump = settings_nonce,
         has_one = owner,
     )]
     pub settings_account: ProgramAccount<'info, SettingsAccount>,
+    #[account(
+        mut,
+        seeds = [b"watcher_account".as_ref()],
+        bump = watcher_nonce,
+    )]
+    pub watcher_account: ProgramAccount<'info, WatcherAccount>,
     pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce: u8)]
+#[instruction(settings_nonce: u8)]
 pub struct AddUserToThread<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
@@ -118,13 +156,14 @@ pub struct AddUserToThread<'info> {
     pub thread_account: ProgramAccount<'info, ThreadAccount>,
     #[account(
         mut,
-        seeds = [invitee.key.as_ref(), b"settings_account", &[_nonce]],
+        seeds = [invitee.key.as_ref(), b"settings_account".as_ref()],
+        bump = settings_nonce,
     )]
     pub invitee_settings_account: ProgramAccount<'info, SettingsAccount>,
 }
 
 #[derive(Accounts)]
-#[instruction(_nonce: u8)]
+#[instruction(message_nonce: u8)]
 pub struct AddMessageToThread<'info> {
     #[account(signer)]
     pub sender: AccountInfo<'info>,
@@ -132,10 +171,10 @@ pub struct AddMessageToThread<'info> {
         init,
         seeds = [
             thread_account.to_account_info().key.as_ref(),
-            b"message_account",
+            b"message_account".as_ref(),
             (thread_account.message_idx + 1).to_string().as_bytes(), // u32 as &[u8]
-            &[_nonce],
         ],
+        bump = message_nonce,
         payer = sender,
         space = 1024,
     )]
@@ -149,11 +188,20 @@ pub struct AddMessageToThread<'info> {
 /*
 Accounts
 */
+/**
+ * An account to notify the watcher about what threads exist.
+ */
+#[account]
+#[derive(Default)]
+pub struct WatcherAccount {
+    pub threads: Vec<ThreadRef>,
+}
+
 #[account]
 #[derive(Default)]
 pub struct SettingsAccount {
     pub owner: Pubkey,
-    pub threads: Vec<SettingsThreadRef>,
+    pub threads: Vec<ThreadRef>,
 }
 
 #[account]
@@ -167,9 +215,10 @@ pub struct ThreadAccount {
 #[account]
 #[derive(Default)]
 pub struct MessageAccount {
-    pub owner: Pubkey, // sender
-    pub text: String,  // TODO: use [u8; 280]
-    pub idx: u32,      // not sure we need this
+    pub owner: Pubkey,  // sender
+    pub text: String,   // TODO: use [u8; 280]
+    pub idx: u32,       // not sure we need this
+    pub timestamp: i64, // safe from 2038 bug?
     pub encrypted: bool,
 }
 
@@ -177,7 +226,7 @@ pub struct MessageAccount {
 Data
 */
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
-pub struct SettingsThreadRef {
+pub struct ThreadRef {
     pub key: Pubkey,
 }
 

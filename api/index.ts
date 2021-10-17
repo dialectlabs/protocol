@@ -34,7 +34,8 @@ export async function ownerFetcher(
   wallet: Wallet_,
   connection: Connection
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  return await accountInfoGet(connection, wallet.publicKey);
+  const r = await accountInfoGet(connection, wallet.publicKey);
+  return r;
 }
 
 export async function validMemberFetch(
@@ -58,6 +59,52 @@ export async function validMemberFetch(
     throw new Error('Account has not signed up');
   }
   return accountInfo;
+}
+
+/*
+Watcher
+*/
+type WatcherData = {
+  threads: SettingsThreadRef[];
+};
+
+export async function watcherProgramAddressGet(
+  program: anchor.Program
+): Promise<[anchor.web3.PublicKey, number]> {
+  return await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from('watcher_account')],
+    program.programId
+  );
+}
+
+export async function watcherCreate(
+  program: anchor.Program,
+  owner?: anchor.web3.PublicKey
+): Promise<void> {
+  const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
+  const tx = await program.rpc.createWatcherAccount(
+    new anchor.BN(watcher_nonce),
+    {
+      accounts: {
+        owner: owner || program.provider.wallet.publicKey,
+        watcherAccount: watcherpk,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    }
+  );
+  await waitForFinality(program, tx);
+}
+
+export async function watcherThreadsGet(
+  program: anchor.Program
+): Promise<SettingsThreadRef[]> {
+  const [watcherpk] = await watcherProgramAddressGet(program);
+  const watcherDataObject = await program.account.watcherAccount.fetch(
+    watcherpk
+  );
+  const watcherData = watcherDataObject as WatcherData;
+  return watcherData.threads;
 }
 
 /*
@@ -136,18 +183,13 @@ export async function settingsCreate(
     signers,
     instructions,
   });
-  try {
-    await waitForFinality(program, tx);
-  } catch (e) {
-    console.error(e);
-    throw e;
-  }
-
-  return await settingsGet(
+  await waitForFinality(program, tx);
+  const sett = await settingsGet(
     program,
     program.provider.connection,
     owner || wallet.publicKey
   );
+  return sett;
 }
 
 export async function settingsMutate(
@@ -190,22 +232,26 @@ export async function threadCreate(
   wallet: Wallet_
 ): Promise<ThreadAccount> {
   const kp = anchor.web3.Keypair.generate();
-  const [settingspk, nonce] = await settingsProgramAddressGet(
+  const [settingspk, settings_nonce] = await settingsProgramAddressGet(
     program,
     wallet.publicKey
   );
-  const tx = await program.rpc.createThreadAccount(new anchor.BN(nonce), {
-    accounts: {
-      owner: program.provider.wallet.publicKey,
-      threadAccount: kp.publicKey,
-      settingsAccount: settingspk,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-    },
-    signers: [kp],
-    instructions: [
-      await program.account.threadAccount.createInstruction(kp, 512),
-    ],
-  });
+  const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
+  const tx = await program.rpc.createThreadAccount(
+    new anchor.BN(settings_nonce),
+    new anchor.BN(watcher_nonce),
+    {
+      accounts: {
+        owner: program.provider.wallet.publicKey,
+        threadAccount: kp.publicKey,
+        settingsAccount: settingspk,
+        watcherAccount: watcherpk,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [kp],
+    }
+  );
 
   await waitForFinality(program, tx);
   return await threadGet(program, kp.publicKey);
@@ -253,7 +299,11 @@ export async function threadsGet(
     program.provider.connection,
     publicKeys
   );
-  const threads = await Promise.all(
+  const threadAccounts: ThreadAccount[] = [];
+  const indexedMessageAccounts: {
+    [key: string]: MessageAccount | number;
+  }[] = [];
+  await Promise.all(
     accountInfos.map(async (accountInfo, idx) => {
       // TODO: Code block ported from anchor. Use there.
       if (accountInfo === null) {
@@ -264,7 +314,7 @@ export async function threadsGet(
         throw new Error('Invalid account discriminator');
       }
 
-      return {
+      const threadAccount = {
         ...accountInfo.account,
         publicKey: publicKeys[idx],
         thread: program.account.threadAccount.coder.accounts.decode(
@@ -272,9 +322,29 @@ export async function threadsGet(
           accountInfo.account.data
         ),
       } as ThreadAccount;
+
+      const latestMessages = await messagesGet(program, threadAccount, 1);
+      if (latestMessages.length > 1) {
+        threadAccounts.push(threadAccount);
+        indexedMessageAccounts.push({ messageAccount: latestMessages[0], idx });
+      }
     })
   );
-  return threads;
+
+  // Sort threads according to descending most recent message timestamps
+  // TODO: don't do this here, do it in dialect instead
+  const sortedMessageAccounts = indexedMessageAccounts.sort((a, b) => {
+    const maa = a.messageAccount as MessageAccount;
+    const mab = b.messageAccount as MessageAccount;
+    return mab.message.timestamp.getTime() - maa.message.timestamp.getTime();
+  });
+
+  const sortedThreadAccounts: ThreadAccount[] = [];
+  sortedMessageAccounts.forEach((sma, idx) => {
+    sortedThreadAccounts.push(threadAccounts[idx]);
+  });
+
+  return sortedThreadAccounts;
 }
 
 export async function userThreadMutate(
@@ -316,6 +386,7 @@ type MessageData = {
   owner: PublicKey;
   text: string;
   idx: number;
+  timestamp: Date;
 };
 
 type MessageAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -395,7 +466,7 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-  encrypted: boolean = false
+  encrypted = false
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
     program,
@@ -427,10 +498,10 @@ export async function messageCreate(
   }
 
   const text64Encoded = base64Encode(textBuffer);
-
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
     text64Encoded,
+    new anchor.BN(Date.now()),
     encrypted,
     {
       accounts: {
@@ -528,6 +599,7 @@ export async function messagesGet(
         }
       }
       message.text = new TextDecoder().decode(messageBuffer);
+      message.timestamp = new Date(message.timestamp.toNumber());
       return {
         ...messageAccountInfo.account,
         publicKey: publicKeys[idx],
@@ -543,7 +615,8 @@ export async function newGroupMutate(
   program: anchor.Program,
   wallet: Wallet_,
   invitees: PublicKey[] | string[],
-  text: string
+  text: string,
+  sender?: anchor.web3.Keypair | null
 ): Promise<ThreadAccount> {
   if (typeof invitees[0] === 'string') {
     invitees = invitees.map((invitee) => new anchor.web3.PublicKey(invitee));
@@ -556,7 +629,7 @@ export async function newGroupMutate(
       invitee as anchor.web3.PublicKey
     );
   });
-  await messageCreate(program, threadAccount, text);
+  await messageCreate(program, threadAccount, text, sender);
   return await threadGet(program, threadAccount.publicKey);
 }
 
@@ -565,6 +638,27 @@ Transactions
 */
 
 async function waitForFinality(
+  program: anchor.Program,
+  transactionStr: string,
+  finality: anchor.web3.Finality | undefined = 'confirmed',
+  maxRetries = 10, // try 10 times
+  sleepDuration = 500 // wait 0.5s between tries
+): Promise<anchor.web3.TransactionResponse> {
+  try {
+    return await waitForFinality_inner(
+      program,
+      transactionStr,
+      finality,
+      maxRetries,
+      sleepDuration
+    );
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
+
+async function waitForFinality_inner(
   program: anchor.Program,
   transactionStr: string,
   finality: anchor.web3.Finality | undefined = 'confirmed',
