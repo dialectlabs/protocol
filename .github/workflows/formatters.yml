@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [master]
 
-
 jobs:
   formatter:
     name: Prettier
