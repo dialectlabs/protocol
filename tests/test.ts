@@ -190,7 +190,7 @@ describe('test messages', () => {
     let threadAccount = await threadGet(PROGRAM, threadpk);
     const n = 5;
     const computed_timestamps = [];
-    const sent_texts : string[] = [];
+    const sent_texts: string[] = [];
     for (let i = 0; i < n; i++) {
       const text = 'h'.repeat(i);
       sent_texts.unshift(text);

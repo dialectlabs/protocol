@@ -300,7 +300,9 @@ export async function threadsGet(
     publicKeys
   );
   const threadAccounts: ThreadAccount[] = [];
-  const indexedMessageAccounts: {[key: string]: MessageAccount | number}[] = [];
+  const indexedMessageAccounts: {
+    [key: string]: MessageAccount | number;
+  }[] = [];
   await Promise.all(
     accountInfos.map(async (accountInfo, idx) => {
       // TODO: Code block ported from anchor. Use there.
@@ -324,7 +326,7 @@ export async function threadsGet(
       const latestMessages = await messagesGet(program, threadAccount, 1);
       if (latestMessages.length > 1) {
         threadAccounts.push(threadAccount);
-        indexedMessageAccounts.push({messageAccount: latestMessages[0], idx});
+        indexedMessageAccounts.push({ messageAccount: latestMessages[0], idx });
       }
     })
   );
@@ -341,7 +343,7 @@ export async function threadsGet(
   sortedMessageAccounts.forEach((sma, idx) => {
     sortedThreadAccounts.push(threadAccounts[idx]);
   });
-  
+
   return sortedThreadAccounts;
 }
 
@@ -464,7 +466,7 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-  encrypted = false,
+  encrypted = false
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
     program,

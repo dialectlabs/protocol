@@ -1,18 +1,18 @@
 {
-    "localnet": {
-        "clusterAddress": "http://10.0.0.253:8899",
-        "programAddress": "DyWxiroHbiGimsrQPcZJVFC7QNnMMofov1AzWr5ARzhW"
-    },
-    "devnet": {
-        "clusterAddress": "https://api.devnet.solana.com",
-        "programAddress": "3M3nKvLbacY6JT3Ru1gQq3wJ8VKenKVRxnjx1S5QM3YR"
-    },
-    "testnet": {
-        "clusterAddress": "",
-        "programAddress": ""
-    },
-    "mainnet-beta": {
-        "clusterAddress": "",
-        "programAddress": ""
-    }
+  "localnet": {
+    "clusterAddress": "http://10.0.0.253:8899",
+    "programAddress": "DyWxiroHbiGimsrQPcZJVFC7QNnMMofov1AzWr5ARzhW"
+  },
+  "devnet": {
+    "clusterAddress": "https://api.devnet.solana.com",
+    "programAddress": "3M3nKvLbacY6JT3Ru1gQq3wJ8VKenKVRxnjx1S5QM3YR"
+  },
+  "testnet": {
+    "clusterAddress": "",
+    "programAddress": ""
+  },
+  "mainnet-beta": {
+    "clusterAddress": "",
+    "programAddress": ""
+  }
 }
