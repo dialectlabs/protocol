@@ -1,3 +1,9 @@
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
+
+[programs.localnet]
+dialect = "3eyY8Q6W1SQTuMj6bM6V8PfccjAiB4VvNikQQtD7f8Sr"
+
+[scripts]
+test = "ts-mocha -t 1000000 tests/*.ts"
