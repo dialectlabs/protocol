@@ -1,48 +1,44 @@
 {
-    "root": true,
-    "env": {
-      "node": true,
-      "browser": true
-    },
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended",
-      "plugin:@typescript-eslint/recommended-requiring-type-checking",
-      "prettier"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": 2020,
-      "parser": "babel-eslint",
-      "project": "./tsconfig.json",
-      "sourceType": "module"
-    },
-    "plugins": [
-      "@typescript-eslint",
-      "prettier"
-    ],
-    "rules": {
-      "no-console": 0,
-      "semi": 1,
-      "@typescript-eslint/no-explicit-any": 0,
-      "quotes": [2, "single", { "avoidEscape": true }]
-    },
-    "overrides": [
-      {
-        "files": ["*.ts", "*.tsx"],
-        "extends": [
-          "plugin:@typescript-eslint/eslint-recommended",
-          "plugin:@typescript-eslint/recommended"
-        ],
-        "parser": "@typescript-eslint/parser",
-        "plugins": ["@typescript-eslint"]
-      }
-    ],
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
+  "root": true,
+  "env": {
+    "node": true,
+    "browser": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "parser": "babel-eslint",
+    "project": "./tsconfig.json",
+    "sourceType": "module"
+  },
+  "plugins": ["@typescript-eslint", "prettier"],
+  "rules": {
+    "no-console": 0,
+    "semi": 1,
+    "@typescript-eslint/no-explicit-any": 0,
+    "quotes": [2, "single", { "avoidEscape": true }]
+  },
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "extends": [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+      ],
+      "parser": "@typescript-eslint/parser",
+      "plugins": ["@typescript-eslint"]
+    }
+  ],
+  "settings": {
+    "react": {
+      "version": "detect"
     }
   }
-  
+}

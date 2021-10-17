@@ -34,9 +34,9 @@ export async function ownerFetcher(
   wallet: Wallet_,
   connection: Connection
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  console.log("wallet.publickey", wallet.publicKey.toString());
+  console.log('wallet.publickey', wallet.publicKey.toString());
   const r = await accountInfoGet(connection, wallet.publicKey);
-  console.log("owner", r);
+  console.log('owner', r);
   return r;
 }
 
@@ -171,12 +171,12 @@ export async function settingsCreate(
   signers?: anchor.web3.Keypair[] | undefined,
   instructions?: anchor.web3.TransactionInstruction[] | undefined
 ): Promise<SettingsAccount> {
-  console.log("creating...");
+  console.log('creating...');
   const [publicKey, nonce] = await settingsProgramAddressGet(
     program,
     owner || wallet.publicKey
   );
-  console.log("got address...");
+  console.log('got address...');
   const tx = await program.rpc.createUserSettingsAccount(new anchor.BN(nonce), {
     accounts: {
       owner: owner || program.provider.wallet.publicKey,
@@ -187,15 +187,15 @@ export async function settingsCreate(
     signers,
     instructions,
   });
-  console.log("made tx...");
+  console.log('made tx...');
   await waitForFinality(program, tx);
-  console.log("awaited finality...")
+  console.log('awaited finality...');
   const sett = await settingsGet(
     program,
     program.provider.connection,
     owner || wallet.publicKey
   );
-  console.log("got sett...");
+  console.log('got sett...');
   return sett;
 }
 
@@ -450,7 +450,7 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Keypair | null,
-  encrypted = false,
+  encrypted = false
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
     program,
