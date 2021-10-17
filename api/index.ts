@@ -299,7 +299,9 @@ export async function threadsGet(
     program.provider.connection,
     publicKeys
   );
-  const threads = await Promise.all(
+  const threadAccounts: ThreadAccount[] = [];
+  const indexedMessageAccounts: {[key: string]: MessageAccount | number}[] = [];
+  await Promise.all(
     accountInfos.map(async (accountInfo, idx) => {
       // TODO: Code block ported from anchor. Use there.
       if (accountInfo === null) {
@@ -310,7 +312,7 @@ export async function threadsGet(
         throw new Error('Invalid account discriminator');
       }
 
-      return {
+      const threadAccount = {
         ...accountInfo.account,
         publicKey: publicKeys[idx],
         thread: program.account.threadAccount.coder.accounts.decode(
@@ -318,9 +320,29 @@ export async function threadsGet(
           accountInfo.account.data
         ),
       } as ThreadAccount;
+
+      const latestMessages = await messagesGet(program, threadAccount, 1);
+      if (latestMessages.length > 1) {
+        threadAccounts.push(threadAccount);
+        indexedMessageAccounts.push({messageAccount: latestMessages[0], idx});
+      }
     })
   );
-  return threads;
+
+  // Sort threads according to descending most recent message timestamps
+  // TODO: don't do this here, do it in dialect instead
+  const sortedMessageAccounts = indexedMessageAccounts.sort((a, b) => {
+    const maa = a.messageAccount as MessageAccount;
+    const mab = b.messageAccount as MessageAccount;
+    return mab.message.timestamp.getTime() - maa.message.timestamp.getTime();
+  });
+
+  const sortedThreadAccounts: ThreadAccount[] = [];
+  sortedMessageAccounts.forEach((sma, idx) => {
+    sortedThreadAccounts.push(threadAccounts[idx]);
+  });
+  
+  return sortedThreadAccounts;
 }
 
 export async function userThreadMutate(
@@ -362,6 +384,7 @@ type MessageData = {
   owner: PublicKey;
   text: string;
   idx: number;
+  timestamp: Date;
 };
 
 type MessageAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -473,10 +496,10 @@ export async function messageCreate(
   }
 
   const text64Encoded = base64Encode(textBuffer);
-
   const tx = await program.rpc.addMessageToThread(
     new anchor.BN(nonce),
     text64Encoded,
+    new anchor.BN(Date.now()),
     encrypted,
     {
       accounts: {
@@ -574,6 +597,7 @@ export async function messagesGet(
         }
       }
       message.text = new TextDecoder().decode(messageBuffer);
+      message.timestamp = new Date(message.timestamp.toNumber());
       return {
         ...messageAccountInfo.account,
         publicKey: publicKeys[idx],

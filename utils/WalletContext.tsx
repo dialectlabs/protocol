@@ -52,8 +52,6 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
 
   useEffect(() => {
     if (privateKey) {
-      setSelectedWallet(Wallet_.embedded(privateKey));
-    } else {
       setSelectedWallet(null);
     }
   }, [privateKey]);

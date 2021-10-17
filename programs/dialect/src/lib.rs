@@ -67,6 +67,7 @@ mod dialect {
         ctx: Context<AddMessageToThread>,
         _message_nonce: u8,
         text: String,
+        timestamp: i64,
         encrypted: bool,
     ) -> ProgramResult {
         // TODO: Verify that sender is a member of the thread
@@ -78,6 +79,7 @@ mod dialect {
         message_account.owner = *ctx.accounts.sender.key;
         message_account.text = text;
         message_account.idx = thread_account.message_idx;
+        message_account.timestamp = timestamp;
         message_account.encrypted = encrypted;
         Ok(())
     }
@@ -213,9 +215,10 @@ pub struct ThreadAccount {
 #[account]
 #[derive(Default)]
 pub struct MessageAccount {
-    pub owner: Pubkey, // sender
-    pub text: String,  // TODO: use [u8; 280]
-    pub idx: u32,      // not sure we need this
+    pub owner: Pubkey,  // sender
+    pub text: String,   // TODO: use [u8; 280]
+    pub idx: u32,       // not sure we need this
+    pub timestamp: i64, // safe from 2038 bug?
     pub encrypted: bool,
 }
 
