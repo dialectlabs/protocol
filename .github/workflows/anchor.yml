@@ -1,0 +1,16 @@
+name: Anchor
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  anchor-test:
+    name: anchor test
+    runs-on: ubuntu-latest
+    container: projectserum/build:v0.17.0
+    steps:
+      - uses: actions/checkout@v2
+      - run: anchor test
