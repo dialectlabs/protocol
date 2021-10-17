@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+declare_id!("3eyY8Q6W1SQTuMj6bM6V8PfccjAiB4VvNikQQtD7f8Sr");
+
 /*
 Entrypoints
 */
@@ -93,7 +95,8 @@ pub struct CreateWatcherAccount<'info> {
     pub owner: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     #[account(init,
-        seeds = [b"watcher_account".as_ref(), &[watcher_nonce]],
+        seeds = [b"watcher_account".as_ref()],
+        bump = watcher_nonce,
         payer = owner,
         space = 512,
     )]
@@ -108,7 +111,8 @@ pub struct CreateSettingsAccount<'info> {
     pub owner: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [owner.key.as_ref(), b"settings_account", &[settings_nonce]],
+        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
+        bump = settings_nonce,
         payer = owner,
         space = 512,
     )]
@@ -117,25 +121,29 @@ pub struct CreateSettingsAccount<'info> {
     pub system_program: AccountInfo<'info>,
 }
 
+// TODO: rename ProgramAccount to Account
 #[derive(Accounts)]
 #[instruction(settings_nonce: u8, watcher_nonce: u8)]
 pub struct CreateThreadAccount<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
-    #[account(init)]
+    #[account(init, payer = owner, space = 512)]
     pub thread_account: ProgramAccount<'info, ThreadAccount>,
     #[account(
         mut,
-        seeds = [owner.key.as_ref(), b"settings_account", &[settings_nonce]],
+        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
+        bump = settings_nonce,
         has_one = owner,
     )]
     pub settings_account: ProgramAccount<'info, SettingsAccount>,
     #[account(
         mut,
-        seeds = [b"watcher_account", &[watcher_nonce]],
+        seeds = [b"watcher_account".as_ref()],
+        bump = watcher_nonce,
     )]
     pub watcher_account: ProgramAccount<'info, WatcherAccount>,
     pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -148,7 +156,8 @@ pub struct AddUserToThread<'info> {
     pub thread_account: ProgramAccount<'info, ThreadAccount>,
     #[account(
         mut,
-        seeds = [invitee.key.as_ref(), b"settings_account", &[settings_nonce]],
+        seeds = [invitee.key.as_ref(), b"settings_account".as_ref()],
+        bump = settings_nonce,
     )]
     pub invitee_settings_account: ProgramAccount<'info, SettingsAccount>,
 }
@@ -162,10 +171,10 @@ pub struct AddMessageToThread<'info> {
         init,
         seeds = [
             thread_account.to_account_info().key.as_ref(),
-            b"message_account",
+            b"message_account".as_ref(),
             (thread_account.message_idx + 1).to_string().as_bytes(), // u32 as &[u8]
-            &[message_nonce],
         ],
+        bump = message_nonce,
         payer = sender,
         space = 1024,
     )]
