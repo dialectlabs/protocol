@@ -13,4 +13,7 @@ jobs:
     container: projectserum/build:v0.17.0
     steps:
       - uses: actions/checkout@v2
-      - run: anchor test
+      - run:|
+          rustup install stable
+          rustup default stable
+          anchor test
