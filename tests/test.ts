@@ -15,9 +15,9 @@ import {
   settingsCreate,
   base64Encode,
   base64Decode,
-  encryptMessage,
-  decryptMessage,
 } from '../api';
+
+import { encryptMessage, decryptMessage } from '../utils';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());

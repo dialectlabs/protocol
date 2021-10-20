@@ -702,6 +702,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "proto2"
+version = "0.0.1"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
