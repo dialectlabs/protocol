@@ -21,33 +21,43 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
   const [connection, setConnection] = useState<Connection | null>(null);
   useEffect(() => {
     if (networkName) {
-      setConnection(new Connection(
-        programs[networkName].clusterAddress,
-        'recent',
-      ));
+      setConnection(
+        new Connection(programs[networkName].clusterAddress, 'recent')
+      );
     }
   }, [networkName]);
   const [program, setProgram] = useState<anchor.Program | null>(null);
 
   useEffect(() => {
     if (wallet?.publicKey && connection && networkName) {
-      anchor.setProvider(new anchor.Provider(connection, wallet, anchor.Provider.defaultOptions()));
-      const program = new anchor.Program(idl as anchor.Idl, new anchor.web3.PublicKey(programs[networkName].programAddress));
+      anchor.setProvider(
+        new anchor.Provider(
+          connection,
+          wallet,
+          anchor.Provider.defaultOptions()
+        )
+      );
+      const program = new anchor.Program(
+        idl as anchor.Idl,
+        new anchor.web3.PublicKey(programs[networkName].programAddress)
+      );
       setProgram(program);
     }
-  }, [wallet?.publicKey, networkName, connection]);
+  }, [wallet?.publicKey?.toString(), networkName, connection]);
   return (
-    <ApiContext.Provider value={{
-      connection: connection,
-      program: program,
-    }}>
+    <ApiContext.Provider
+      value={{
+        connection: connection,
+        program: program,
+      }}
+    >
       {props.children}
     </ApiContext.Provider>
   );
 };
 
 export function useApi(): ValueType {
-    return useContext(ApiContext) as ValueType;
+  return useContext(ApiContext) as ValueType;
 }
 
 export default useApi;
