@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "description": "",
   "private": true,
-  "module": "./dist/index.js",
+  "module": "./lib/es/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/dialectlabs/protocol"
   },
   "main": "./lib/es/index.js",
+  "types": "./lib/es/types.d.ts",
   "scripts": {
     "build": "rm -rf lib && tsc",
     "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
