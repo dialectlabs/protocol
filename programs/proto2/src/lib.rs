@@ -64,7 +64,7 @@ pub struct AddMessageToQueue<'info> {
         mut,
         seeds = [
             queue_owner.key.as_ref(),
-            b"queue_owner".as_ref()
+            b"queue_account".as_ref()
         ],
         bump = queue_nonce,
     )]
