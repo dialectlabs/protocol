@@ -13,7 +13,8 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "outDir": "lib/es",
-    "noEmit": false
+    "noEmit": false,
+    "declaration": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"],
