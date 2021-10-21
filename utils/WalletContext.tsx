@@ -18,7 +18,7 @@ type ValueType = {
 };
 export const WalletContext = createContext<ValueType | null>({
   wallet: null,
-  networkName: (process.env.ENVIRONMENT as Cluster | 'localnet') || 'localnet',
+  networkName: process.env.ENVIRONMENT as Cluster | 'localnet' || 'localnet',
   setNetworkName: (_: Cluster | 'localnet') => {
     _;
   },
@@ -29,11 +29,13 @@ export const WalletContext = createContext<ValueType | null>({
 });
 
 export const WalletContextProvider = (props: PropsType): JSX.Element => {
-  const [selectedWallet, setSelectedWallet] = useState<Wallet_ | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<
+    Wallet_ | null
+  >(null);
   const [privateKey, setPrivateKey] = useState<Uint8Array | null>(null);
   const [, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
-    (process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster) || 'localnet'
+    process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster || 'localnet'
   );
   const network: string = useMemo(() => {
     if (networkName === 'localnet') {
@@ -50,6 +52,10 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
 
   useEffect(() => {
     if (privateKey) {
+      console.log('setting private key...')
+      setSelectedWallet(Wallet_.embedded(privateKey));
+    } else {
+      console.log('UNsetting private key...')
       setSelectedWallet(null);
     }
   }, [privateKey]);
