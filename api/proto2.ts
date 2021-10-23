@@ -38,7 +38,7 @@ export async function writeMessageToQueue(
   queueOwner: anchor.web3.PublicKey,
   sender: anchor.web3.PublicKey,
   receiver: anchor.web3.PublicKey,
-  text: String
+  text: string
 ) {
   queueOwner ||= program.provider.wallet.publicKey;
   const timestamp = new anchor.BN(Date.now());
@@ -49,7 +49,7 @@ export async function writeMessageToQueue(
   console.log({ queueAccount, queueNonce });
   const tx = await program.rpc.addMessageToQueue(
     new anchor.BN(queueNonce),
-    text,
+    new TextEncoder().encode(text),
     timestamp,
     {
       accounts: {
@@ -57,8 +57,6 @@ export async function writeMessageToQueue(
         receiver,
         queueOwner,
         queueAccount,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        // systemProgram: anchor.web3.SystemProgram.programId,
       },
     }
   );
