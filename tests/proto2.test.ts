@@ -37,4 +37,17 @@ describe('test', () => {
       'blah blah blah'
     );
   });
+  it('adds more messages to queue', async () => {
+    for(let i = 0; i < 30; i++){
+      console.log(i);
+      await writeMessageToQueue(
+        PROGRAM,
+        queue_owner,
+        queue_owner,
+        receiver,
+        'blah blah blah' + i
+      );
+    }
+  });
+
 });

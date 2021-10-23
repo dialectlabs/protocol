@@ -5,6 +5,7 @@ wallet = "~/.config/solana/id.json"
 [programs.localnet]
 dialect = "3eyY8Q6W1SQTuMj6bM6V8PfccjAiB4VvNikQQtD7f8Sr"
 proto2 = "FBg6zTf1QMKD8CXGF1MdCa2paUosBfokidALJ7tXpHMX"
+cpi = "AETCZ1yXpDmUxE2Wmro9U7AfPKqZzAAbkQTPYZ1ijtNb"
 
 [scripts]
-test = "ts-mocha -t 1000000 tests/*.ts"
+test = "ts-mocha -t 1000000 tests/proto2.test.ts"

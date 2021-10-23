@@ -49,6 +49,7 @@ export async function writeMessageToQueue(
   console.log({ queueAccount, queueNonce });
   const tx = await program.rpc.addMessageToQueue(
     new anchor.BN(queueNonce),
+    // text, 
     new TextEncoder().encode(text),
     timestamp,
     {
