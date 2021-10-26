@@ -465,7 +465,7 @@ export async function messageCreate(
   program: anchor.Program,
   thread: ThreadAccount,
   text: string,
-  sender?: anchor.web3.Keypair | null,
+  sender?: anchor.web3.Signer | null,
   encrypted = false
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
@@ -511,7 +511,7 @@ export async function messageCreate(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [sender] || undefined,
+      signers: sender ? [sender] : [],
     }
   );
   await waitForFinality(program, tx);
@@ -685,7 +685,7 @@ async function waitForFinality_inner(
 // TODO: instead use separate diffie-helman key with public key signed by the RSA private key.
 export function encryptMessage(
   msg: Uint8Array,
-  sAccount: anchor.web3.Keypair,
+  sAccount: anchor.web3.Signer,
   rPublicKey: PublicKey,
   nonce: Uint8Array
 ): Uint8Array {
