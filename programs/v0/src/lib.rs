@@ -6,7 +6,7 @@ declare_id!("3eyY8Q6W1SQTuMj6bM6V8PfccjAiB4VvNikQQtD7f8Sr");
 Entrypoints
 */
 #[program]
-mod dialect {
+mod v0 {
     use super::*;
     pub fn create_watcher_account(
         _ctx: Context<CreateWatcherAccount>,

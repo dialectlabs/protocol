@@ -17,11 +17,11 @@ import {
   base64Decode,
   encryptMessage,
   decryptMessage,
-} from '../api';
+} from '../src/api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
-const PROGRAM = anchor.workspace.Dialect;
+const PROGRAM = anchor.workspace.V0;
 
 // let settingspk: anchor.web3.PublicKey;
 let threadpk: PublicKey;

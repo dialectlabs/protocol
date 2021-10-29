@@ -1,15 +1,15 @@
 [package]
-name = "dialect"
+name = "v0"
 version = "0.0.1"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "dialect"
+name = "v0"
 
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = "0.17.0"
+anchor-lang = "0.18.0"

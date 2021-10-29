@@ -27,3 +27,20 @@ anchor deploy
 ```
 
 this will give you a program id as output, which you should then put in program.json
+
+## Tokenized communication
+
+### Memos
+
+https://explorer.solana.com/tx/47eaxtBi6JY5GHvKmsdJcRba1PE7T19X4QX2dQ6FVpA2wuUwpxjFa6pgKnaassbmgKiwiewy6RhMCEpgzd6h6RfV
+
+
+## Upgrading anchor
+
+If you get the error
+
+```bash
+error[E0460]: found possibly newer version of crate `std` which `rustc_version` depends on
+```
+
+the simplest solution is to `rm -r target/`.
