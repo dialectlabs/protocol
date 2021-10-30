@@ -44,3 +44,13 @@ error[E0460]: found possibly newer version of crate `std` which `rustc_version` 
 ```
 
 the simplest solution is to `rm -r target/`.
+
+## Adding new workspace
+
+From the root dir
+
+```bash
+anchor new <program-name>
+```
+
+This will create a new `/programs/<program-name>/` directory with boilerplate.
