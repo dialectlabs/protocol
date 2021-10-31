@@ -8,10 +8,10 @@ Entrypoints
 #[program]
 pub mod dialect {
     use super::*;
-    pub fn initialize(ctx: Context<Initialize>) -> ProgramResult {
+    pub fn initialize(_ctx: Context<Initialize>) -> ProgramResult {
         Ok(())
     }
-    pub fn create_dialect(ctx: Context<CreateDialect>) -> ProgramResult {
+    pub fn create_dialect(_ctx: Context<CreateDialect>) -> ProgramResult {
         Ok(())
     }
 }
@@ -26,6 +26,7 @@ pub struct Initialize {}
 pub struct CreateDialect<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
+    // TODO: Choose space
     #[account(init, payer = owner, space=512)]
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
