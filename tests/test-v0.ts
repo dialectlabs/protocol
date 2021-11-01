@@ -15,9 +15,8 @@ import {
   settingsCreate,
   base64Encode,
   base64Decode,
-  encryptMessage,
-  decryptMessage,
-} from '../src/api';
+} from '../src/v0';
+import { encryptMessage, decryptMessage } from '../src/utils';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -156,8 +155,8 @@ describe('test threads', () => {
 describe('b64 encode', () => {
   it('encode-decode-inverse', async () => {
     const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 7, 8]);
-    let encoded = base64Encode(data);
-    let decoded = base64Decode(encoded);
+    const encoded = base64Encode(data);
+    const decoded = base64Decode(encoded);
     assert.strictEqual(decoded.constructor.name, data.constructor.name);
     assert.strictEqual(data.toString(), decoded.toString());
   });
@@ -242,7 +241,7 @@ describe('test encrypted messages', () => {
 
 describe('test watcher', () => {
   it('watcher can see thread list', async () => {
-    let threads = await watcherThreadsGet(PROGRAM);
+    const threads = await watcherThreadsGet(PROGRAM);
     assert.strictEqual(threads.length, 1);
     assert.strictEqual(threads[0].key.toString(), threadpk.toString());
   });

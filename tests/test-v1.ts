@@ -3,7 +3,7 @@ import * as splToken from '@solana/spl-token';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { waitForFinality } from '../src/api';
+import { waitForFinality } from '../src/utils';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
