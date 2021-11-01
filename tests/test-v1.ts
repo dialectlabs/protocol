@@ -3,6 +3,7 @@ import * as splToken from '@solana/spl-token';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { waitForFinality } from '../src/api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -39,6 +40,9 @@ describe('Test messaging with a fungible token', () => {
       9,
       splToken.TOKEN_PROGRAM_ID,
     );
+    const mintInfo = await mint.getMintInfo();
+    console.log('mintInfo.mintAuthority', mintInfo.mintAuthority?.toString());
+    assert.equal(mintInfo.mintAuthority?.toString(), senderKeypair.publicKey.toString());
 
     senderTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
       senderKeypair.publicKey,
@@ -60,7 +64,16 @@ describe('Test messaging with a fungible token', () => {
   });
 
   it('Create a dialect for the fungible token', async () => {
-    chai.expect(true).to.be.true;
+    const tx = await program.rpc.createDialect({
+      accounts: {
+        mint: mint.publicKey,
+        authority: senderKeypair.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+    });
+    await waitForFinality(program, tx);
+    console.log('tx', tx);
   });
 
   it('Fail to create a dialect for a non-mint account', async () => {

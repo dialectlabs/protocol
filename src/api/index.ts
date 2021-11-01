@@ -637,7 +637,7 @@ export async function newGroupMutate(
 Transactions
 */
 
-async function waitForFinality(
+export async function waitForFinality(
   program: anchor.Program,
   transactionStr: string,
   finality: anchor.web3.Finality | undefined = 'confirmed',
