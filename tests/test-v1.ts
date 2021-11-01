@@ -3,7 +3,7 @@ import * as splToken from '@solana/spl-token';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { waitForFinality } from '../src/utils';
+import { createDialect, getDialectProgramAddress } from '../src/api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -19,11 +19,6 @@ describe('Test messaging with a fungible token', () => {
   let senderTokenAccount: splToken.AccountInfo;
   let receiverTokenAccount: splToken.AccountInfo;
   const mintAmount = 1000000000;
-
-  it('Test initialize', async () => {
-    const tx = await program.rpc.initialize();
-    console.log('tx', tx);
-  });
 
   it('Create a new fungible mint & token account', async () => {
     const fromAirdropSignature = await connection.requestAirdrop(
@@ -41,7 +36,6 @@ describe('Test messaging with a fungible token', () => {
       splToken.TOKEN_PROGRAM_ID,
     );
     const mintInfo = await mint.getMintInfo();
-    console.log('mintInfo.mintAuthority', mintInfo.mintAuthority?.toString());
     assert.equal(mintInfo.mintAuthority?.toString(), senderKeypair.publicKey.toString());
 
     senderTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
@@ -64,53 +58,21 @@ describe('Test messaging with a fungible token', () => {
   });
 
   it('Create a dialect for the fungible token', async () => {
-    const [dialectPubkey, dialectNonce] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from('dialect'), mint.publicKey.toBuffer()],
-      program.programId
-    );
-    const tx = await program.rpc.createDialect(
-      new anchor.BN(dialectNonce),
-      {
-        accounts: {
-          dialect: dialectPubkey,
-          mint: mint.publicKey,
-          mintAuthority: senderKeypair.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        },
-        signers: [senderKeypair],
-      }
-    );
-    await waitForFinality(program, tx);
-    console.log('tx', tx);
+    const dialectAccount = await createDialect(program, mint, senderKeypair);
+    assert.equal(dialectAccount.dialect.mint.toString(), mint.publicKey.toString());
+  });
+
+  it('Fail to create a second dialect for the same fungible token', async () => {
+    chai.expect(createDialect(program, mint, senderKeypair)).to.eventually.be.rejectedWith(Error);
   });
 
   it('Fail to create a dialect as non-mint authority', async () => {
-    const [dialectPubkey, dialectNonce] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from('dialect'), mint.publicKey.toBuffer()],
-      program.programId
-    );
-    chai.expect(program.rpc.createDialect(
-        new anchor.BN(dialectNonce),
-        {
-          accounts: {
-            dialect: dialectPubkey,
-            mint: mint.publicKey,
-            mintAuthority: receiverKeypair.publicKey,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          },
-          signers: [receiverKeypair],
-        }
-      )).to.eventually.be.rejectedWith(Error);
+    chai.expect(createDialect(program, mint, receiverKeypair)).to.eventually.be.rejectedWith(Error);
   });
 
   it('Fail to create a dialect for a non-mint account', async () => {
     const nonMintKeypair = web3.Keypair.generate();
-    const [dialectPubkey, dialectNonce] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from('dialect'), nonMintKeypair.publicKey.toBuffer()],
-      program.programId
-    );
+    const [dialectPubkey, dialectNonce] = await getDialectProgramAddress(program, mint);
     chai.expect(program.rpc.createDialect(
       new anchor.BN(dialectNonce),
       {
@@ -124,6 +86,11 @@ describe('Test messaging with a fungible token', () => {
         signers: [senderKeypair],
       }
     )).to.eventually.be.rejectedWith(Error);
+  });
+
+  it('Get members, expect it to be 1', async () => {
+    // TODO: Implement
+    chai.expect(true).to.be.true;
   });
 
   it('Transfer one token to the receiver', async () => {
@@ -159,6 +126,11 @@ describe('Test messaging with a fungible token', () => {
     );
     assert.equal(senderTokenAccount.amount.toString(), (mintAmount - 1).toString());
     assert.equal(receiverTokenAccount.amount.toString(), '1');
+  });
+
+  it('Get members, expect it to be 2', async () => {
+    // TODO: Implement
+    chai.expect(true).to.be.true;
   });
 
   it('Mint authority sends a message.', async () => {

@@ -10,14 +10,10 @@ Entrypoints
 #[program]
 pub mod dialect {
     use super::*;
-    pub fn initialize(_ctx: Context<Initialize>) -> ProgramResult {
-        msg!("hello from initialize");
-        Ok(())
-    }
-
     pub fn create_dialect(ctx: Context<CreateDialect>, _dialect_nonce: u8) -> ProgramResult {
         let mint = &ctx.accounts.mint;
-        msg!("mint.mint_authority {:?}", mint.mint_authority);
+        let dialect = &mut ctx.accounts.dialect;
+        dialect.mint = mint.key();
         Ok(())
     }
 }
@@ -25,8 +21,6 @@ pub mod dialect {
 /*
 Contexts
 */
-#[derive(Accounts)]
-pub struct Initialize {}
 
 #[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]

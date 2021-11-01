@@ -58,3 +58,8 @@ This will create a new `/programs/<program-name>/` directory with boilerplate.
 ## Debugging
 
 Convert `0x<n>` from hex, look up error number here. https://github.com/project-serum/anchor/blob/master/lang/src/error.rs
+
+## Open questions
+
+- Read efficiency for determining group members
+- Deleting a mint
