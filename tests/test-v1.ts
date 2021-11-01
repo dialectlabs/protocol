@@ -64,20 +64,66 @@ describe('Test messaging with a fungible token', () => {
   });
 
   it('Create a dialect for the fungible token', async () => {
-    const tx = await program.rpc.createDialect({
-      accounts: {
-        mint: mint.publicKey,
-        authority: senderKeypair.publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-    });
+    const [dialectPubkey, dialectNonce] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from('dialect'), mint.publicKey.toBuffer()],
+      program.programId
+    );
+    const tx = await program.rpc.createDialect(
+      new anchor.BN(dialectNonce),
+      {
+        accounts: {
+          dialect: dialectPubkey,
+          mint: mint.publicKey,
+          mintAuthority: senderKeypair.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: [senderKeypair],
+      }
+    );
     await waitForFinality(program, tx);
     console.log('tx', tx);
   });
 
+  it('Fail to create a dialect as non-mint authority', async () => {
+    const [dialectPubkey, dialectNonce] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from('dialect'), mint.publicKey.toBuffer()],
+      program.programId
+    );
+    chai.expect(program.rpc.createDialect(
+        new anchor.BN(dialectNonce),
+        {
+          accounts: {
+            dialect: dialectPubkey,
+            mint: mint.publicKey,
+            mintAuthority: receiverKeypair.publicKey,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          },
+          signers: [receiverKeypair],
+        }
+      )).to.eventually.be.rejectedWith(Error);
+  });
+
   it('Fail to create a dialect for a non-mint account', async () => {
-    chai.expect(true).to.be.true;
+    const nonMintKeypair = web3.Keypair.generate();
+    const [dialectPubkey, dialectNonce] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from('dialect'), nonMintKeypair.publicKey.toBuffer()],
+      program.programId
+    );
+    chai.expect(program.rpc.createDialect(
+      new anchor.BN(dialectNonce),
+      {
+        accounts: {
+          dialect: dialectPubkey,
+          mint: nonMintKeypair.publicKey,
+          mintAuthority: senderKeypair.publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: [senderKeypair],
+      }
+    )).to.eventually.be.rejectedWith(Error);
   });
 
   it('Transfer one token to the receiver', async () => {
@@ -128,11 +174,11 @@ describe('Test messaging with a fungible token', () => {
     chai.expect(true).to.be.true;
   });
 
-  it('Transfer authority', async () => {
+  it('Transfer authority to another wallet', async () => {
     chai.expect(true).to.be.true;
   });
 
-  it('New authority can send a message', async () => {
+  it('New authority can now send a message', async () => {
     chai.expect(true).to.be.true;
   });
 
@@ -141,6 +187,10 @@ describe('Test messaging with a fungible token', () => {
   });
 
   it('Old authority fails to send a message', async () => {
+    chai.expect(true).to.be.true;
+  });
+
+  it('Close the account (TBD)', async () => {
     chai.expect(true).to.be.true;
   });
 });
