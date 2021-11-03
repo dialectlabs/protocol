@@ -10,7 +10,10 @@ Entrypoints
 #[program]
 pub mod dialect {
     use super::*;
-    pub fn create_dialect(ctx: Context<CreateDialect>, _dialect_nonce: u8) -> ProgramResult {
+    pub fn create_mint_dialect(
+        ctx: Context<CreateMintDialect>,
+        _dialect_nonce: u8,
+    ) -> ProgramResult {
         let mint = &ctx.accounts.mint;
         let dialect = &mut ctx.accounts.dialect;
         dialect.mint = mint.key();
@@ -24,7 +27,7 @@ Contexts
 
 #[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
-pub struct CreateDialect<'info> {
+pub struct CreateMintDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
     pub mint_authority: AccountInfo<'info>, // The dialect owner must be the mint authority
     // TODO: Enforce that mint.mint_authority exists
@@ -37,7 +40,7 @@ pub struct CreateDialect<'info> {
         payer = mint_authority,
         space = 512, // TODO: Choose space
     )]
-    pub dialect: Account<'info, DialectAccount>,
+    pub dialect: Account<'info, MintDialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -47,7 +50,7 @@ Accounts
 */
 #[account]
 #[derive(Default)]
-pub struct DialectAccount {
+pub struct MintDialectAccount {
     pub mint: Pubkey,
     // pub mint_authority: Pubkey, // TODO: Do we need this?
 }

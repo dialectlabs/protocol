@@ -3,7 +3,7 @@ import * as splToken from '@solana/spl-token';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { createDialect, getDialectProgramAddress } from '../src/api';
+import { createMintDialect, getMintDialectProgramAddress } from '../src/api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -58,22 +58,22 @@ describe('Test messaging with a fungible token', () => {
   });
 
   it('Create a dialect for the fungible token', async () => {
-    const dialectAccount = await createDialect(program, mint, senderKeypair);
+    const dialectAccount = await createMintDialect(program, mint, senderKeypair);
     assert.equal(dialectAccount.dialect.mint.toString(), mint.publicKey.toString());
   });
 
   it('Fail to create a second dialect for the same fungible token', async () => {
-    chai.expect(createDialect(program, mint, senderKeypair)).to.eventually.be.rejectedWith(Error);
+    chai.expect(createMintDialect(program, mint, senderKeypair)).to.eventually.be.rejectedWith(Error);
   });
 
   it('Fail to create a dialect as non-mint authority', async () => {
-    chai.expect(createDialect(program, mint, receiverKeypair)).to.eventually.be.rejectedWith(Error);
+    chai.expect(createMintDialect(program, mint, receiverKeypair)).to.eventually.be.rejectedWith(Error);
   });
 
   it('Fail to create a dialect for a non-mint account', async () => {
     const nonMintKeypair = web3.Keypair.generate();
-    const [dialectPubkey, dialectNonce] = await getDialectProgramAddress(program, mint);
-    chai.expect(program.rpc.createDialect(
+    const [dialectPubkey, dialectNonce] = await getMintDialectProgramAddress(program, mint);
+    chai.expect(program.rpc.createMintDialect(
       new anchor.BN(dialectNonce),
       {
         accounts: {

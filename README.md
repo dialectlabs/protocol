@@ -63,3 +63,21 @@ Convert `0x<n>` from hex, look up error number here. https://github.com/project-
 
 - Read efficiency for determining group members
 - Deleting a mint
+
+## design
+
+messaging via the pub-sub pattern, basically you need:
+
+1. an entity that acts as the thing to which ppl pub-sub.
+2. a way for someone to know what they've subbed to
+3. a way to store ppl's permissions to pub
+4. a way to store ppls pubs
+
+in a tokenized design, it's:
+
+1. the token mint
+2. holding (any amount of?) the token
+    - tbd if 
+3. 
+
+SRM has no authority https://solscan.io/token/SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt, but e.g. solrise does https://solscan.io/token/SLRSSpSLUTP7okbCUBYStWCo1vUgyt775faPqz8HUMr
