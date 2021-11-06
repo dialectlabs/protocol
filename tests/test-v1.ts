@@ -1,45 +1,63 @@
 import * as anchor from '@project-serum/anchor';
-import * as splToken from '@solana/spl-token';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { createDialect, getDialectProgramAddress } from '../src/api';
+import { createDialect, getDialectProgramAddress, Member } from '../src/api';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 const program = anchor.workspace.Dialect;
 const connection = program.provider.connection;
-const members = Array(8).fill(0).map(() => web3.Keypair.generate());
+
+const [owner, writer, nonmember] = Array(3).fill(0).map(() => web3.Keypair.generate());
+
+const members = [{
+  publicKey: owner.publicKey,
+  scopes: [true, false], // owner, read-only
+}, {
+  publicKey: writer.publicKey,
+  scopes: [false, true], // non-owner, read-write
+}] as Member[];
 
 // TODO: Remove test interdependence with fixtures
 describe('Test messaging with a standard dialect', () => {
 
   it('Fund owner\'s account', async () => {
     const fromAirdropSignature = await connection.requestAirdrop(
-      members[0].publicKey,
+      owner.publicKey,
       web3.LAMPORTS_PER_SOL,
     );
     await connection.confirmTransaction(fromAirdropSignature);
   });
 
-  it('Create a dialect for 8 members, with various scopes', async () => {
-    await createDialect(program, members[0], members.map(m => m.publicKey));
+  it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
+    await createDialect(program, owner, members);
   });
 
   it('Fail to create a second dialect for the same members', async () => {
+    chai
+      .expect(createDialect(program, owner, members))
+      .to.eventually.be.rejectedWith(Error);
+  });
+
+  it('Fail to create a dialect for unsorted members', async () => {
     chai.expect(true).to.be.true;
   });
 
-  it('Fail to create a second dialect for unsorted members', async () => {
+  it('Fail to create a dialect for duplicate members', async () => {
     chai.expect(true).to.be.true;
   });
 
-  it('Get members, verify it\'s the right 8 with correct scopes', async () => {
+  it('Get members, verify it\'s the right 2 with correct scopes', async () => {
     // TODO: Implement
     chai.expect(true).to.be.true;
   });
 
-  it('Owner sends a message', async () => {
+  it('Find a dialect for a given member pair.', async () => {
+    chai.expect(true).to.be.true;
+  });
+
+  it('Writer sends a message', async () => {
     chai.expect(true).to.be.true;
   });
 
@@ -52,7 +70,7 @@ describe('Test messaging with a standard dialect', () => {
     chai.expect(true).to.be.true;
   });
 
-  it('All readers fail to send a message', async () => {
+  it('Owner fails to send a message', async () => {
     chai.expect(true).to.be.true;
   });
 

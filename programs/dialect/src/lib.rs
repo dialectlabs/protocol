@@ -15,15 +15,19 @@ pub mod dialect {
     Dialects
     */
 
-    pub fn create_dialect(ctx: Context<CreateDialect>, _dialect_nonce: u8) -> ProgramResult {
+    pub fn create_dialect(
+        ctx: Context<CreateDialect>,
+        _dialect_nonce: u8,
+        // scopes: [[bool; 2]; 2],
+    ) -> ProgramResult {
         // TODO: Assert that members are unique
         // TODO: Assert that owner in members
         // TODO: Pass up scopes
         // TODO: Enumerate over members & scopes
         let dialect = &mut ctx.accounts.dialect;
         let owner = &mut ctx.accounts.owner;
-        let members = &ctx.remaining_accounts;
-        msg!("remaining accounts {:?}", ctx.remaining_accounts);
+        let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
+        // msg!("remaining accounts {:?}", ctx.remaining_accounts);
         // let members = [
         //     &mut ctx.accounts.member0,
         //     &mut ctx.accounts.member1,
@@ -34,51 +38,28 @@ pub mod dialect {
         //     &mut ctx.accounts.member6,
         //     &mut ctx.accounts.member7,
         // ];
-        // for (idx, member) in members.iter().enumerate() {
-        //     if idx < members.len() - 1
-        //         && member.key.cmp(&members[idx + 1].key) == std::cmp::Ordering::Greater
-        //     {
-        //         msg!("Member {} is GREATER member {}", idx, idx + 1);
-        //     }
-        // }
+        // Reject if members are not sorted
+        for (idx, member) in members.iter().enumerate() {
+            if idx < members.len() - 1
+                && member.key.cmp(&members[idx + 1].key) == std::cmp::Ordering::Greater
+            {
+                msg!("Member {} is GREATER member {}", idx, idx + 1);
+            }
+        }
 
         // TODO: Enforce that members are sorted
         // msg!("members: {:?}", members);
 
-        // dialect.members = [
-        //     Some(Member {
-        //         pubkey: *members[0].key,
-        //         scopes: [true, true], // owner/write
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[1].key,
-        //         scopes: [false, true], // write
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[2].key,
-        //         scopes: [false, false], // read
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[3].key,
-        //         scopes: [false, false], // read
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[4].key,
-        //         scopes: [false, false], // read
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[5].key,
-        //         scopes: [false, false], // read
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[6].key,
-        //         scopes: [false, false], // read
-        //     }),
-        //     Some(Member {
-        //         pubkey: *members[7].key,
-        //         scopes: [false, false], // read
-        //     }),
-        // ];
+        dialect.members = [
+            Some(Member {
+                pubkey: *members[0].key,
+                scopes: [true, true], // owner/write
+            }),
+            Some(Member {
+                pubkey: *members[1].key,
+                scopes: [false, true], // write
+            }),
+        ];
         Ok(())
     }
 
@@ -108,16 +89,12 @@ Contexts
 #[instruction(dialect_nonce: u8)]
 pub struct CreateDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
+    // We dupe the owner in one of the members, since the members must be sorted
     pub owner: AccountInfo<'info>,
-    // pub member0: AccountInfo<'info>,
+    pub member0: AccountInfo<'info>,
     // // TOOD: Set limit, or use remaining accounts for members
-    // pub member1: AccountInfo<'info>,
-    // pub member2: AccountInfo<'info>,
-    // pub member3: AccountInfo<'info>,
-    // pub member4: AccountInfo<'info>,
-    // pub member5: AccountInfo<'info>,
-    // pub member6: AccountInfo<'info>,
-    // pub member7: AccountInfo<'info>,
+    pub member1: AccountInfo<'info>,
+    // TODO: Support more users
     #[account(
         init,
         // TODO: Assert that owner is a member with owner privileges
@@ -125,15 +102,8 @@ pub struct CreateDialect<'info> {
         // TODO: Sort member keys for deterministic seed per set
         seeds = [
             b"dialect".as_ref(),
-            b"standard".as_ref(),
-            // member0.key().as_ref(),
-            // member1.key().as_ref(),
-            // member2.key().as_ref(),
-            // member3.key().as_ref(),
-            // member4.key().as_ref(),
-            // member5.key().as_ref(),
-            // member6.key().as_ref(),
-            // member7.key().as_ref(),
+            member0.key().as_ref(),
+            member1.key().as_ref(),
         ],
         bump = dialect_nonce,
         payer = owner,
@@ -179,7 +149,7 @@ Accounts
 #[account]
 #[derive(Default)]
 pub struct DialectAccount {
-    pub members: [Option<Member>; 8],
+    pub members: [Option<Member>; 2],
 }
 
 #[account]
