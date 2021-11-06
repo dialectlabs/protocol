@@ -18,7 +18,7 @@ pub mod dialect {
     pub fn create_dialect(
         ctx: Context<CreateDialect>,
         _dialect_nonce: u8,
-        // scopes: [[bool; 2]; 2],
+        scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert that members are unique
         // TODO: Assert that owner in members
@@ -27,17 +27,6 @@ pub mod dialect {
         let dialect = &mut ctx.accounts.dialect;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
-        // msg!("remaining accounts {:?}", ctx.remaining_accounts);
-        // let members = [
-        //     &mut ctx.accounts.member0,
-        //     &mut ctx.accounts.member1,
-        //     &mut ctx.accounts.member2,
-        //     &mut ctx.accounts.member3,
-        //     &mut ctx.accounts.member4,
-        //     &mut ctx.accounts.member5,
-        //     &mut ctx.accounts.member6,
-        //     &mut ctx.accounts.member7,
-        // ];
         // Reject if members are not sorted
         for (idx, member) in members.iter().enumerate() {
             if idx < members.len() - 1
@@ -53,11 +42,11 @@ pub mod dialect {
         dialect.members = [
             Some(Member {
                 pubkey: *members[0].key,
-                scopes: [true, true], // owner/write
+                scopes: scopes[0], // owner/write
             }),
             Some(Member {
                 pubkey: *members[1].key,
-                scopes: [false, true], // write
+                scopes: scopes[1], // write
             }),
         ];
         Ok(())

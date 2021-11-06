@@ -85,3 +85,7 @@ SRM has no authority https://solscan.io/token/SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2L
 ## Account with list of dialects
 
 Users will need a list of the dialects they're members of, but e.g. protocols won't necessarily want this -- they might be a part of many, and they may only need to find these when they already know the member(s) that belong (this can be derived deterministically). We need a way to either flexibly create or not create the dialects account, or explicitly choose to create or not create it.
+
+### How do users opt-in?
+
+This might be how we relate dialects to the user dialects account.

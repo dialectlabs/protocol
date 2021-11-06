@@ -47,9 +47,10 @@ export async function createDialect(program: anchor.Program, owner: anchor.web3.
   const sortedMembers = members.sort((a, b) => a.publicKey.toBuffer().compare(b.publicKey.toBuffer()));
   const [publicKey, nonce] = await getDialectProgramAddress(program, sortedMembers);
   // TODO: assert owner in members
-  const keyedMembers = members.reduce((ms, m, idx) => ({...ms, [`member${idx}`]: m.publicKey}), {});
+  const keyedMembers = sortedMembers.reduce((ms, m, idx) => ({...ms, [`member${idx}`]: m.publicKey}), {});
   const tx = await program.rpc.createDialect(
     new anchor.BN(nonce),
+    sortedMembers.map(m => m.scopes),
     {
       accounts: {
         dialect: publicKey,
