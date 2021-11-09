@@ -27,7 +27,7 @@ pub mod dialect {
         let dialect = &mut ctx.accounts.dialect;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
-        // Reject if members are not sorted
+        // TODO: Reject if members are not sorted
         for (idx, member) in members.iter().enumerate() {
             if idx < members.len() - 1
                 && member.key.cmp(&members[idx + 1].key) == std::cmp::Ordering::Greater
@@ -36,23 +36,25 @@ pub mod dialect {
             }
         }
 
-        // TODO: Enforce that members are sorted
-        // msg!("members: {:?}", members);
-
         dialect.members = [
-            Some(Member {
+            Member {
                 pubkey: *members[0].key,
                 scopes: scopes[0], // owner/write
-            }),
-            Some(Member {
+            },
+            Member {
                 pubkey: *members[1].key,
                 scopes: scopes[1], // write
-            }),
+            },
         ];
         Ok(())
     }
 
-    pub fn update_dialect(ctx: Context<UpdateDialect>, _dialect_nonce: u8) -> ProgramResult {
+    pub fn send_message(ctx: Context<SendMessage>, _dialect_nonce: u8) -> ProgramResult {
+        let dialect = &mut ctx.accounts.dialect;
+        let sender = &mut ctx.accounts.sender;
+        if sender.key != &dialect.members[0].pubkey && sender.key != &dialect.members[1].pubkey {
+            msg!("Sender isn't a member")
+        }
         Ok(())
     }
 
@@ -94,6 +96,7 @@ pub struct CreateDialect<'info> {
             member0.key().as_ref(),
             member1.key().as_ref(),
         ],
+        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // also assert !eq
         bump = dialect_nonce,
         payer = owner,
         space = 512, // TODO: Choose space
@@ -105,11 +108,23 @@ pub struct CreateDialect<'info> {
 
 #[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
-pub struct UpdateDialect<'info> {
+pub struct SendMessage<'info> {
     #[account(signer, mut)]
-    pub owner: AccountInfo<'info>,
-    #[account(mut, seeds = [b"dialectstandard".as_ref()], bump = dialect_nonce)]
+    pub sender: AccountInfo<'info>,
+    pub member0: AccountInfo<'info>,
+    pub member1: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"dialect".as_ref(),
+            member0.key().as_ref(),
+            member1.key().as_ref(),
+        ],
+        bump = dialect_nonce,
+    )]
     pub dialect: Account<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -138,7 +153,7 @@ Accounts
 #[account]
 #[derive(Default)]
 pub struct DialectAccount {
-    pub members: [Option<Member>; 2],
+    pub members: [Member; 2],
 }
 
 #[account]

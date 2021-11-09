@@ -23,7 +23,7 @@ export async function getDialectProgramAddress(program: anchor.Program, members:
   return await anchor.web3.PublicKey.findProgramAddress(
     [
       Buffer.from('dialect'),
-      ...members // sort for deterministic address
+      ...members // sort for deterministic PDA
         .map(m => m.publicKey.toBuffer())
         .sort((a, b) => a.compare(b)), // TODO: test that buffers sort as expected
     ],
@@ -59,7 +59,6 @@ export async function createDialect(program: anchor.Program, owner: anchor.web3.
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      // remainingAccounts: sortedMembers.filter(m => m.toString() !== owner.publicKey.toString()).map(m => ({pubkey: m, isSigner: false, isWritable: false} as anchor.web3.AccountMeta)),
       signers: [owner],
     }
   );

@@ -3,6 +3,7 @@ import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { createDialect, getDialectProgramAddress, Member } from '../src/api';
+import { waitForFinality } from '../src/utils';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -30,6 +31,29 @@ describe('Test messaging with a standard dialect', () => {
     await connection.confirmTransaction(fromAirdropSignature);
   });
 
+  it('Fail to create a dialect for unsorted members', async () => {
+    // use custom unsorted version of createDialect for unsorted members
+    const unsortedMembers = members.sort((a, b) => a.publicKey.toBuffer().compare(b.publicKey.toBuffer()));
+    const [publicKey, nonce] = await getDialectProgramAddress(program, unsortedMembers);
+    // TODO: assert owner in members
+    const keyedMembers = unsortedMembers.reduce((ms, m, idx) => ({...ms, [`member${idx}`]: m.publicKey}), {});
+    const tx = await program.rpc.createDialect(
+      new anchor.BN(nonce),
+      members.map(m => m.scopes),
+      {
+        accounts: {
+          dialect: publicKey,
+          owner: owner.publicKey,
+          ...keyedMembers,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: [owner],
+      }
+    );
+    await waitForFinality(program, tx);
+  });
+
   it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
     await createDialect(program, owner, members);
   });
@@ -38,10 +62,6 @@ describe('Test messaging with a standard dialect', () => {
     chai
       .expect(createDialect(program, owner, members))
       .to.eventually.be.rejectedWith(Error);
-  });
-
-  it('Fail to create a dialect for unsorted members', async () => {
-    chai.expect(true).to.be.true;
   });
 
   it('Fail to create a dialect for duplicate members', async () => {
