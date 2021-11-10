@@ -33,7 +33,7 @@ describe('Test messaging with a standard dialect', () => {
 
   it('Fail to create a dialect for unsorted members', async () => {
     // use custom unsorted version of createDialect for unsorted members
-    const unsortedMembers = members.sort((a, b) => a.publicKey.toBuffer().compare(b.publicKey.toBuffer()));
+    const unsortedMembers = members.sort((a, b) => -a.publicKey.toBuffer().compare(b.publicKey.toBuffer()));
     const [publicKey, nonce] = await getDialectProgramAddress(program, unsortedMembers);
     // TODO: assert owner in members
     const keyedMembers = unsortedMembers.reduce((ms, m, idx) => ({...ms, [`member${idx}`]: m.publicKey}), {});
