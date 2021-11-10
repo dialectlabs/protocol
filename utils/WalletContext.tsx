@@ -18,7 +18,7 @@ type ValueType = {
 };
 export const WalletContext = createContext<ValueType | null>({
   wallet: null,
-  networkName: process.env.ENVIRONMENT as Cluster | 'localnet' || 'localnet',
+  networkName: (process.env.ENVIRONMENT as Cluster | 'localnet') || 'localnet',
   setNetworkName: (_: Cluster | 'localnet') => {
     _;
   },
@@ -29,13 +29,11 @@ export const WalletContext = createContext<ValueType | null>({
 });
 
 export const WalletContextProvider = (props: PropsType): JSX.Element => {
-  const [selectedWallet, setSelectedWallet] = useState<
-    Wallet_ | null
-  >(null);
+  const [selectedWallet, setSelectedWallet] = useState<Wallet_ | null>(null);
   const [privateKey, setPrivateKey] = useState<Uint8Array | null>(null);
   const [, setUrlWallet] = useState<Wallet | null>(null);
   const [networkName, setNetworkName] = useState<Cluster | 'localnet'>(
-    process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster || 'localnet'
+    (process.env.NEXT_PUBLIC_SOLANA_ENVIRONMENT as Cluster) || 'localnet'
   );
   const network: string = useMemo(() => {
     if (networkName === 'localnet') {
@@ -43,42 +41,49 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     }
     return clusterApiUrl(networkName);
   }, [networkName]);
-  const [providerUrl] = useState<string>('https://www.sollet.io');
-  // const connection = useMemo(() => new Connection(network), [network]);
-  useEffect(() => {
-    const w = new Wallet(providerUrl, network);
-    setUrlWallet(w);
-  }, [providerUrl, network]);
+  // const [providerUrl] = useState<string>('https://www.sollet.io');
+  // // const connection = useMemo(() => new Connection(network), [network]);
+  // useEffect(() => {
+  //   const w = new Wallet(providerUrl, network);
+  //   setUrlWallet(w);
+  // }, [providerUrl, network]);
 
   useEffect(() => {
     if (privateKey) {
-      console.log('setting private key...')
+      console.log('setting private key...');
       setSelectedWallet(Wallet_.embedded(privateKey));
     } else {
-      console.log('UNsetting private key...')
+      console.log('UNsetting private key...');
       setSelectedWallet(null);
     }
   }, [privateKey]);
 
+  console.log('WalletContextProvider');
+
+  const value = {
+    wallet: selectedWallet,
+    networkName,
+    setNetworkName,
+    onConnect: (privateKey: Uint8Array | null) => {
+      console.log('onConnect in protocol', privateKey);
+      setPrivateKey(privateKey);
+    },
+    onDisconnect: () => setPrivateKey(null),
+  };
+
   return (
-    <WalletContext.Provider
-      value={{
-        wallet: selectedWallet,
-        networkName,
-        setNetworkName,
-        onConnect: (privateKey: Uint8Array | null) => {
-          setPrivateKey(privateKey);
-        },
-        onDisconnect: () => setPrivateKey(null),
-      }}
-    >
+    <WalletContext.Provider value={value}>
       {props.children}
     </WalletContext.Provider>
   );
 };
 
 export function useWallet(): ValueType {
-  return useContext(WalletContext) as ValueType;
+  const context = useContext(WalletContext) as ValueType;
+  if (context === undefined) {
+    throw new Error('useCount must be used within a WalletContextProvider');
+  }
+  return context;
 }
 
 export default useWallet;
