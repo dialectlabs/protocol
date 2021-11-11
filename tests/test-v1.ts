@@ -2,7 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { createDialect, getDialectProgramAddress, Member } from '../src/api';
+import { createDialect, getDialectForMembers, getDialectProgramAddress, Member } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
 chai.use(chaiAsPromised);
@@ -37,7 +37,7 @@ describe('Test messaging with a standard dialect', () => {
     const [publicKey, nonce] = await getDialectProgramAddress(program, unsortedMembers);
     // TODO: assert owner in members
     const keyedMembers = unsortedMembers.reduce((ms, m, idx) => ({...ms, [`member${idx}`]: m.publicKey}), {});
-    const tx = await program.rpc.createDialect(
+    chai.expect(program.rpc.createDialect(
       new anchor.BN(nonce),
       members.map(m => m.scopes),
       {
@@ -50,8 +50,8 @@ describe('Test messaging with a standard dialect', () => {
         },
         signers: [owner],
       }
-    );
-    await waitForFinality(program, tx);
+    )).to.eventually.be.rejectedWith(Error);
+    // await waitForFinality(program, tx);
   });
 
   it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
@@ -65,16 +65,20 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Fail to create a dialect for duplicate members', async () => {
-    chai.expect(true).to.be.true;
+    const duplicateMembers = [
+      {publicKey: owner.publicKey, scopes: [true, true]} as Member,
+      {publicKey: owner.publicKey, scopes: [true, true]} as Member,
+    ];
+    chai.expect(createDialect(program, owner, duplicateMembers)).to.be.rejectedWith(Error);
+    // chai.expect(true).to.be.true;
   });
 
-  it('Get members, verify it\'s the right 2 with correct scopes', async () => {
-    // TODO: Implement
-    chai.expect(true).to.be.true;
-  });
-
-  it('Find a dialect for a given member pair.', async () => {
-    chai.expect(true).to.be.true;
+  it('Find a dialect for a given member pair, verify correct scopes.', async () => {
+    const dialect = await getDialectForMembers(program, members);
+    members.every((m, i) => (assert(
+      m.publicKey.equals(dialect.dialect.members[i].pubkey) &&
+      m.scopes.every((s, j) => s === dialect.dialect.members[i].scopes[j])
+    )));
   });
 
   it('Writer sends a message', async () => {

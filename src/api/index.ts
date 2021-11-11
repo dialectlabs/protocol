@@ -31,7 +31,7 @@ export async function getDialectProgramAddress(program: anchor.Program, members:
   );
 }
 
-export async function getDialect(program: anchor.Program, members: Member[]): Promise<MintDialectAccount> {
+export async function getDialectForMembers(program: anchor.Program, members: Member[]): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) => a.publicKey.toBuffer().compare(b.publicKey.toBuffer()));
   const [publicKey,] = await getDialectProgramAddress(program, sortedMembers);
   const dialect = await program.account.dialectAccount.fetch(publicKey);
@@ -63,7 +63,7 @@ export async function createDialect(program: anchor.Program, owner: anchor.web3.
     }
   );
   await waitForFinality(program, tx);
-  return await getDialect(program, members);
+  return await getDialectForMembers(program, members);
 }
 
 /*

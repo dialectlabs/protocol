@@ -96,7 +96,7 @@ pub struct CreateDialect<'info> {
             member0.key().as_ref(),
             member1.key().as_ref(),
         ],
-        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // also assert !eq
+        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // should also assert !eq
         bump = dialect_nonce,
         payer = owner,
         space = 512, // TODO: Choose space
