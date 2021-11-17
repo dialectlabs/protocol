@@ -14,7 +14,8 @@
     "build": "rm -rf lib && tsc",
     "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
     "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
-    "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}"
+    "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
+    "local-publish": "rm -rf node_modules"
   },
   "keywords": [],
   "author": "c. b. osborn",
