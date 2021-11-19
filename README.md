@@ -2,6 +2,17 @@
 
 ## local development
 
+### building for local usage
+
+"local usage" means installation of this package through "file://..." 
+```
+> npm install
+> npm run build
+> npm run local-publish
+```
+During local-publish step we remove the node_modules from this folder so that, when installed, they are not being consumed during main app's run
+
+
 ### install solana, anchor
 
 notes coming soon

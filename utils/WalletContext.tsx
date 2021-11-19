@@ -41,12 +41,12 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     }
     return clusterApiUrl(networkName);
   }, [networkName]);
-  const [providerUrl] = useState<string>('https://www.sollet.io');
-  // const connection = useMemo(() => new Connection(network), [network]);
-  useEffect(() => {
-    const w = new Wallet(providerUrl, network);
-    setUrlWallet(w);
-  }, [providerUrl, network]);
+  // const [providerUrl] = useState<string>('https://www.sollet.io');
+  // // const connection = useMemo(() => new Connection(network), [network]);
+  // useEffect(() => {
+  //   const w = new Wallet(providerUrl, network);
+  //   setUrlWallet(w);
+  // }, [providerUrl, network]);
 
   useEffect(() => {
     if (privateKey) {
@@ -58,25 +58,32 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     }
   }, [privateKey]);
 
+  console.log('WalletContextProvider');
+
+  const value = {
+    wallet: selectedWallet,
+    networkName,
+    setNetworkName,
+    onConnect: (privateKey: Uint8Array | null) => {
+      console.log('onConnect in protocol', privateKey);
+      setPrivateKey(privateKey);
+    },
+    onDisconnect: () => setPrivateKey(null),
+  };
+
   return (
-    <WalletContext.Provider
-      value={{
-        wallet: selectedWallet,
-        networkName,
-        setNetworkName,
-        onConnect: (privateKey: Uint8Array | null) => {
-          setPrivateKey(privateKey);
-        },
-        onDisconnect: () => setPrivateKey(null),
-      }}
-    >
+    <WalletContext.Provider value={value}>
       {props.children}
     </WalletContext.Provider>
   );
 };
 
 export function useWallet(): ValueType {
-  return useContext(WalletContext) as ValueType;
+  const context = useContext(WalletContext) as ValueType;
+  if (context === undefined) {
+    throw new Error('useCount must be used within a WalletContextProvider');
+  }
+  return context;
 }
 
 export default useWallet;
