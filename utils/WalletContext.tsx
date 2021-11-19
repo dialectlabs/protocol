@@ -59,8 +59,6 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     }
   }, [privateKey]);
 
-  console.log('WalletContextProvider');
-
   const value = {
     wallet: selectedWallet,
     networkName,
