@@ -41,6 +41,7 @@ export const WalletContextProvider = (props: PropsType): JSX.Element => {
     }
     return clusterApiUrl(networkName);
   }, [networkName]);
+  // FS: this code uses some of the variables above and seems like provides a connection to blockchain, needs to be looked at, before removal
   // const [providerUrl] = useState<string>('https://www.sollet.io');
   // // const connection = useMemo(() => new Connection(network), [network]);
   // useEffect(() => {
