@@ -1,7 +1,7 @@
 {
   "localnet": {
-    "clusterAddress": "http://10.0.0.253:8899",
-    "programAddress": "DyWxiroHbiGimsrQPcZJVFC7QNnMMofov1AzWr5ARzhW"
+    "clusterAddress": "http://127.0.0.1:8899",
+    "programAddress": "EGCymyunRorQzXASGva2NV2YARJ7kBT9NbGNcohqDQdE"
   },
   "devnet": {
     "clusterAddress": "https://api.devnet.solana.com",
