@@ -239,11 +239,3 @@ describe('test encrypted messages', () => {
     }
   });
 });
-
-describe('test watcher', () => {
-  it('watcher can see thread list', async () => {
-    let threads = await watcherThreadsGet(PROGRAM);
-    assert.strictEqual(threads.length, 1);
-    assert.strictEqual(threads[0].key.toString(), threadpk.toString());
-  });
-});
