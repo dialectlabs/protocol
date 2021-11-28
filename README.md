@@ -75,7 +75,6 @@ this will give you a program id as output, which you should then put in program.
 
 https://explorer.solana.com/tx/47eaxtBi6JY5GHvKmsdJcRba1PE7T19X4QX2dQ6FVpA2wuUwpxjFa6pgKnaassbmgKiwiewy6RhMCEpgzd6h6RfV
 
-
 ## Upgrading anchor
 
 If you get the error
@@ -118,8 +117,8 @@ in a tokenized design, it's:
 
 1. the token mint
 2. holding (any amount of?) the token
-    - tbd if 
-3. 
+   - tbd if
+3.
 
 SRM has no authority https://solscan.io/token/SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt, but e.g. solrise does https://solscan.io/token/SLRSSpSLUTP7okbCUBYStWCo1vUgyt775faPqz8HUMr
 

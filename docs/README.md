@@ -144,7 +144,6 @@ const dialectAccount = await createDialect(
     });
 ```
 
-
 Let's discuss what each of the configuration attributes means.
 
 #### Messages & message permanence
@@ -163,7 +162,7 @@ async const getMessages = (program: anchor.Program, dialectAccount: DialectAccou
     const messageIdx = dialectAccount.dialect.message_idx;
     const messagesPerAcct = dialectAccount.dialect.
     if (message_account_idx === undefined) {
-        // no messages accounts, all messages are in 
+        // no messages accounts, all messages are in
         ...
         return messages
     }
@@ -305,8 +304,6 @@ pub struct UserAccount {
 ---
 
 ## Web3 client
-
-
 
 ## Notification service
 

@@ -626,4 +626,3 @@ export async function newGroupMutate(
   await messageCreate(program, threadAccount, text, sender);
   return await threadGet(program, threadAccount.publicKey);
 }
-
