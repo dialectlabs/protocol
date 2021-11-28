@@ -21,6 +21,7 @@
 # misc
 .DS_Store
 *.pem
+.idea
 
 # debug
 npm-debug.log*
@@ -38,3 +39,6 @@ yarn-error.log*
 
 # dist
 /lib
+
+# folder created by solana-test-validator --rpc-port 8899
+test-ledger
