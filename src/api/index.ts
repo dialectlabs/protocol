@@ -76,11 +76,11 @@ Dialect
 */
 
 type Dialect = {
-  mint: PublicKey;
+  members: Member[];
 };
 
 type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
-  dialect: MintDialect;
+  dialect: Dialect;
   publicKey: PublicKey;
 };
 

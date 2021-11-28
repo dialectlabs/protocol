@@ -163,7 +163,7 @@ describe('Test messaging with a standard dialect', () => {
     const dialect = await getDialectForMembers(program, members);
     members.every((m, i) =>
       assert(
-        m.publicKey.equals(dialect.dialect.members[i].pubkey) &&
+        m.publicKey.equals(dialect.dialect.members[i].publicKey) &&
           m.scopes.every((s, j) => s === dialect.dialect.members[i].scopes[j])
       )
     );
