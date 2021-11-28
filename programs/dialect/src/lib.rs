@@ -12,6 +12,23 @@ pub mod dialect {
     use super::*;
 
     /*
+    User metadata
+    */
+
+    // TODO: Make device_token optional
+    pub fn create_metadata(
+        ctx: Context<CreateMetadata>,
+        _metadata_nonce: u8,
+        device_token: [u8; 32],
+    ) -> ProgramResult {
+        let metadata = &mut ctx.accounts.metadata;
+        metadata.device_token = device_token;
+        metadata.subscriptions = [None; 4];
+        msg!("device_token: {:?}", device_token);
+        Ok(())
+    }
+
+    /*
     Dialects
     */
 
@@ -20,26 +37,16 @@ pub mod dialect {
         _dialect_nonce: u8,
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
-        // TODO: Assert that members are unique
         // TODO: Assert that owner in members
-        // TODO: Pass up scopes
-        // TODO: Enumerate over members & scopes
+        // TODO: Add dialect to member subs
         let dialect = &mut ctx.accounts.dialect;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
-        // TODO: Reject if members are not sorted
-        for (idx, member) in members.iter().enumerate() {
-            if idx < members.len() - 1
-                && member.key.cmp(&members[idx + 1].key) == std::cmp::Ordering::Greater
-            {
-                msg!("Member {} is GREATER member {}", idx, idx + 1);
-            }
-        }
 
         dialect.members = [
             Member {
                 pubkey: *members[0].key,
-                scopes: scopes[0], // owner/write
+                scopes: scopes[0], // admin/write
             },
             Member {
                 pubkey: *members[1].key,
@@ -109,6 +116,28 @@ Contexts
 */
 
 #[derive(Accounts)]
+#[instruction(metadata_nonce: u8)]
+pub struct CreateMetadata<'info> {
+    #[account(signer, mut)]
+    pub user: AccountInfo<'info>,
+    #[account(
+        init,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key.as_ref(),
+        ],
+        bump = metadata_nonce,
+        payer = user,
+        // discriminator + device_token + 4 x (pubkey + enabled) = 
+        // 8 + 32 + 4 * (32 + 1) = 172
+        space = 512, // TODO: Set space correctly
+    )]
+    pub metadata: Account<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
 pub struct CreateDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
@@ -120,15 +149,13 @@ pub struct CreateDialect<'info> {
     // TODO: Support more users
     #[account(
         init,
-        // TODO: Assert that owner is a member with owner privileges
-        // TODO: Assert no dupes among members
-        // TODO: Sort member keys for deterministic seed per set
+        // TODO: Assert that owner is a member with admin privileges
         seeds = [
             b"dialect".as_ref(),
             member0.key().as_ref(),
             member1.key().as_ref(),
         ],
-        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // should also assert !eq
+        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
         bump = dialect_nonce,
         payer = owner,
         space = 512, // TODO: Choose space
@@ -195,6 +222,15 @@ Accounts
 */
 #[account]
 #[derive(Default)]
+pub struct MetadataAccount {
+    // TODO: Add profile
+    user: Pubkey,
+    device_token: [u8; 32],                   // TODO: Encrypt
+    subscriptions: [Option<Subscription>; 4], // TODO: More subscriptions
+}
+
+#[account]
+#[derive(Default)]
 pub struct DialectAccount {
     pub members: [Member; 2],
 }
@@ -211,8 +247,14 @@ Data
 */
 
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+pub struct Subscription {
+    pub pubkey: Pubkey,
+    pub enabled: bool,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
 pub struct Member {
     pub pubkey: Pubkey,
-    // [Owner, Write]. [false, false] implies read-only
+    // [Admin, Write]. [false, false] implies read-only
     pub scopes: [bool; 2],
 }

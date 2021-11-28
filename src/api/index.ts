@@ -1,10 +1,62 @@
 import * as anchor from '@project-serum/anchor';
 import * as splToken from '@solana/spl-token';
-import { PublicKey } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 
 import { waitForFinality } from '../utils';
 
 // TODO: Switch from types to classes
+
+/*
+User metadata
+*/
+
+type Metadata = {
+  deviceToken: string;
+  subscriptions: Subscription[];
+}
+
+type Subscription = {
+  pubkey: PublicKey;
+  enabled: boolean,
+}
+
+export async function getMetadataProgramAddress(program: anchor.Program, user: PublicKey): Promise<[anchor.web3.PublicKey, number]> {
+  return await anchor.web3.PublicKey.findProgramAddress([
+    Buffer.from('metadata'),
+    user.toBuffer(),
+  ], program.programId);
+}
+
+// Get with keypair, for decryption
+export async function getMetadata(program: anchor.Program, user: PublicKey): Promise<Metadata> {
+  const [publicKey,] = await getMetadataProgramAddress(program, user);
+  console.log('publicKey', publicKey);
+  const metadata = await program.account.metadataAccount.fetch(publicKey);
+  // console.log('metadataAccount', metadataAccount);
+  return {
+    deviceToken: new TextDecoder().decode(new Uint8Array(metadata.deviceToken)),
+    subscriptions: [],
+  } as Metadata;
+}
+
+export async function createMetadata(program: anchor.Program, user: Keypair, deviceToken: string): Promise<Metadata> {
+  const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(program, user.publicKey);
+  const tx = await program.rpc.createMetadata(
+    new anchor.BN(metadataNonce),
+    Buffer.from(deviceToken),
+    {
+      accounts: {
+        user: user.publicKey,
+        metadata: metadataAddress,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [user],
+    },
+  );
+  await waitForFinality(program, tx);
+  return await getMetadata(program, user.publicKey);
+}
 
 /*
 Dialect

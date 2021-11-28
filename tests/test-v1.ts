@@ -2,7 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import * as web3 from '@solana/web3.js';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { createDialect, getDialectForMembers, getDialectProgramAddress, Member } from '../src/api';
+import { createDialect, createMetadata, getDialectForMembers, getDialectProgramAddress, getMetadata, Member } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
 chai.use(chaiAsPromised);
@@ -21,7 +21,8 @@ const members = [{
 }] as Member[];
 
 // TODO: Remove test interdependence with fixtures
-describe('Test messaging with a standard dialect', () => {
+
+describe('Test creating user metadata', () => {
 
   it('Fund owner\'s account', async () => {
     const fromAirdropSignature = await connection.requestAirdrop(
@@ -30,6 +31,21 @@ describe('Test messaging with a standard dialect', () => {
     );
     await connection.confirmTransaction(fromAirdropSignature);
   });
+
+  it('Create user metadata object(s)', async () => {
+    const deviceToken = 'a'.repeat(32);
+    const metadata = await createMetadata(program, owner, deviceToken);
+    console.log('metadata', metadata);
+    const gottenMetadata = await getMetadata(program, owner.publicKey);
+    console.log('gottenMetadata', gottenMetadata);
+    console.log('deviceToken', deviceToken, metadata.deviceToken, gottenMetadata.deviceToken.toString());
+    assert(metadata.deviceToken.toString() === deviceToken);
+    assert(gottenMetadata.deviceToken.toString() === deviceToken);
+  });
+
+});
+
+describe('Test messaging with a standard dialect', () => {
 
   it('Transfers funds to writer\'s account', async () => {
     const senderBalanceBefore = (await program.provider.connection.getAccountInfo(owner.publicKey)).lamports / web3.LAMPORTS_PER_SOL;
