@@ -14,50 +14,50 @@
     "build": "rm -rf lib && tsc",
     "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
     "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
-    "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}"
+    "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
+    "local-publish": "rm -rf node_modules && rm -rf .anchor"
   },
   "keywords": [],
   "author": "c. b. osborn",
   "license": "MIT",
   "dependencies": {
-    "@headlessui/react": "^1.4.0",
-    "@heroicons/react": "^1.0.3",
-    "@project-serum/anchor": "^0.18.0",
+    "@project-serum/anchor": "^0.18.2",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.22.0",
-    "chai": "^4.3.4",
-    "chai-as-promised": "^7.1.1",
     "copy-to-clipboard": "^3.3.1",
     "ed2curve": "0.3.0",
     "js-sha256": "^0.9.0",
-    "mocha": "^9.0.3",
-    "next": "11.0.1",
-    "next-themes": "^0.0.15",
     "swr": "^0.5.6",
     "tweetnacl": "1.0.3"
   },
   "devDependencies": {
     "@types/bs58": "^4.0.1",
-    "@types/chai": "^4.2.21",
+    "@types/chai": "^4.2.22",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^9.0.0",
-    "@types/react": "17.0.16",
+    "@types/react": "^17.0.16",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
-    "autoprefixer": "^10.2.6",
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
     "eslint": "7.32.0",
     "eslint-config-next": "11.0.1",
     "eslint-plugin-react": "^7.24.0",
-    "postcss": "^8.3.5",
-    "react": "17.0.2",
-    "react-dom": "17.0.2",
-    "tailwindcss": "^2.2.4",
+    "mocha": "^9.1.1",
     "ts-mocha": "^8.0.0",
     "ts-node": "^10.2.0",
     "typescript": "^4.3.5"
   },
+  "engines": {
+    "node": ">=15.10",
+    "npm": ">=8"
+  },
+  "engineStrict": true,
   "browser": {
     "fs": false,
     "path": false,
     "os": false
+  },
+  "peerDependencies": {
+    "react": "^17.0.2"
   }
 }

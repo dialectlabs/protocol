@@ -233,16 +233,13 @@ export async function threadCreate(
     program,
     wallet.publicKey
   );
-  const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
   const tx = await program.rpc.createThreadAccount(
     new anchor.BN(settings_nonce),
-    new anchor.BN(watcher_nonce),
     {
       accounts: {
         owner: program.provider.wallet.publicKey,
         threadAccount: kp.publicKey,
         settingsAccount: settingspk,
-        watcherAccount: watcherpk,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },

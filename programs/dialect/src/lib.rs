@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 use solana_program::program_option::COption;
 
-declare_id!("5KqWSKK4urvq6LMRyKV6BrC5qPTXr7B3YK8xFmF3MAX7");
+declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 
 /*
 Entrypoints
@@ -58,6 +58,38 @@ pub mod dialect {
         Ok(())
     }
 
+    pub fn transfer(ctx: Context<Transfer>, amount1: u64, amount2: u64) -> ProgramResult {
+        let sender = &mut ctx.accounts.sender;
+        let receiver1 = &mut ctx.accounts.receiver1;
+        let receiver2 = &mut ctx.accounts.receiver2;
+        let system_program = &ctx.accounts.system_program;
+        anchor_lang::solana_program::program::invoke(
+            &anchor_lang::solana_program::system_instruction::transfer(
+                sender.key,
+                receiver1.key,
+                amount1,
+            ),
+            &[
+                sender.to_account_info(),
+                receiver1.to_account_info(),
+                system_program.to_account_info(),
+            ],
+        )?;
+        anchor_lang::solana_program::program::invoke(
+            &anchor_lang::solana_program::system_instruction::transfer(
+                sender.key,
+                receiver2.key,
+                amount2,
+            ),
+            &[
+                sender.to_account_info(),
+                receiver2.to_account_info(),
+                system_program.to_account_info(),
+            ],
+        )?;
+        Ok(())
+    }
+
     /*
     Mint Dialects
     */
@@ -104,6 +136,17 @@ pub struct CreateDialect<'info> {
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Transfer<'info> {
+    #[account(signer, mut)]
+    pub sender: AccountInfo<'info>,
+    #[account(mut)]
+    pub receiver1: AccountInfo<'info>,
+    #[account(mut)]
+    pub receiver2: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
