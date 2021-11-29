@@ -34,10 +34,7 @@
         {
           "name": "deviceToken",
           "type": {
-            "array": [
-              "u8",
-              32
-            ]
+            "array": ["u8", 32]
           }
         }
       ]
@@ -86,10 +83,7 @@
           "type": {
             "array": [
               {
-                "array": [
-                  "bool",
-                  2
-                ]
+                "array": ["bool", 2]
               },
               2
             ]
@@ -223,10 +217,7 @@
           {
             "name": "deviceToken",
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           },
           {
@@ -306,10 +297,7 @@
           {
             "name": "scopes",
             "type": {
-              "array": [
-                "bool",
-                2
-              ]
+              "array": ["bool", 2]
             }
           }
         ]
