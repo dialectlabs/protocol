@@ -45,11 +45,11 @@ pub mod dialect {
 
         dialect.members = [
             Member {
-                pubkey: *members[0].key,
+                public_key: *members[0].key,
                 scopes: scopes[0], // admin/write
             },
             Member {
-                pubkey: *members[1].key,
+                public_key: *members[1].key,
                 scopes: scopes[1], // write
             },
         ];
@@ -59,7 +59,9 @@ pub mod dialect {
     pub fn send_message(ctx: Context<SendMessage>, _dialect_nonce: u8) -> ProgramResult {
         let dialect = &mut ctx.accounts.dialect;
         let sender = &mut ctx.accounts.sender;
-        if sender.key != &dialect.members[0].pubkey && sender.key != &dialect.members[1].pubkey {
+        if sender.key != &dialect.members[0].public_key
+            && sender.key != &dialect.members[1].public_key
+        {
             msg!("Sender isn't a member")
         }
         Ok(())
@@ -128,7 +130,7 @@ pub struct CreateMetadata<'info> {
         ],
         bump = metadata_nonce,
         payer = user,
-        // discriminator + device_token + 4 x (pubkey + enabled) = 
+        // discriminator + device_token + 4 x (public_key + enabled) = 
         // 8 + 32 + 4 * (32 + 1) = 172
         space = 512, // TODO: Set space correctly
     )]
@@ -254,7 +256,7 @@ pub struct Subscription {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
 pub struct Member {
-    pub pubkey: Pubkey,
+    pub public_key: Pubkey,
     // [Admin, Write]. [false, false] implies read-only
     pub scopes: [bool; 2],
 }
