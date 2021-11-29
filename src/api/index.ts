@@ -20,6 +20,31 @@ type Subscription = {
   enabled: boolean;
 };
 
+export async function accountInfoGet(
+  connection: Connection,
+  publicKey: PublicKey
+): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  return await connection.getAccountInfo(publicKey);
+}
+
+export async function accountInfoFetch(
+  _url: string,
+  connection: Connection,
+  publicKeyStr: string
+): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  const publicKey = new anchor.web3.PublicKey(publicKeyStr);
+  return await accountInfoGet(connection, publicKey);
+}
+
+export async function ownerFetcher(
+  _url: string,
+  wallet: Wallet_,
+  connection: Connection
+): Promise<anchor.web3.AccountInfo<Buffer> | null> {
+  const r = await accountInfoGet(connection, wallet.publicKey);
+  return r;
+}
+
 export async function getMetadataProgramAddress(
   program: anchor.Program,
   user: PublicKey
