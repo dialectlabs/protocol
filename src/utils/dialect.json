@@ -3,46 +3,15 @@
   "name": "dialect",
   "instructions": [
     {
-      "name": "createWatcherAccount",
+      "name": "createMetadata",
       "accounts": [
         {
-          "name": "owner",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "watcherAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "watcherNonce",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "createUserSettingsAccount",
-      "accounts": [
-        {
-          "name": "owner",
+          "name": "user",
           "isMut": true,
           "isSigner": true
         },
         {
-          "name": "settingsAccount",
+          "name": "metadata",
           "isMut": true,
           "isSigner": false
         },
@@ -59,26 +28,40 @@
       ],
       "args": [
         {
-          "name": "settingsNonce",
+          "name": "metadataNonce",
           "type": "u8"
+        },
+        {
+          "name": "deviceToken",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     },
     {
-      "name": "createThreadAccount",
+      "name": "createDialect",
       "accounts": [
         {
           "name": "owner",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "threadAccount",
           "isMut": true,
           "isSigner": true
         },
         {
-          "name": "settingsAccount",
+          "name": "member0",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "member1",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "dialect",
           "isMut": true,
           "isSigner": false
         },
@@ -95,57 +78,45 @@
       ],
       "args": [
         {
-          "name": "settingsNonce",
+          "name": "dialectNonce",
           "type": "u8"
+        },
+        {
+          "name": "scopes",
+          "type": {
+            "array": [
+              {
+                "array": [
+                  "bool",
+                  2
+                ]
+              },
+              2
+            ]
+          }
         }
       ]
     },
     {
-      "name": "addUserToThread",
-      "accounts": [
-        {
-          "name": "owner",
-          "isMut": false,
-          "isSigner": true
-        },
-        {
-          "name": "invitee",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "threadAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "inviteeSettingsAccount",
-          "isMut": true,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "settingsNonce",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "addMessageToThread",
+      "name": "sendMessage",
       "accounts": [
         {
           "name": "sender",
-          "isMut": false,
+          "isMut": true,
           "isSigner": true
         },
         {
-          "name": "messageAccount",
-          "isMut": true,
+          "name": "member0",
+          "isMut": false,
           "isSigner": false
         },
         {
-          "name": "threadAccount",
+          "name": "member1",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "dialect",
           "isMut": true,
           "isSigner": false
         },
@@ -162,109 +133,145 @@
       ],
       "args": [
         {
-          "name": "messageNonce",
+          "name": "dialectNonce",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "transfer",
+      "accounts": [
+        {
+          "name": "sender",
+          "isMut": true,
+          "isSigner": true
         },
         {
-          "name": "text",
-          "type": "string"
+          "name": "receiver1",
+          "isMut": true,
+          "isSigner": false
         },
         {
-          "name": "timestamp",
-          "type": "i64"
+          "name": "receiver2",
+          "isMut": true,
+          "isSigner": false
         },
         {
-          "name": "encrypted",
-          "type": "bool"
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amount1",
+          "type": "u64"
+        },
+        {
+          "name": "amount2",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "createMintDialect",
+      "accounts": [
+        {
+          "name": "mintAuthority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "dialect",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "dialectNonce",
+          "type": "u8"
         }
       ]
     }
   ],
   "accounts": [
     {
-      "name": "WatcherAccount",
+      "name": "MetadataAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "threads",
+            "name": "user",
+            "type": "publicKey"
+          },
+          {
+            "name": "deviceToken",
             "type": {
-              "vec": {
-                "defined": "ThreadRef"
-              }
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "subscriptions",
+            "type": {
+              "array": [
+                {
+                  "option": {
+                    "defined": "Subscription"
+                  }
+                },
+                4
+              ]
             }
           }
         ]
       }
     },
     {
-      "name": "SettingsAccount",
+      "name": "DialectAccount",
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "threads",
-            "type": {
-              "vec": {
-                "defined": "ThreadRef"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "ThreadAccount",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
           {
             "name": "members",
             "type": {
-              "vec": {
-                "defined": "Member"
-              }
+              "array": [
+                {
+                  "defined": "Member"
+                },
+                2
+              ]
             }
-          },
-          {
-            "name": "messageIdx",
-            "type": "u32"
           }
         ]
       }
     },
     {
-      "name": "MessageAccount",
+      "name": "MintDialectAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "owner",
+            "name": "mint",
             "type": "publicKey"
-          },
-          {
-            "name": "text",
-            "type": "string"
-          },
-          {
-            "name": "idx",
-            "type": "u32"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "encrypted",
-            "type": "bool"
           }
         ]
       }
@@ -272,13 +279,17 @@
   ],
   "types": [
     {
-      "name": "ThreadRef",
+      "name": "Subscription",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "key",
+            "name": "pubkey",
             "type": "publicKey"
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
           }
         ]
       }
@@ -289,14 +300,23 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "key",
+            "name": "pubkey",
             "type": "publicKey"
+          },
+          {
+            "name": "scopes",
+            "type": {
+              "array": [
+                "bool",
+                2
+              ]
+            }
           }
         ]
       }
     }
   ],
   "metadata": {
-    "address": "EGCymyunRorQzXASGva2NV2YARJ7kBT9NbGNcohqDQdE"
+    "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
   }
 }
