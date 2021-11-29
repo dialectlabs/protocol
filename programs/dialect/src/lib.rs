@@ -130,9 +130,10 @@ pub struct CreateMetadata<'info> {
         ],
         bump = metadata_nonce,
         payer = user,
-        // discriminator + device_token + 4 x (public_key + enabled) = 
-        // 8 + 32 + 4 * (32 + 1) = 172
-        space = 512, // TODO: Set space correctly
+        // discriminator + user + device_token + 4 x (public_key + enabled) = 
+        // 8 + 32 + 32 + 4 * (32 + 1) = 172 subscriptions full
+        // 8 + 32 + 32 + 4 * 1 = 72 subscriptions empty
+        space = 76, // TODO: Set space correctly
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
