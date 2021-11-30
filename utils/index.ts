@@ -12,8 +12,10 @@ export type ProviderPropsType = {
 };
 
 export const display = (publicKey: PublicKey | string): string => {
-  const s = publicKey.toString();
-  return `${s.slice(0, 4)}...${s.slice(s.length - 4)}`;
+  if (typeof publicKey !== 'string') {
+    publicKey = publicKey.toString();
+  }
+  return `${publicKey.slice(0, 4)}...${publicKey.slice(publicKey.length - 4)}`;
 };
 
 export const getPublicKey = (
