@@ -1,8 +1,8 @@
 import * as anchor from '@project-serum/anchor';
 import * as splToken from '@solana/spl-token';
-import { Keypair, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
-import { waitForFinality } from '../utils';
+import { waitForFinality, Wallet_ } from '../utils';
 
 // TODO: Switch from types to classes
 
