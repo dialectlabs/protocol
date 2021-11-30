@@ -15,13 +15,12 @@ import {
   settingsCreate,
   base64Encode,
   base64Decode,
-  encryptMessage,
-  decryptMessage,
-} from '../api';
+} from '../src/v0';
+import { encryptMessage, decryptMessage } from '../src/utils';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
-const PROGRAM = anchor.workspace.Dialect;
+const PROGRAM = anchor.workspace.V0;
 
 // let settingspk: anchor.web3.PublicKey;
 let threadpk: PublicKey;
@@ -156,8 +155,8 @@ describe('test threads', () => {
 describe('b64 encode', () => {
   it('encode-decode-inverse', async () => {
     const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 7, 8]);
-    let encoded = base64Encode(data);
-    let decoded = base64Decode(encoded);
+    const encoded = base64Encode(data);
+    const decoded = base64Decode(encoded);
     assert.strictEqual(decoded.constructor.name, data.constructor.name);
     assert.strictEqual(data.toString(), decoded.toString());
   });

@@ -1,84 +1,114 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Mint;
+use solana_program::program_option::COption;
 
-declare_id!("EGCymyunRorQzXASGva2NV2YARJ7kBT9NbGNcohqDQdE");
+declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 
 /*
 Entrypoints
 */
 #[program]
-mod dialect {
+pub mod dialect {
     use super::*;
-    pub fn create_watcher_account(
-        _ctx: Context<CreateWatcherAccount>,
-        _watcher_nonce: u8,
+
+    /*
+    User metadata
+    */
+
+    // TODO: Make device_token optional
+    pub fn create_metadata(
+        ctx: Context<CreateMetadata>,
+        _metadata_nonce: u8,
+        device_token: [u8; 32],
     ) -> ProgramResult {
+        let metadata = &mut ctx.accounts.metadata;
+        metadata.device_token = device_token;
+        metadata.subscriptions = [None; 4];
+        msg!("device_token: {:?}", device_token);
         Ok(())
     }
 
-    pub fn create_user_settings_account(
-        ctx: Context<CreateSettingsAccount>,
-        _settings_nonce: u8,
+    /*
+    Dialects
+    */
+
+    pub fn create_dialect(
+        ctx: Context<CreateDialect>,
+        _dialect_nonce: u8,
+        scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
-        ctx.accounts.settings_account.owner = *ctx.accounts.owner.key;
+        // TODO: Assert that owner in members
+        // TODO: Add dialect to member subs
+        let dialect = &mut ctx.accounts.dialect;
+        let owner = &mut ctx.accounts.owner;
+        let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
+
+        dialect.members = [
+            Member {
+                public_key: *members[0].key,
+                scopes: scopes[0], // admin/write
+            },
+            Member {
+                public_key: *members[1].key,
+                scopes: scopes[1], // write
+            },
+        ];
         Ok(())
     }
 
-    pub fn create_thread_account(
-        ctx: Context<CreateThreadAccount>,
-        _settings_nonce: u8,
-    ) -> ProgramResult {
-        // set the owner of the thread account
-        let thread_account = &mut ctx.accounts.thread_account;
-        thread_account.owner = *ctx.accounts.owner.key;
-        // add the owner to the members
-        thread_account.members = vec![Member {
-            key: *ctx.accounts.owner.key,
-        }];
-        // iniialize message_idx
-        thread_account.message_idx = 0;
-        // add the thread to the owner's settings.threads
-        let thread = ThreadRef {
-            key: *thread_account.to_account_info().key,
-        };
-        ctx.accounts.settings_account.threads.push(thread);
+    pub fn send_message(ctx: Context<SendMessage>, _dialect_nonce: u8) -> ProgramResult {
+        let dialect = &mut ctx.accounts.dialect;
+        let sender = &mut ctx.accounts.sender;
+        if sender.key != &dialect.members[0].public_key
+            && sender.key != &dialect.members[1].public_key
+        {
+            msg!("Sender isn't a member")
+        }
         Ok(())
     }
 
-    pub fn add_user_to_thread(ctx: Context<AddUserToThread>, _settings_nonce: u8) -> ProgramResult {
-        // add the thread to user settings.threads
-        let invitee_settings_account = &mut ctx.accounts.invitee_settings_account;
-        let threads = &mut invitee_settings_account.threads;
-        let mut new_threads = vec![ThreadRef {
-            key: *ctx.accounts.thread_account.to_account_info().key,
-        }];
-        threads.append(&mut new_threads);
-        // add the user to thread.members
-        let members = &mut ctx.accounts.thread_account.members;
-        let mut new_members = vec![Member {
-            key: *ctx.accounts.invitee.key,
-        }];
-        members.append(&mut new_members);
+    pub fn transfer(ctx: Context<Transfer>, amount1: u64, amount2: u64) -> ProgramResult {
+        let sender = &mut ctx.accounts.sender;
+        let receiver1 = &mut ctx.accounts.receiver1;
+        let receiver2 = &mut ctx.accounts.receiver2;
+        let system_program = &ctx.accounts.system_program;
+        anchor_lang::solana_program::program::invoke(
+            &anchor_lang::solana_program::system_instruction::transfer(
+                sender.key,
+                receiver1.key,
+                amount1,
+            ),
+            &[
+                sender.to_account_info(),
+                receiver1.to_account_info(),
+                system_program.to_account_info(),
+            ],
+        )?;
+        anchor_lang::solana_program::program::invoke(
+            &anchor_lang::solana_program::system_instruction::transfer(
+                sender.key,
+                receiver2.key,
+                amount2,
+            ),
+            &[
+                sender.to_account_info(),
+                receiver2.to_account_info(),
+                system_program.to_account_info(),
+            ],
+        )?;
         Ok(())
     }
 
-    pub fn add_message_to_thread(
-        ctx: Context<AddMessageToThread>,
-        _message_nonce: u8,
-        text: String,
-        timestamp: i64,
-        encrypted: bool,
+    /*
+    Mint Dialects
+    */
+    pub fn create_mint_dialect(
+        ctx: Context<CreateMintDialect>,
+        _dialect_nonce: u8,
     ) -> ProgramResult {
-        // TODO: Verify that sender is a member of the thread
-        // increment thread.message_idx
-        let thread_account = &mut ctx.accounts.thread_account;
-        thread_account.message_idx += 1;
-        // set the message data
-        let message_account = &mut ctx.accounts.message_account;
-        message_account.owner = *ctx.accounts.sender.key;
-        message_account.text = text;
-        message_account.idx = thread_account.message_idx;
-        message_account.timestamp = timestamp;
-        message_account.encrypted = encrypted;
+        let mint = &ctx.accounts.mint;
+        let dialect = &mut ctx.accounts.dialect;
+        dialect.mint = mint.key();
         Ok(())
     }
 }
@@ -86,93 +116,106 @@ mod dialect {
 /*
 Contexts
 */
-#[derive(Accounts)]
-#[instruction(watcher_nonce: u8)]
-pub struct CreateWatcherAccount<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    #[account(init,
-        seeds = [b"watcher_account".as_ref()],
-        bump = watcher_nonce,
-        payer = owner,
-        space = 512,
-    )]
-    pub watcher_account: ProgramAccount<'info, WatcherAccount>,
-    pub system_program: AccountInfo<'info>,
-}
 
 #[derive(Accounts)]
-#[instruction(settings_nonce: u8)]
-pub struct CreateSettingsAccount<'info> {
+#[instruction(metadata_nonce: u8)]
+pub struct CreateMetadata<'info> {
     #[account(signer, mut)]
-    pub owner: AccountInfo<'info>,
-    #[account(
-        init,
-        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
-        bump = settings_nonce,
-        payer = owner,
-        space = 512,
-    )]
-    pub settings_account: ProgramAccount<'info, SettingsAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-// TODO: rename ProgramAccount to Account
-#[derive(Accounts)]
-#[instruction(settings_nonce: u8)]
-pub struct CreateThreadAccount<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    #[account(init, payer = owner, space = 512)]
-    pub thread_account: ProgramAccount<'info, ThreadAccount>,
-    #[account(
-        mut,
-        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
-        bump = settings_nonce,
-        has_one = owner,
-    )]
-    pub settings_account: ProgramAccount<'info, SettingsAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(settings_nonce: u8)]
-pub struct AddUserToThread<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    pub invitee: AccountInfo<'info>,
-    #[account(mut, has_one = owner)] // only the owner can add users
-    pub thread_account: ProgramAccount<'info, ThreadAccount>,
-    #[account(
-        mut,
-        seeds = [invitee.key.as_ref(), b"settings_account".as_ref()],
-        bump = settings_nonce,
-    )]
-    pub invitee_settings_account: ProgramAccount<'info, SettingsAccount>,
-}
-
-#[derive(Accounts)]
-#[instruction(message_nonce: u8)]
-pub struct AddMessageToThread<'info> {
-    #[account(signer)]
-    pub sender: AccountInfo<'info>,
+    pub user: AccountInfo<'info>,
     #[account(
         init,
         seeds = [
-            thread_account.to_account_info().key.as_ref(),
-            b"message_account".as_ref(),
-            (thread_account.message_idx + 1).to_string().as_bytes(), // u32 as &[u8]
+            b"metadata".as_ref(),
+            user.key.as_ref(),
         ],
-        bump = message_nonce,
-        payer = sender,
-        space = 1024,
+        bump = metadata_nonce,
+        payer = user,
+        // discriminator + user + device_token + 4 x (public_key + enabled) = 
+        // 8 + 32 + 32 + 4 * (32 + 1) = 172 subscriptions full
+        // 8 + 32 + 32 + 4 * 1 = 72 subscriptions empty
+        space = 76, // TODO: Set space correctly
     )]
-    pub message_account: ProgramAccount<'info, MessageAccount>,
+    pub metadata: Account<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8)]
+pub struct CreateDialect<'info> {
+    #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
+    // We dupe the owner in one of the members, since the members must be sorted
+    pub owner: AccountInfo<'info>,
+    pub member0: AccountInfo<'info>,
+    // // TOOD: Set limit, or use remaining accounts for members
+    pub member1: AccountInfo<'info>,
+    // TODO: Support more users
+    #[account(
+        init,
+        // TODO: Assert that owner is a member with admin privileges
+        seeds = [
+            b"dialect".as_ref(),
+            member0.key().as_ref(),
+            member1.key().as_ref(),
+        ],
+        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
+        bump = dialect_nonce,
+        payer = owner,
+        space = 512, // TODO: Choose space
+    )]
+    pub dialect: Account<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Transfer<'info> {
+    #[account(signer, mut)]
+    pub sender: AccountInfo<'info>,
     #[account(mut)]
-    pub thread_account: ProgramAccount<'info, ThreadAccount>,
+    pub receiver1: AccountInfo<'info>,
+    #[account(mut)]
+    pub receiver2: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8)]
+pub struct SendMessage<'info> {
+    #[account(signer, mut)]
+    pub sender: AccountInfo<'info>,
+    pub member0: AccountInfo<'info>,
+    pub member1: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"dialect".as_ref(),
+            member0.key().as_ref(),
+            member1.key().as_ref(),
+        ],
+        bump = dialect_nonce,
+    )]
+    pub dialect: Account<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8)]
+pub struct CreateMintDialect<'info> {
+    #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
+    pub mint_authority: AccountInfo<'info>, // The dialect owner must be the mint authority
+    // TODO: Enforce that mint.mint_authority exists
+    #[account(constraint = COption::Some(mint_authority.key()) == mint.mint_authority)]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        init,
+        seeds = [b"dialect".as_ref(), mint.key().as_ref()],
+        bump = dialect_nonce,
+        payer = mint_authority,
+        space = 512, // TODO: Choose space
+    )]
+    pub dialect: Account<'info, MintDialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -180,49 +223,41 @@ pub struct AddMessageToThread<'info> {
 /*
 Accounts
 */
-/**
- * An account to notify the watcher about what threads exist.
- */
 #[account]
 #[derive(Default)]
-pub struct WatcherAccount {
-    pub threads: Vec<ThreadRef>,
+pub struct MetadataAccount {
+    // TODO: Add profile
+    user: Pubkey,
+    device_token: [u8; 32],                   // TODO: Encrypt
+    subscriptions: [Option<Subscription>; 4], // TODO: More subscriptions
 }
 
 #[account]
 #[derive(Default)]
-pub struct SettingsAccount {
-    pub owner: Pubkey,
-    pub threads: Vec<ThreadRef>,
+pub struct DialectAccount {
+    pub members: [Member; 2],
 }
 
 #[account]
 #[derive(Default)]
-pub struct ThreadAccount {
-    pub owner: Pubkey,
-    pub members: Vec<Member>,
-    pub message_idx: u32, // ~140 years @ 1 message / sec
-}
-
-#[account]
-#[derive(Default)]
-pub struct MessageAccount {
-    pub owner: Pubkey,  // sender
-    pub text: String,   // TODO: use [u8; 280]
-    pub idx: u32,       // not sure we need this
-    pub timestamp: i64, // safe from 2038 bug?
-    pub encrypted: bool,
+pub struct MintDialectAccount {
+    pub mint: Pubkey,
+    // pub mint_authority: Pubkey, // TODO: Do we need this?
 }
 
 /*
 Data
 */
+
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
-pub struct ThreadRef {
-    pub key: Pubkey,
+pub struct Subscription {
+    pub pubkey: Pubkey,
+    pub enabled: bool,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
 pub struct Member {
-    pub key: Pubkey,
+    pub public_key: Pubkey,
+    // [Admin, Write]. [false, false] implies read-only
+    pub scopes: [bool; 2],
 }
