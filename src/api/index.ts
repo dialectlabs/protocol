@@ -258,8 +258,33 @@ type MessagesAccount = anchor.web3.AccountInfo<Buffer> & {
 
 export async function sendMessage(
   program: anchor.Program,
-  mint: splToken.Token,
-  sender: anchor.web3.Keypair
+  dialect: DialectAccount,
+  sender: anchor.web3.Keypair,
+  text: string,
 ): Promise<Message> {
-  return { text: 'hello' } as Message;
+  const [dialectPublicKey, nonce] = await getDialectProgramAddress(program, dialect.dialect.members);
+
+  const intArray = Array(32).fill(0);
+  const charArray = Buffer.from(text);
+  for (let i = 0; i < charArray.length; i++) {
+    console.log(`charArray[${i}]`, charArray[i]);
+    intArray[i] = charArray[i];
+  }
+  
+  await program.rpc.sendMessage(
+    new anchor.BN(nonce),
+    new Uint8Array(Buffer.from('a'.repeat(32))),
+    {
+      accounts: {
+        dialect: dialectPublicKey,
+        sender: sender.publicKey,
+        member0: dialect.dialect.members[0].publicKey,
+        member1: dialect.dialect.members[1].publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [sender],
+    },
+  );
+  return { sender: sender.publicKey, text };
 }

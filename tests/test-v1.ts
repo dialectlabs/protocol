@@ -9,6 +9,7 @@ import {
   getDialectProgramAddress,
   getMetadata,
   Member,
+  sendMessage,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
@@ -135,7 +136,6 @@ describe('Test messaging with a standard dialect', () => {
         )
       )
       .to.eventually.be.rejectedWith(Error);
-    // await waitForFinality(program, tx);
   });
 
   it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
@@ -156,7 +156,6 @@ describe('Test messaging with a standard dialect', () => {
     chai
       .expect(createDialect(program, owner, duplicateMembers))
       .to.be.rejectedWith(Error);
-    // chai.expect(true).to.be.true;
   });
 
   it('Find a dialect for a given member pair, verify correct scopes.', async () => {
@@ -170,7 +169,9 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Writer sends a message', async () => {
-    chai.expect(true).to.be.true;
+    const dialect = await getDialectForMembers(program, members);
+    const message = 'Hello, world!';
+    await sendMessage(program, dialect, writer, message);
   });
 
   it('All members can read the message', async () => {
@@ -179,6 +180,10 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('All writers can send a message', async () => {
+    chai.expect(true).to.be.true;
+  });
+
+  it('New messages overwrite old, retrieved messages are in order.', async () => {
     chai.expect(true).to.be.true;
   });
 

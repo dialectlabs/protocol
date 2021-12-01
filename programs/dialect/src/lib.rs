@@ -54,13 +54,17 @@ pub mod dialect {
             },
         ];
 
-        dialect.messages = [None; 8];
+        dialect.messages = [None; 1];
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
         Ok(())
     }
 
-    pub fn send_message(ctx: Context<SendMessage>, _dialect_nonce: u8) -> ProgramResult {
+    pub fn send_message(
+        ctx: Context<SendMessage>,
+        _dialect_nonce: u8,
+        text: [u8; 32],
+    ) -> ProgramResult {
         let dialect = &mut ctx.accounts.dialect;
         let sender = &mut ctx.accounts.sender;
         if sender.key != &dialect.members[0].public_key
@@ -168,7 +172,7 @@ pub struct CreateDialect<'info> {
         bump = dialect_nonce,
         payer = owner,
         // space = discriminator + 2 * Member + 32 * Message = 8 + 2 * 34 + 32 * 68
-        space = 2252, // TODO: Choose space
+        space = 4000, // TODO: Choose space
     )]
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -231,6 +235,7 @@ pub struct CreateMintDialect<'info> {
 /*
 Accounts
 */
+
 #[account]
 #[derive(Default)]
 pub struct MetadataAccount {
@@ -245,7 +250,7 @@ pub struct MetadataAccount {
 // TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
 pub struct DialectAccount {
     pub members: [Member; 2],           // 2 * Member = 68
-    pub messages: [Option<Message>; 8], // 32 * Message = 2176 (will be 9344 with message length 256)
+    pub messages: [Option<Message>; 1], // 32 * Message = 2176 (will be 9344 with message length 256)
     pub next_message_idx: u8,           // 1 -- index of next message (not the latest)
     pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
 }
