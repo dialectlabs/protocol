@@ -174,7 +174,7 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('All members can read the message', async () => {
-    // N.b. of course non-token holders can as well
+    // N.b. of course non-members can as well, if not encrypted
     chai.expect(true).to.be.true;
   });
 
