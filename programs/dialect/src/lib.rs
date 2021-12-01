@@ -54,7 +54,7 @@ pub mod dialect {
             },
         ];
 
-        dialect.messages = [None; 1];
+        dialect.messages = [None; 8];
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
         Ok(())
@@ -72,6 +72,10 @@ pub mod dialect {
         {
             msg!("Sender isn't a member")
         }
+        // dialect.messages[dialect.next_message_idx] = Some(Message {
+        //     sender: *sender.key,
+        //     text,
+        // });
         Ok(())
     }
 
@@ -250,7 +254,7 @@ pub struct MetadataAccount {
 // TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
 pub struct DialectAccount {
     pub members: [Member; 2],           // 2 * Member = 68
-    pub messages: [Option<Message>; 1], // 32 * Message = 2176 (will be 9344 with message length 256)
+    pub messages: [Option<Message>; 8], // 32 * Message = 2176 (will be 9344 with message length 256)
     pub next_message_idx: u8,           // 1 -- index of next message (not the latest)
     pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
 }

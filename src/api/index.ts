@@ -267,13 +267,12 @@ export async function sendMessage(
   const intArray = Array(32).fill(0);
   const charArray = Buffer.from(text);
   for (let i = 0; i < charArray.length; i++) {
-    console.log(`charArray[${i}]`, charArray[i]);
     intArray[i] = charArray[i];
   }
   
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
-    new Uint8Array(Buffer.from('a'.repeat(32))),
+    new Uint8Array(intArray),
     {
       accounts: {
         dialect: dialectPublicKey,
