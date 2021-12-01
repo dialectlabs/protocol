@@ -172,6 +172,9 @@ describe('Test messaging with a standard dialect', () => {
     const dialect = await getDialectForMembers(program, members);
     const message = 'Hello, world!';
     await sendMessage(program, dialect, writer, message);
+    const gottenDialect = await getDialectForMembers(program, dialect.dialect.members);
+    chai.expect(gottenDialect.dialect.messages[0].text === message).to.be.true;
+    chai.expect(gottenDialect.dialect.nextMessageIdx === 1).to.be.true;
   });
 
   it('All members can read the message', async () => {

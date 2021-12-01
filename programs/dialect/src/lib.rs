@@ -72,10 +72,12 @@ pub mod dialect {
         {
             msg!("Sender isn't a member")
         }
-        // dialect.messages[dialect.next_message_idx] = Some(Message {
-        //     sender: *sender.key,
-        //     text,
-        // });
+        let idx = dialect.next_message_idx;
+        dialect.messages[idx as usize] = Some(Message {
+            owner: *sender.key,
+            text,
+        });
+        dialect.next_message_idx += 1;
         Ok(())
     }
 
@@ -291,6 +293,6 @@ pub struct Message {
     pub owner: Pubkey, // 32
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
-    pub timestamp: u32, // 4
+    // pub timestamp: u32, // 4
     pub text: [u8; 32], // 32
 }

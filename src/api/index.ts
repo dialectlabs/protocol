@@ -102,6 +102,8 @@ Dialect
 
 type Dialect = {
   members: Member[];
+  messages: Message[];
+  nextMessageIdx: number;
 };
 
 type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -124,6 +126,11 @@ export async function getDialectProgramAddress(
   );
 }
 
+type RawMessage = {
+  owner: PublicKey;
+  text: number[];
+}
+
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[]
@@ -137,7 +144,14 @@ export async function getDialectForMembers(
   return {
     ...account,
     publicKey,
-    dialect,
+    // dialect,
+    dialect: {
+      ...dialect,
+      messages: dialect.messages.map((m: RawMessage | null) => m && {
+        ...m,
+        text: new TextDecoder().decode(new Uint8Array(m.text.slice(0, m.text.indexOf(0))))
+      }) || null
+    },
   } as DialectAccount;
 }
 
