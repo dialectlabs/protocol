@@ -47,15 +47,7 @@ describe('Test creating user metadata', () => {
   it('Create user metadata object(s)', async () => {
     const deviceToken = 'a'.repeat(32);
     const metadata = await createMetadata(program, owner, deviceToken);
-    console.log('metadata', metadata);
     const gottenMetadata = await getMetadata(program, owner.publicKey);
-    console.log('gottenMetadata', gottenMetadata);
-    console.log(
-      'deviceToken',
-      deviceToken,
-      metadata.deviceToken,
-      gottenMetadata.deviceToken.toString()
-    );
     assert(metadata.deviceToken.toString() === deviceToken);
     assert(gottenMetadata.deviceToken.toString() === deviceToken);
   });
@@ -66,15 +58,12 @@ describe('Test messaging with a standard dialect', () => {
     const senderBalanceBefore =
       (await program.provider.connection.getAccountInfo(owner.publicKey))
         .lamports / web3.LAMPORTS_PER_SOL;
-    console.log('senderbalancebefore', senderBalanceBefore);
     const receiver1BalanceBefore =
       (await program.provider.connection.getAccountInfo(writer.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiver1balancebefore', receiver1BalanceBefore);
     const receiver2BalanceBefore =
       (await program.provider.connection.getAccountInfo(nonmember.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiver2balancebefore', receiver2BalanceBefore);
     const tx = await program.rpc.transfer(
       new anchor.BN(1 * web3.LAMPORTS_PER_SOL),
       new anchor.BN(2 * web3.LAMPORTS_PER_SOL),
@@ -93,15 +82,12 @@ describe('Test messaging with a standard dialect', () => {
     const senderBalanceAfter =
       (await program.provider.connection.getAccountInfo(owner.publicKey))
         .lamports / web3.LAMPORTS_PER_SOL;
-    console.log('senderbalanceAfter', senderBalanceAfter);
     const receiver1BalanceAfter =
       (await program.provider.connection.getAccountInfo(writer.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiverbalanceAfter', receiver1BalanceAfter);
     const receiver2BalanceAfter =
       (await program.provider.connection.getAccountInfo(nonmember.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiverbalanceAfter', receiver2BalanceAfter);
   });
 
   it('Fail to create a dialect for unsorted members', async () => {
@@ -176,17 +162,13 @@ describe('Test messaging with a standard dialect', () => {
     const message = dialect.dialect.messages[0];
     chai.expect(message.text === text).to.be.true;
     chai.expect(dialect.dialect.nextMessageIdx === 1).to.be.true;
-    console.log(
-      'dialect.dialect.lastMessageTimestamp',
-      dialect.dialect.lastMessageTimestamp
-    );
-    console.log('message.timestamp', message.timestamp);
     chai.expect(dialect.dialect.lastMessageTimestamp === message.timestamp).to
       .be.true;
   });
 
   it('All members can read the message', async () => {
     // N.b. of course non-members can as well, if not encrypted
+    // TODO: Implement when encrypted
     chai.expect(true).to.be.true;
   });
 

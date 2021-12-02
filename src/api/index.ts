@@ -61,9 +61,7 @@ export async function getMetadata(
   user: PublicKey
 ): Promise<Metadata> {
   const [publicKey] = await getMetadataProgramAddress(program, user);
-  console.log('publicKey', publicKey);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
-  // console.log('metadataAccount', metadataAccount);
   return {
     deviceToken: new TextDecoder().decode(new Uint8Array(metadata.deviceToken)),
     subscriptions: [],
