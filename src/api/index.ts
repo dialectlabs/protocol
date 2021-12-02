@@ -140,7 +140,11 @@ export async function getDialect(
   const unpermutedMessages = dialect.messages.filter((m: Message | null) => m);
   const messages: RawMessage[] = [];
   for (let i = 0; i < unpermutedMessages.length; i++) {
-    const m = unpermutedMessages[(dialect.nextMessageIdx - 1 - i) % 8];
+    const idx =
+      (dialect.nextMessageIdx - 1 - i) % 8 >= 0
+        ? (dialect.nextMessageIdx - 1 - i) % 8
+        : 8 + (dialect.nextMessageIdx - 1 - i); // lol is this right
+    const m = unpermutedMessages[idx];
     messages.push(m);
   }
   return {

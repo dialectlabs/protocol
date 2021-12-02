@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  getDialect,
   getDialectForMembers,
   getDialectProgramAddress,
   getMetadata,
@@ -177,6 +178,28 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('New messages overwrite old, retrieved messages are in order.', async () => {
+    const dialect = await getDialectForMembers(program, members);
+    const numMessages = 39;
+    const texts = Array(numMessages)
+      .fill(0)
+      .map((_, i) => `Hello, world! ${i}`);
+    for (let i = 0; i < numMessages; i++) {
+      await sendMessage(program, dialect, writer, texts[i]);
+      const d = await getDialect(program, dialect.publicKey);
+      // verify last N messages look correct
+      for (let j = 0; j <= Math.min(i + 1, 7); j++) {
+        const message = d.dialect.messages[j].text;
+        const expectedMessage =
+          i - j === -1 ? 'Hello, world!' : `Hello, world! ${i - j}`; // +1 for readability
+        console.log('         message', d.dialect.messages[j].text);
+        console.log('expected message', expectedMessage);
+        chai.expect(message === expectedMessage).to.be.true;
+      }
+      console.log('\n');
+    }
+  });
+
+  it('Fails to send a message longer than the character limit', async () => {
     chai.expect(true).to.be.true;
   });
 
