@@ -67,11 +67,6 @@ pub mod dialect {
     ) -> ProgramResult {
         let dialect = &mut ctx.accounts.dialect;
         let sender = &mut ctx.accounts.sender;
-        if sender.key != &dialect.members[0].public_key
-            && sender.key != &dialect.members[1].public_key
-        {
-            msg!("Sender isn't a member")
-        }
         let idx = dialect.next_message_idx;
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
         dialect.messages[idx as usize] = Some(Message {
@@ -202,7 +197,12 @@ pub struct Transfer<'info> {
 #[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
 pub struct SendMessage<'info> {
-    #[account(signer, mut)]
+    #[account(
+        signer,
+        mut,
+        // Verify the sender is a member & has write privileges
+        constraint = dialect.members.into_iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
+    )]
     pub sender: AccountInfo<'info>,
     // TODO: rm explicitly passing these members, use the dialect.members attr for seed determination & authz
     pub member0: AccountInfo<'info>,

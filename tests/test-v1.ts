@@ -10,6 +10,7 @@ import {
   getDialectProgramAddress,
   getMetadata,
   Member,
+  MESSAGES_PER_DIALECT,
   sendMessage,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
@@ -187,7 +188,7 @@ describe('Test messaging with a standard dialect', () => {
       await sendMessage(program, dialect, writer, texts[i]);
       const d = await getDialect(program, dialect.publicKey);
       // verify last N messages look correct
-      for (let j = 0; j <= Math.min(i + 1, 7); j++) {
+      for (let j = 0; j <= Math.min(i + 1, MESSAGES_PER_DIALECT - 1); j++) {
         const message = d.dialect.messages[j].text;
         const expectedMessage =
           i - j === -1 ? 'Hello, world!' : `Hello, world! ${i - j}`; // +1 for readability
