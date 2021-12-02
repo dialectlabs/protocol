@@ -169,12 +169,20 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Writer sends a message', async () => {
-    const dialect = await getDialectForMembers(program, members);
-    const message = 'Hello, world!';
-    await sendMessage(program, dialect, writer, message);
-    const gottenDialect = await getDialectForMembers(program, dialect.dialect.members);
-    chai.expect(gottenDialect.dialect.messages[0].text === message).to.be.true;
-    chai.expect(gottenDialect.dialect.nextMessageIdx === 1).to.be.true;
+    let dialect = await getDialectForMembers(program, members);
+    const text = 'Hello, world!';
+    await sendMessage(program, dialect, writer, text);
+    dialect = await getDialectForMembers(program, dialect.dialect.members);
+    const message = dialect.dialect.messages[0];
+    chai.expect(message.text === text).to.be.true;
+    chai.expect(dialect.dialect.nextMessageIdx === 1).to.be.true;
+    console.log(
+      'dialect.dialect.lastMessageTimestamp',
+      dialect.dialect.lastMessageTimestamp
+    );
+    console.log('message.timestamp', message.timestamp);
+    chai.expect(dialect.dialect.lastMessageTimestamp === message.timestamp).to
+      .be.true;
   });
 
   it('All members can read the message', async () => {

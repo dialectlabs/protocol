@@ -104,6 +104,7 @@ type Dialect = {
   members: Member[];
   messages: Message[];
   nextMessageIdx: number;
+  lastMessageTimestamp: number;
 };
 
 type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -129,6 +130,35 @@ export async function getDialectProgramAddress(
 type RawMessage = {
   owner: PublicKey;
   text: number[];
+  timestamp: number;
+};
+
+export async function getDialect(
+  program: anchor.Program,
+  publicKey: PublicKey
+): Promise<DialectAccount> {
+  const dialect = await program.account.dialectAccount.fetch(publicKey);
+  const account = await program.provider.connection.getAccountInfo(publicKey);
+  return {
+    ...account,
+    publicKey,
+    // dialect,
+    dialect: {
+      ...dialect,
+      lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
+      messages:
+        dialect.messages.map(
+          (m: RawMessage | null) =>
+            m && {
+              ...m,
+              text: new TextDecoder().decode(
+                new Uint8Array(m.text.slice(0, m.text.indexOf(0)))
+              ),
+              timestamp: m.timestamp * 1000,
+            }
+        ) || null,
+    },
+  } as DialectAccount;
 }
 
 export async function getDialectForMembers(
@@ -139,20 +169,7 @@ export async function getDialectForMembers(
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer())
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
-  const dialect = await program.account.dialectAccount.fetch(publicKey);
-  const account = await program.provider.connection.getAccountInfo(publicKey);
-  return {
-    ...account,
-    publicKey,
-    // dialect,
-    dialect: {
-      ...dialect,
-      messages: dialect.messages.map((m: RawMessage | null) => m && {
-        ...m,
-        text: new TextDecoder().decode(new Uint8Array(m.text.slice(0, m.text.indexOf(0))))
-      }) || null
-    },
-  } as DialectAccount;
+  return await getDialect(program, publicKey);
 }
 
 export async function createDialect(
@@ -261,8 +278,9 @@ Messages
 */
 
 type Message = {
-  sender: PublicKey;
+  owner: PublicKey;
   text: string;
+  timestamp: number;
 };
 
 type MessagesAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -274,16 +292,19 @@ export async function sendMessage(
   program: anchor.Program,
   dialect: DialectAccount,
   sender: anchor.web3.Keypair,
-  text: string,
+  text: string
 ): Promise<Message> {
-  const [dialectPublicKey, nonce] = await getDialectProgramAddress(program, dialect.dialect.members);
+  const [dialectPublicKey, nonce] = await getDialectProgramAddress(
+    program,
+    dialect.dialect.members
+  );
 
   const intArray = Array(32).fill(0);
   const charArray = Buffer.from(text);
   for (let i = 0; i < charArray.length; i++) {
     intArray[i] = charArray[i];
   }
-  
+
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
     new Uint8Array(intArray),
@@ -297,7 +318,9 @@ export async function sendMessage(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [sender],
-    },
+    }
   );
-  return { sender: sender.publicKey, text };
+
+  const d = await getDialect(program, dialect.publicKey);
+  return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
