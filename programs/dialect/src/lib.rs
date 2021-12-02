@@ -200,19 +200,15 @@ pub struct SendMessage<'info> {
     #[account(
         signer,
         mut,
-        // Verify the sender is a member & has write privileges
         constraint = dialect.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
     )]
     pub sender: AccountInfo<'info>,
-    // TODO: rm explicitly passing these members, use the dialect.members attr for seed determination & authz
-    pub member0: AccountInfo<'info>,
-    pub member1: AccountInfo<'info>,
     #[account(
         mut,
         seeds = [
             b"dialect".as_ref(),
-            member0.key().as_ref(),
-            member1.key().as_ref(),
+            dialect.members[0].public_key.as_ref(),
+            dialect.members[1].public_key.as_ref(),
         ],
         bump = dialect_nonce,
     )]
