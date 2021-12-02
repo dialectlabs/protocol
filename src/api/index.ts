@@ -139,6 +139,12 @@ export async function getDialect(
 ): Promise<DialectAccount> {
   const dialect = await program.account.dialectAccount.fetch(publicKey);
   const account = await program.provider.connection.getAccountInfo(publicKey);
+  const unpermutedMessages = dialect.messages.filter((m: Message | null) => m);
+  const messages: RawMessage[] = [];
+  for (let i = 0; i < unpermutedMessages.length; i++) {
+    const m = unpermutedMessages[(dialect.nextMessageIdx - 1 - i) % 8];
+    messages.push(m);
+  }
   return {
     ...account,
     publicKey,
@@ -147,7 +153,7 @@ export async function getDialect(
       ...dialect,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
       messages:
-        dialect.messages.map(
+        messages.map(
           (m: RawMessage | null) =>
             m && {
               ...m,

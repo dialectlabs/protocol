@@ -79,7 +79,7 @@ pub mod dialect {
             text,
             timestamp,
         });
-        dialect.next_message_idx += 1;
+        dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
         dialect.last_message_timestamp = timestamp;
         Ok(())
     }
