@@ -35,8 +35,6 @@ pub mod dialect {
     pub fn create_dialect(
         ctx: Context<CreateDialect>,
         _dialect_nonce: u8,
-        // _metadata0_nonce: u8,
-        // _metadata1_nonce: u8,
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert owner in members
@@ -181,7 +179,7 @@ pub struct CreateMetadata<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(dialect_nonce: u8)] //, metadata0_nonce: u8)] //, metadata1_nonce: u8)]
+#[instruction(dialect_nonce: u8)]
 pub struct CreateDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
     // We dupe the owner in one of the members, since the members must be sorted
@@ -190,24 +188,6 @@ pub struct CreateDialect<'info> {
     // // TOOD: Set limit, or use remaining accounts for members
     pub member1: AccountInfo<'info>,
     // TODO: Support more users
-    // #[account(
-    //     mut,
-    //     seeds = [
-    //         b"metadata".as_ref(),
-    //         member0.key.as_ref(),
-    //     ],
-    //     bump = metadata0_nonce,
-    // )]
-    // pub metadata0: Account<'info, MetadataAccount>,
-    // #[account(
-    //     mut,
-    //     seeds = [
-    //         b"metadata".as_ref(),
-    //         member1.key.as_ref(),
-    //     ],
-    //     bump = metadata1_nonce,
-    // )]
-    // pub metadata1: Account<'info, MetadataAccount>,
     #[account(
         init,
         // TODO: Assert that owner is a member with admin privileges

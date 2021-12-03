@@ -251,66 +251,6 @@ export async function createDialect(
     }
   );
   await waitForFinality(program, tx);
-
-  // TODO: parallelize
-  // const metadata_nonces: number[] = [];
-  // const sortedMetadatas = await Promise.all(sortedMembers.map(async (m) => {
-  //   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
-  //     program,
-  //     m.publicKey
-  //   );
-  //   metadata_nonces.push(metadataNonce);
-  //   return metadataAddress;
-  // }));
-  // const keyedMetadatas = sortedMetadatas.reduce(
-  //   (ms, m, idx) => ({ ...ms, [`metadata${idx}`]: m }),
-  //   {}
-  // );
-  // console.log('sortedMetadatas', sortedMetadatas.map(m => m.toString()));
-  // console.log('metadata_nonces', metadata_nonces);
-  // console.log('members pubkeys', members.map(m => m.publicKey.toString()));
-  // console.log('dialect.pubkey', publicKey.toString());
-  // const [metadata0, metadataNonce0] = await getMetadataProgramAddress(program, sortedMembers[0].publicKey);
-  // tx = await program.rpc.subscribeUser(
-  //   new anchor.BN(nonce),
-  //   new anchor.BN(metadataNonce0),
-  //   // new anchor.BN(metadata_nonces[0]),
-  //   {
-  //     accounts: {
-  //       dialect: publicKey,
-  //       signer: owner.publicKey,
-  //       // ...keyedMembers,
-  //       user: sortedMembers[0].publicKey,
-  //       // metadata: sortedMetadatas[0],
-  //       metadata: metadata0,
-  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     },
-  //     signers: [owner],
-  //   }
-  // );
-  // await waitForFinality(program, tx);
-  // const [metadata1, metadataNonce1] = await getMetadataProgramAddress(program, sortedMembers[1].publicKey);
-  // tx = await program.rpc.subscribeUser(
-  //   new anchor.BN(nonce),
-  //   new anchor.BN(metadataNonce1),
-  //   // new anchor.BN(metadata_nonces[0]),
-  //   {
-  //     accounts: {
-  //       dialect: publicKey,
-  //       signer: owner.publicKey,
-  //       // ...keyedMembers,
-  //       user: sortedMembers[1].publicKey,
-  //       // metadata: sortedMetadatas[0],
-  //       metadata: metadata1,
-  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-  //       systemProgram: anchor.web3.SystemProgram.programId,
-  //     },
-  //     signers: [owner],
-  //   }
-  // );
-  // await waitForFinality(program, tx);
-  // const metadata0 = await subscribeUser(program, dialect)
   return await getDialectForMembers(program, members);
 }
 
