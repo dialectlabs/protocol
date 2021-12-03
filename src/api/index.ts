@@ -66,7 +66,7 @@ export async function getMetadata(
   const metadata = await program.account.metadataAccount.fetch(publicKey);
   return {
     deviceToken: new TextDecoder().decode(new Uint8Array(metadata.deviceToken)),
-    subscriptions: [],
+    subscriptions: metadata.subscriptions.filter((s: Subscription | null) => s),
   } as Metadata;
 }
 
@@ -96,6 +96,40 @@ export async function createMetadata(
   return await getMetadata(program, user.publicKey);
 }
 
+export async function subscribeUser(
+  program: anchor.Program,
+  dialect: DialectAccount,
+  user: PublicKey,
+  signer: Keypair
+): Promise<Metadata> {
+  const [publicKey, nonce] = await getDialectProgramAddress(
+    program,
+    dialect.dialect.members
+  );
+  const [metadata, metadataNonce] = await getMetadataProgramAddress(
+    program,
+    user
+  );
+  console.log('metadata', metadata.toString());
+  const tx = await program.rpc.subscribeUser(
+    new anchor.BN(nonce),
+    new anchor.BN(metadataNonce),
+    {
+      accounts: {
+        dialect: publicKey,
+        signer: signer.publicKey,
+        user: user,
+        metadata,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [signer],
+    }
+  );
+  await waitForFinality(program, tx);
+  return await getMetadata(program, user);
+}
+
 /*
 Dialect
 */
@@ -107,7 +141,7 @@ type Dialect = {
   lastMessageTimestamp: number;
 };
 
-type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
+export type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
   dialect: Dialect;
   publicKey: PublicKey;
 };
@@ -149,7 +183,7 @@ export async function getDialect(
     const m = unpermutedMessages[idx];
     messages.push(m);
   }
-  
+
   return {
     ...account,
     publicKey,
@@ -200,7 +234,7 @@ export async function createDialect(
     (ms, m, idx) => ({ ...ms, [`member${idx}`]: m.publicKey }),
     {}
   );
-  let tx = await program.rpc.createDialect(
+  const tx = await program.rpc.createDialect(
     new anchor.BN(nonce),
     // ...metadata_nonces.map((n) => new anchor.BN(n)),
     sortedMembers.map((m) => m.scopes),
@@ -236,46 +270,47 @@ export async function createDialect(
   // console.log('metadata_nonces', metadata_nonces);
   // console.log('members pubkeys', members.map(m => m.publicKey.toString()));
   // console.log('dialect.pubkey', publicKey.toString());
-  const [metadata0, metadataNonce0] = await getMetadataProgramAddress(program, sortedMembers[0].publicKey);
-  tx = await program.rpc.subscribeUser(
-    new anchor.BN(nonce),
-    new anchor.BN(metadataNonce0),
-    // new anchor.BN(metadata_nonces[0]),
-    {
-      accounts: {
-        dialect: publicKey,
-        signer: owner.publicKey,
-        // ...keyedMembers,
-        user: sortedMembers[0].publicKey,
-        // metadata: sortedMetadatas[0],
-        metadata: metadata0,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [owner], 
-    }
-  );
-  await waitForFinality(program, tx);
-  const [metadata1, metadataNonce1] = await getMetadataProgramAddress(program, sortedMembers[1].publicKey);
-  tx = await program.rpc.subscribeUser(
-    new anchor.BN(nonce),
-    new anchor.BN(metadataNonce1),
-    // new anchor.BN(metadata_nonces[0]),
-    {
-      accounts: {
-        dialect: publicKey,
-        signer: owner.publicKey,
-        // ...keyedMembers,
-        user: sortedMembers[1].publicKey,
-        // metadata: sortedMetadatas[0],
-        metadata: metadata1,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [owner], 
-    }
-  );
-  await waitForFinality(program, tx);
+  // const [metadata0, metadataNonce0] = await getMetadataProgramAddress(program, sortedMembers[0].publicKey);
+  // tx = await program.rpc.subscribeUser(
+  //   new anchor.BN(nonce),
+  //   new anchor.BN(metadataNonce0),
+  //   // new anchor.BN(metadata_nonces[0]),
+  //   {
+  //     accounts: {
+  //       dialect: publicKey,
+  //       signer: owner.publicKey,
+  //       // ...keyedMembers,
+  //       user: sortedMembers[0].publicKey,
+  //       // metadata: sortedMetadatas[0],
+  //       metadata: metadata0,
+  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+  //       systemProgram: anchor.web3.SystemProgram.programId,
+  //     },
+  //     signers: [owner],
+  //   }
+  // );
+  // await waitForFinality(program, tx);
+  // const [metadata1, metadataNonce1] = await getMetadataProgramAddress(program, sortedMembers[1].publicKey);
+  // tx = await program.rpc.subscribeUser(
+  //   new anchor.BN(nonce),
+  //   new anchor.BN(metadataNonce1),
+  //   // new anchor.BN(metadata_nonces[0]),
+  //   {
+  //     accounts: {
+  //       dialect: publicKey,
+  //       signer: owner.publicKey,
+  //       // ...keyedMembers,
+  //       user: sortedMembers[1].publicKey,
+  //       // metadata: sortedMetadatas[0],
+  //       metadata: metadata1,
+  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+  //       systemProgram: anchor.web3.SystemProgram.programId,
+  //     },
+  //     signers: [owner],
+  //   }
+  // );
+  // await waitForFinality(program, tx);
+  // const metadata0 = await subscribeUser(program, dialect)
   return await getDialectForMembers(program, members);
 }
 

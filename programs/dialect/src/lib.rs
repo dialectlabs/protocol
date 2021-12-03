@@ -80,6 +80,8 @@ pub mod dialect {
                 pubkey: dialect.key(),
                 enabled: true,
             });
+        } else {
+            msg!("User already subscribed to 4 dialects");
         }
         Ok(())
     }
