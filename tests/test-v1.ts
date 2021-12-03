@@ -5,10 +5,13 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  getDialect,
   getDialectForMembers,
   getDialectProgramAddress,
   getMetadata,
   Member,
+  MESSAGES_PER_DIALECT,
+  sendMessage,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
@@ -46,15 +49,7 @@ describe('Test creating user metadata', () => {
   it('Create user metadata object(s)', async () => {
     const deviceToken = 'a'.repeat(32);
     const metadata = await createMetadata(program, owner, deviceToken);
-    console.log('metadata', metadata);
     const gottenMetadata = await getMetadata(program, owner.publicKey);
-    console.log('gottenMetadata', gottenMetadata);
-    console.log(
-      'deviceToken',
-      deviceToken,
-      metadata.deviceToken,
-      gottenMetadata.deviceToken.toString()
-    );
     assert(metadata.deviceToken.toString() === deviceToken);
     assert(gottenMetadata.deviceToken.toString() === deviceToken);
   });
@@ -65,15 +60,12 @@ describe('Test messaging with a standard dialect', () => {
     const senderBalanceBefore =
       (await program.provider.connection.getAccountInfo(owner.publicKey))
         .lamports / web3.LAMPORTS_PER_SOL;
-    console.log('senderbalancebefore', senderBalanceBefore);
     const receiver1BalanceBefore =
       (await program.provider.connection.getAccountInfo(writer.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiver1balancebefore', receiver1BalanceBefore);
     const receiver2BalanceBefore =
       (await program.provider.connection.getAccountInfo(nonmember.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiver2balancebefore', receiver2BalanceBefore);
     const tx = await program.rpc.transfer(
       new anchor.BN(1 * web3.LAMPORTS_PER_SOL),
       new anchor.BN(2 * web3.LAMPORTS_PER_SOL),
@@ -92,15 +84,12 @@ describe('Test messaging with a standard dialect', () => {
     const senderBalanceAfter =
       (await program.provider.connection.getAccountInfo(owner.publicKey))
         .lamports / web3.LAMPORTS_PER_SOL;
-    console.log('senderbalanceAfter', senderBalanceAfter);
     const receiver1BalanceAfter =
       (await program.provider.connection.getAccountInfo(writer.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiverbalanceAfter', receiver1BalanceAfter);
     const receiver2BalanceAfter =
       (await program.provider.connection.getAccountInfo(nonmember.publicKey))
         ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    console.log('receiverbalanceAfter', receiver2BalanceAfter);
   });
 
   it('Fail to create a dialect for unsorted members', async () => {
@@ -135,7 +124,6 @@ describe('Test messaging with a standard dialect', () => {
         )
       )
       .to.eventually.be.rejectedWith(Error);
-    // await waitForFinality(program, tx);
   });
 
   it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
@@ -156,7 +144,6 @@ describe('Test messaging with a standard dialect', () => {
     chai
       .expect(createDialect(program, owner, duplicateMembers))
       .to.be.rejectedWith(Error);
-    // chai.expect(true).to.be.true;
   });
 
   it('Find a dialect for a given member pair, verify correct scopes.', async () => {
@@ -170,15 +157,51 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Writer sends a message', async () => {
-    chai.expect(true).to.be.true;
+    let dialect = await getDialectForMembers(program, members);
+    const text = 'Hello, world!';
+    await sendMessage(program, dialect, writer, text);
+    dialect = await getDialectForMembers(program, dialect.dialect.members);
+    const message = dialect.dialect.messages[0];
+    chai.expect(message.text === text).to.be.true;
+    chai.expect(dialect.dialect.nextMessageIdx === 1).to.be.true;
+    chai.expect(dialect.dialect.lastMessageTimestamp === message.timestamp).to
+      .be.true;
   });
 
   it('All members can read the message', async () => {
-    // N.b. of course non-token holders can as well
+    // N.b. of course non-members can as well, if not encrypted
+    // TODO: Implement when encrypted
     chai.expect(true).to.be.true;
   });
 
   it('All writers can send a message', async () => {
+    chai.expect(true).to.be.true;
+  });
+
+  it('New messages overwrite old, retrieved messages are in order.', async () => {
+    // TODO: Test max message length, fully filled
+    const dialect = await getDialectForMembers(program, members);
+    const numMessages = 39;
+    const texts = Array(numMessages)
+      .fill(0)
+      .map((_, i) => `Hello, world! ${i}`);
+    for (let i = 0; i < numMessages; i++) {
+      await sendMessage(program, dialect, writer, texts[i]);
+      const d = await getDialect(program, dialect.publicKey);
+      // verify last N messages look correct
+      for (let j = 0; j <= Math.min(i + 1, MESSAGES_PER_DIALECT - 1); j++) {
+        const message = d.dialect.messages[j].text;
+        const expectedMessage =
+          i - j === -1 ? 'Hello, world!' : `Hello, world! ${i - j}`; // +1 for readability
+        console.log('         message', d.dialect.messages[j].text);
+        console.log('expected message', expectedMessage);
+        chai.expect(message === expectedMessage).to.be.true;
+      }
+      console.log('\n');
+    }
+  });
+
+  it('Fails to send a message longer than the character limit', async () => {
     chai.expect(true).to.be.true;
   });
 

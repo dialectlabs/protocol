@@ -10,6 +10,8 @@ import { waitForFinality, Wallet_ } from '../utils';
 User metadata
 */
 
+export const MESSAGES_PER_DIALECT = 8;
+
 type Metadata = {
   deviceToken: string;
   subscriptions: Subscription[];
@@ -61,9 +63,7 @@ export async function getMetadata(
   user: PublicKey
 ): Promise<Metadata> {
   const [publicKey] = await getMetadataProgramAddress(program, user);
-  console.log('publicKey', publicKey);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
-  // console.log('metadataAccount', metadataAccount);
   return {
     deviceToken: new TextDecoder().decode(new Uint8Array(metadata.deviceToken)),
     subscriptions: [],
@@ -102,6 +102,9 @@ Dialect
 
 type Dialect = {
   members: Member[];
+  messages: Message[];
+  nextMessageIdx: number;
+  lastMessageTimestamp: number;
 };
 
 type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -124,6 +127,50 @@ export async function getDialectProgramAddress(
   );
 }
 
+type RawMessage = {
+  owner: PublicKey;
+  text: number[];
+  timestamp: number;
+};
+
+export async function getDialect(
+  program: anchor.Program,
+  publicKey: PublicKey
+): Promise<DialectAccount> {
+  const dialect = await program.account.dialectAccount.fetch(publicKey);
+  const account = await program.provider.connection.getAccountInfo(publicKey);
+  const unpermutedMessages = dialect.messages.filter((m: Message | null) => m);
+  const messages: RawMessage[] = [];
+  for (let i = 0; i < unpermutedMessages.length; i++) {
+    const idx =
+      (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
+        ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
+        : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
+    const m = unpermutedMessages[idx];
+    messages.push(m);
+  }
+  return {
+    ...account,
+    publicKey,
+    // dialect,
+    dialect: {
+      ...dialect,
+      lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
+      messages:
+        messages.map(
+          (m: RawMessage | null) =>
+            m && {
+              ...m,
+              text: new TextDecoder().decode(
+                new Uint8Array(m.text.slice(0, m.text.indexOf(0)))
+              ),
+              timestamp: m.timestamp * 1000,
+            }
+        ) || null,
+    },
+  } as DialectAccount;
+}
+
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[]
@@ -132,13 +179,7 @@ export async function getDialectForMembers(
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer())
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
-  const dialect = await program.account.dialectAccount.fetch(publicKey);
-  const account = await program.provider.connection.getAccountInfo(publicKey);
-  return {
-    ...account,
-    publicKey,
-    dialect,
-  } as DialectAccount;
+  return await getDialect(program, publicKey);
 }
 
 export async function createDialect(
@@ -247,8 +288,9 @@ Messages
 */
 
 type Message = {
-  sender: PublicKey;
+  owner: PublicKey;
   text: string;
+  timestamp: number;
 };
 
 type MessagesAccount = anchor.web3.AccountInfo<Buffer> & {
@@ -258,8 +300,37 @@ type MessagesAccount = anchor.web3.AccountInfo<Buffer> & {
 
 export async function sendMessage(
   program: anchor.Program,
-  mint: splToken.Token,
-  sender: anchor.web3.Keypair
+  dialect: DialectAccount,
+  sender: anchor.web3.Keypair,
+  text: string
 ): Promise<Message> {
-  return { text: 'hello' } as Message;
+  const [dialectPublicKey, nonce] = await getDialectProgramAddress(
+    program,
+    dialect.dialect.members
+  );
+
+  const intArray = Array(32).fill(0);
+  const charArray = Buffer.from(text);
+  for (let i = 0; i < charArray.length; i++) {
+    intArray[i] = charArray[i];
+  }
+
+  await program.rpc.sendMessage(
+    new anchor.BN(nonce),
+    new Uint8Array(intArray),
+    {
+      accounts: {
+        dialect: dialectPublicKey,
+        sender: sender.publicKey,
+        member0: dialect.dialect.members[0].publicKey,
+        member1: dialect.dialect.members[1].publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [sender],
+    }
+  );
+
+  const d = await getDialect(program, dialect.publicKey);
+  return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
