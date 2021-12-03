@@ -47,11 +47,11 @@ pub mod dialect {
         dialect.members = [
             Member {
                 public_key: *members[0].key,
-                scopes: scopes[0], // admin/write
+                scopes: scopes[0],
             },
             Member {
                 public_key: *members[1].key,
-                scopes: scopes[1], // write
+                scopes: scopes[1],
             },
         ];
 
@@ -62,8 +62,8 @@ pub mod dialect {
         Ok(())
     }
 
-    pub fn subscribe_member(
-        ctx: Context<SubscribeMember>,
+    pub fn subscribe_user(
+        ctx: Context<SubscribeUser>,
         _dialect_nonce: u8,
         _metadata_nonce: u8,
     ) -> ProgramResult {
@@ -218,7 +218,7 @@ pub struct CreateDialect<'info> {
         bump = dialect_nonce,
         payer = owner,
         // space = discriminator + 2 * Member + 32 * Message = 8 + 2 * 34 + 32 * 68
-        space = 8 + 2 * 34 + 32 * 68, // TODO: Choose space
+        space = 8 + (2 * 34) + (32 * 68), // TODO: Choose space
     )]
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -227,20 +227,21 @@ pub struct CreateDialect<'info> {
 
 #[derive(Accounts)]
 #[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
-pub struct SubscribeMember<'info> {
+pub struct SubscribeUser<'info> {
     #[account(signer, mut)]
-    pub owner: AccountInfo<'info>,
-    pub member: AccountInfo<'info>,
+    pub signer: AccountInfo<'info>,
+    // TOOD: Consider at some point enforcing user = signer
+    pub user: AccountInfo<'info>,
     #[account(
         mut,
         seeds = [
             b"metadata".as_ref(),
-            member.key().as_ref(),
+            user.key().as_ref(),
         ],
         bump = metadata_nonce,
     )]
     pub metadata: Account<'info, MetadataAccount>,
-    pub dialect: AccountInfo<'info>,
+    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }

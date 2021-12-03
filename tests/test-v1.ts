@@ -188,7 +188,7 @@ describe('Test messaging with a standard dialect', () => {
   it('New messages overwrite old, retrieved messages are in order.', async () => {
     // TODO: Test max message length, fully filled
     const dialect = await getDialectForMembers(program, members);
-    const numMessages = 39;
+    const numMessages = 17;
     const texts = Array(numMessages)
       .fill(0)
       .map((_, i) => `Hello, world! ${i}`);

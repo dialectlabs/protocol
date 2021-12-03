@@ -237,16 +237,16 @@ export async function createDialect(
   // console.log('members pubkeys', members.map(m => m.publicKey.toString()));
   // console.log('dialect.pubkey', publicKey.toString());
   const [metadata0, metadataNonce0] = await getMetadataProgramAddress(program, sortedMembers[0].publicKey);
-  tx = await program.rpc.subscribeMember(
+  tx = await program.rpc.subscribeUser(
     new anchor.BN(nonce),
     new anchor.BN(metadataNonce0),
     // new anchor.BN(metadata_nonces[0]),
     {
       accounts: {
         dialect: publicKey,
-        owner: owner.publicKey,
+        signer: owner.publicKey,
         // ...keyedMembers,
-        member: sortedMembers[0].publicKey,
+        user: sortedMembers[0].publicKey,
         // metadata: sortedMetadatas[0],
         metadata: metadata0,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -257,16 +257,16 @@ export async function createDialect(
   );
   await waitForFinality(program, tx);
   const [metadata1, metadataNonce1] = await getMetadataProgramAddress(program, sortedMembers[1].publicKey);
-  tx = await program.rpc.subscribeMember(
+  tx = await program.rpc.subscribeUser(
     new anchor.BN(nonce),
     new anchor.BN(metadataNonce1),
     // new anchor.BN(metadata_nonces[0]),
     {
       accounts: {
         dialect: publicKey,
-        owner: owner.publicKey,
+        signer: owner.publicKey,
         // ...keyedMembers,
-        member: sortedMembers[1].publicKey,
+        user: sortedMembers[1].publicKey,
         // metadata: sortedMetadatas[0],
         metadata: metadata1,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
