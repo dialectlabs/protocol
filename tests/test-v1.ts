@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  DialectAccount,
   getDialect,
   getDialectForMembers,
   getDialectProgramAddress,
@@ -12,6 +13,7 @@ import {
   Member,
   MESSAGES_PER_DIALECT,
   sendMessage,
+  subscribeUser,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
@@ -19,6 +21,7 @@ chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 const program = anchor.workspace.Dialect;
 const connection = program.provider.connection;
+let dialect: DialectAccount;
 
 const [owner, writer, nonmember] = Array(3)
   .fill(0)
@@ -38,20 +41,27 @@ const members = [
 // TODO: Remove test interdependence with fixtures
 
 describe('Test creating user metadata', () => {
-  it("Fund owner's account", async () => {
+  it("Fund members' accounts", async () => {
     const fromAirdropSignature = await connection.requestAirdrop(
       owner.publicKey,
       10 * web3.LAMPORTS_PER_SOL
     );
     await connection.confirmTransaction(fromAirdropSignature);
+    const fromAirdropSignature1 = await connection.requestAirdrop(
+      writer.publicKey,
+      10 * web3.LAMPORTS_PER_SOL
+    );
+    await connection.confirmTransaction(fromAirdropSignature1);
   });
 
   it('Create user metadata object(s)', async () => {
     const deviceToken = 'a'.repeat(32);
-    const metadata = await createMetadata(program, owner, deviceToken);
-    const gottenMetadata = await getMetadata(program, owner.publicKey);
-    assert(metadata.deviceToken.toString() === deviceToken);
-    assert(gottenMetadata.deviceToken.toString() === deviceToken);
+    for (const member of [owner, writer]) {
+      const metadata = await createMetadata(program, member, deviceToken);
+      const gottenMetadata = await getMetadata(program, member.publicKey);
+      assert(metadata.deviceToken.toString() === deviceToken);
+      assert(gottenMetadata.deviceToken.toString() === deviceToken);
+    }
   });
 });
 
@@ -127,7 +137,28 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
-    await createDialect(program, owner, members);
+    dialect = await createDialect(program, owner, members);
+  });
+
+  it('Subscribe all members to dialect', async () => {
+    const metadata0 = await subscribeUser(
+      program,
+      dialect,
+      members[0].publicKey,
+      owner
+    );
+    chai.expect(
+      metadata0.subscriptions.some((s) => s.pubkey.equals(dialect.publicKey))
+    ).to.be.true;
+    const metadata1 = await subscribeUser(
+      program,
+      dialect,
+      members[1].publicKey,
+      owner
+    );
+    chai.expect(
+      metadata1.subscriptions.some((s) => s.pubkey.equals(dialect.publicKey))
+    ).to.be.true;
   });
 
   it('Fail to create a second dialect for the same members', async () => {
@@ -181,7 +212,7 @@ describe('Test messaging with a standard dialect', () => {
   it('New messages overwrite old, retrieved messages are in order.', async () => {
     // TODO: Test max message length, fully filled
     const dialect = await getDialectForMembers(program, members);
-    const numMessages = 39;
+    const numMessages = 17;
     const texts = Array(numMessages)
       .fill(0)
       .map((_, i) => `Hello, world! ${i}`);

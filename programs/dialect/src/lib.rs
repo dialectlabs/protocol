@@ -38,7 +38,6 @@ pub mod dialect {
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert owner in members
-        // TODO: Add dialect to member subs
         let dialect = &mut ctx.accounts.dialect;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
@@ -46,17 +45,42 @@ pub mod dialect {
         dialect.members = [
             Member {
                 public_key: *members[0].key,
-                scopes: scopes[0], // admin/write
+                scopes: scopes[0],
             },
             Member {
                 public_key: *members[1].key,
-                scopes: scopes[1], // write
+                scopes: scopes[1],
             },
         ];
 
         dialect.messages = [None; 8];
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
+
+        Ok(())
+    }
+
+    pub fn subscribe_user(
+        ctx: Context<SubscribeUser>,
+        _dialect_nonce: u8,
+        _metadata_nonce: u8,
+    ) -> ProgramResult {
+        let dialect = &mut ctx.accounts.dialect;
+        let metadata = &mut ctx.accounts.metadata;
+        let num_subscriptions = metadata
+            .subscriptions
+            .iter()
+            .filter(|s| s.is_some())
+            .count();
+        // TODO: handle max subscriptions
+        if num_subscriptions < 4 {
+            metadata.subscriptions[num_subscriptions] = Some(Subscription {
+                pubkey: dialect.key(),
+                enabled: true,
+            });
+        } else {
+            msg!("User already subscribed to 4 dialects");
+        }
         Ok(())
     }
 
@@ -147,7 +171,7 @@ pub struct CreateMetadata<'info> {
         bump = metadata_nonce,
         payer = user,
         // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 76,
+        space = 8 + 32 + 32 + 4 * 33,
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -176,9 +200,30 @@ pub struct CreateDialect<'info> {
         bump = dialect_nonce,
         payer = owner,
         // space = discriminator + 2 * Member + 32 * Message = 8 + 2 * 34 + 32 * 68
-        space = 8 + 2 * 34 + 32 * 68, // TODO: Choose space
+        space = 8 + (2 * 34) + (32 * 68), // TODO: Choose space
     )]
     pub dialect: Account<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
+pub struct SubscribeUser<'info> {
+    #[account(signer, mut)]
+    pub signer: AccountInfo<'info>,
+    // TOOD: Consider at some point enforcing user = signer
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key().as_ref(),
+        ],
+        bump = metadata_nonce,
+    )]
+    pub metadata: Account<'info, MetadataAccount>,
+    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
