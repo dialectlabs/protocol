@@ -38,20 +38,27 @@ const members = [
 // TODO: Remove test interdependence with fixtures
 
 describe('Test creating user metadata', () => {
-  it("Fund owner's account", async () => {
+  it("Fund members' accounts", async () => {
     const fromAirdropSignature = await connection.requestAirdrop(
       owner.publicKey,
       10 * web3.LAMPORTS_PER_SOL
     );
     await connection.confirmTransaction(fromAirdropSignature);
+    const fromAirdropSignature1 = await connection.requestAirdrop(
+      writer.publicKey,
+      10 * web3.LAMPORTS_PER_SOL
+    );
+    await connection.confirmTransaction(fromAirdropSignature1);
   });
 
   it('Create user metadata object(s)', async () => {
     const deviceToken = 'a'.repeat(32);
-    const metadata = await createMetadata(program, owner, deviceToken);
-    const gottenMetadata = await getMetadata(program, owner.publicKey);
-    assert(metadata.deviceToken.toString() === deviceToken);
-    assert(gottenMetadata.deviceToken.toString() === deviceToken);
+    for (const member of [owner, writer]) {
+      const metadata = await createMetadata(program, member, deviceToken);
+      const gottenMetadata = await getMetadata(program, member.publicKey);
+      assert(metadata.deviceToken.toString() === deviceToken);
+      assert(gottenMetadata.deviceToken.toString() === deviceToken);
+    }
   });
 });
 

@@ -35,10 +35,11 @@ pub mod dialect {
     pub fn create_dialect(
         ctx: Context<CreateDialect>,
         _dialect_nonce: u8,
+        // _metadata0_nonce: u8,
+        // _metadata1_nonce: u8,
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert owner in members
-        // TODO: Add dialect to member subs
         let dialect = &mut ctx.accounts.dialect;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
@@ -57,6 +58,29 @@ pub mod dialect {
         dialect.messages = [None; 8];
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
+
+        Ok(())
+    }
+
+    pub fn subscribe_member(
+        ctx: Context<SubscribeMember>,
+        _dialect_nonce: u8,
+        _metadata_nonce: u8,
+    ) -> ProgramResult {
+        let dialect = &mut ctx.accounts.dialect;
+        let metadata = &mut ctx.accounts.metadata;
+        let num_subscriptions = metadata
+            .subscriptions
+            .iter()
+            .filter(|s| s.is_some())
+            .count();
+        // TODO: handle max subscriptions
+        if num_subscriptions < 4 {
+            metadata.subscriptions[num_subscriptions] = Some(Subscription {
+                pubkey: dialect.key(),
+                enabled: true,
+            });
+        }
         Ok(())
     }
 
@@ -147,7 +171,7 @@ pub struct CreateMetadata<'info> {
         bump = metadata_nonce,
         payer = user,
         // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 76,
+        space = 8 + 32 + 32 + 4 * 33,
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -155,7 +179,7 @@ pub struct CreateMetadata<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(dialect_nonce: u8)]
+#[instruction(dialect_nonce: u8)] //, metadata0_nonce: u8)] //, metadata1_nonce: u8)]
 pub struct CreateDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
     // We dupe the owner in one of the members, since the members must be sorted
@@ -164,6 +188,24 @@ pub struct CreateDialect<'info> {
     // // TOOD: Set limit, or use remaining accounts for members
     pub member1: AccountInfo<'info>,
     // TODO: Support more users
+    // #[account(
+    //     mut,
+    //     seeds = [
+    //         b"metadata".as_ref(),
+    //         member0.key.as_ref(),
+    //     ],
+    //     bump = metadata0_nonce,
+    // )]
+    // pub metadata0: Account<'info, MetadataAccount>,
+    // #[account(
+    //     mut,
+    //     seeds = [
+    //         b"metadata".as_ref(),
+    //         member1.key.as_ref(),
+    //     ],
+    //     bump = metadata1_nonce,
+    // )]
+    // pub metadata1: Account<'info, MetadataAccount>,
     #[account(
         init,
         // TODO: Assert that owner is a member with admin privileges
@@ -179,6 +221,26 @@ pub struct CreateDialect<'info> {
         space = 8 + 2 * 34 + 32 * 68, // TODO: Choose space
     )]
     pub dialect: Account<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
+pub struct SubscribeMember<'info> {
+    #[account(signer, mut)]
+    pub owner: AccountInfo<'info>,
+    pub member: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            member.key().as_ref(),
+        ],
+        bump = metadata_nonce,
+    )]
+    pub metadata: Account<'info, MetadataAccount>,
+    pub dialect: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
