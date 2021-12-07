@@ -100,6 +100,10 @@ pub mod dialect {
         });
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
         dialect.last_message_timestamp = timestamp;
+        emit!(MessageEvent {
+            data: 5 as u64,
+            label: "hellow".to_string(),
+        });
         Ok(())
     }
 
@@ -171,7 +175,7 @@ pub struct CreateMetadata<'info> {
         bump = metadata_nonce,
         payer = user,
         // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 8 + 32 + 32 + 4 * 33,
+        space = 8 + 32 + 32 + (4 * 33),
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -199,8 +203,8 @@ pub struct CreateDialect<'info> {
         constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
         bump = dialect_nonce,
         payer = owner,
-        // space = discriminator + 2 * Member + 32 * Message = 8 + 2 * 34 + 32 * 68
-        space = 8 + (2 * 34) + (32 * 68), // TODO: Choose space
+        // space = discriminator + 2 * Member + 32 * Message
+        space = 8 + (2 * 34) + (32 * 68),
     )]
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -339,4 +343,11 @@ pub struct Message {
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
     pub timestamp: u32, // 4
     pub text: [u8; 32], // 32
+}
+
+#[event]
+pub struct MessageEvent {
+    pub data: u64,
+    #[index]
+    pub label: String,
 }

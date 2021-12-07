@@ -176,3 +176,11 @@ q fix
 ```
 
 ```
+
+## examples
+
+Run the examples with:
+
+```bash
+ts-node examples/index.ts
+```
