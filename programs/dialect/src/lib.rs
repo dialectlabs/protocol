@@ -57,6 +57,10 @@ pub mod dialect {
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
 
+        emit!(CreateDialectEvent {
+            dialect: dialect.key(),
+        });
+
         Ok(())
     }
 
@@ -77,6 +81,10 @@ pub mod dialect {
             metadata.subscriptions[num_subscriptions] = Some(Subscription {
                 pubkey: dialect.key(),
                 enabled: true,
+            });
+            emit!(SubscribeUserEvent {
+                metadata: metadata.key(),
+                dialect: dialect.key()
             });
         } else {
             msg!("User already subscribed to 4 dialects");
@@ -100,9 +108,9 @@ pub mod dialect {
         });
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
         dialect.last_message_timestamp = timestamp;
-        emit!(MessageEvent {
-            data: 5 as u64,
-            label: "hellow".to_string(),
+        emit!(SendMessageEvent {
+            dialect: dialect.key(),
+            sender: *sender.key,
         });
         Ok(())
     }
@@ -346,8 +354,18 @@ pub struct Message {
 }
 
 #[event]
-pub struct MessageEvent {
-    pub data: u64,
-    #[index]
-    pub label: String,
+pub struct CreateDialectEvent {
+    pub dialect: Pubkey,
+}
+
+#[event]
+pub struct SendMessageEvent {
+    pub dialect: Pubkey,
+    pub sender: Pubkey,
+}
+
+#[event]
+pub struct SubscribeUserEvent {
+    pub metadata: Pubkey,
+    pub dialect: Pubkey,
 }

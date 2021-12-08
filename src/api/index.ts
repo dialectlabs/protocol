@@ -12,7 +12,7 @@ User metadata
 
 export const MESSAGES_PER_DIALECT = 8;
 
-type Metadata = {
+export type Metadata = {
   deviceToken: string;
   subscriptions: Subscription[];
 };
