@@ -34,7 +34,10 @@
         {
           "name": "deviceToken",
           "type": {
-            "array": ["u8", 32]
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]
@@ -83,11 +86,59 @@
           "type": {
             "array": [
               {
-                "array": ["bool", 2]
+                "array": [
+                  "bool",
+                  2
+                ]
               },
               2
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "subscribeUser",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "user",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "dialect",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "dialectNonce",
+          "type": "u8"
+        },
+        {
+          "name": "metadataNonce",
+          "type": "u8"
         }
       ]
     },
@@ -100,12 +151,47 @@
           "isSigner": true
         },
         {
-          "name": "member0",
+          "name": "dialect",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "member1",
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "dialectNonce",
+          "type": "u8"
+        },
+        {
+          "name": "text",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "createMintDialect",
+      "accounts": [
+        {
+          "name": "mintAuthority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
           "isMut": false,
           "isSigner": false
         },
@@ -166,42 +252,6 @@
           "type": "u64"
         }
       ]
-    },
-    {
-      "name": "createMintDialect",
-      "accounts": [
-        {
-          "name": "mintAuthority",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "mint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "dialect",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "dialectNonce",
-          "type": "u8"
-        }
-      ]
     }
   ],
   "accounts": [
@@ -217,7 +267,10 @@
           {
             "name": "deviceToken",
             "type": {
-              "array": ["u8", 32]
+              "array": [
+                "u8",
+                32
+              ]
             }
           },
           {
@@ -251,6 +304,27 @@
                 2
               ]
             }
+          },
+          {
+            "name": "messages",
+            "type": {
+              "array": [
+                {
+                  "option": {
+                    "defined": "Message"
+                  }
+                },
+                8
+              ]
+            }
+          },
+          {
+            "name": "nextMessageIdx",
+            "type": "u8"
+          },
+          {
+            "name": "lastMessageTimestamp",
+            "type": "u32"
           }
         ]
       }
@@ -291,13 +365,41 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "pubkey",
+            "name": "publicKey",
             "type": "publicKey"
           },
           {
             "name": "scopes",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Message",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "timestamp",
+            "type": "u32"
+          },
+          {
+            "name": "text",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
             }
           }
         ]
