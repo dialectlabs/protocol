@@ -18,10 +18,10 @@ During local-publish step we remove the node_modules from this folder so that, w
 
 TODO: notes
 
-
 install solana on m1
-1) brew install coreutils
-2) https://dev.to/nickgarfield/how-to-install-solana-dev-tools-on-an-m1-mac-kfn
+
+1. brew install coreutils
+2. https://dev.to/nickgarfield/how-to-install-solana-dev-tools-on-an-m1-mac-kfn
 
 https://project-serum.github.io/anchor/getting-started/installation.html
 
