@@ -18,7 +18,10 @@ During local-publish step we remove the node_modules from this folder so that, w
 
 TODO: notes
 
-install solana on m1 — https://dev.to/nickgarfield/how-to-install-solana-dev-tools-on-an-m1-mac-kfn
+install solana on m1
+
+1. brew install coreutils
+2. https://dev.to/nickgarfield/how-to-install-solana-dev-tools-on-an-m1-mac-kfn
 
 https://project-serum.github.io/anchor/getting-started/installation.html
 
@@ -45,6 +48,7 @@ solana balance
 
 ```
 solana-test-validator --rpc-port 8899
+solana config set --url http://127.0.0.1:8899
 ```
 
 ### build & deploy
@@ -52,7 +56,7 @@ solana-test-validator --rpc-port 8899
 make sure you have SOL via an airdrop
 
 ```
-solana airdrop 5
+solana airdrop 50
 ```
 
 Run build, the output will be the program address
@@ -175,4 +179,12 @@ q fix
 
 ```
 
+```
+
+## examples
+
+Run the examples with:
+
+```bash
+ts-node examples/index.ts
 ```

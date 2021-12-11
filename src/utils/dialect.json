@@ -34,10 +34,7 @@
         {
           "name": "deviceToken",
           "type": {
-            "array": [
-              "u8",
-              32
-            ]
+            "array": ["u8", 32]
           }
         }
       ]
@@ -86,10 +83,7 @@
           "type": {
             "array": [
               {
-                "array": [
-                  "bool",
-                  2
-                ]
+                "array": ["bool", 2]
               },
               2
             ]
@@ -174,10 +168,7 @@
         {
           "name": "text",
           "type": {
-            "array": [
-              "u8",
-              32
-            ]
+            "array": ["u8", 32]
           }
         }
       ]
@@ -267,10 +258,7 @@
           {
             "name": "deviceToken",
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           },
           {
@@ -371,10 +359,7 @@
           {
             "name": "scopes",
             "type": {
-              "array": [
-                "bool",
-                2
-              ]
+              "array": ["bool", 2]
             }
           }
         ]
@@ -396,14 +381,75 @@
           {
             "name": "text",
             "type": {
-              "array": [
-                "u8",
-                32
-              ]
+              "array": ["u8", 32]
             }
           }
         ]
       }
+    },
+    {
+      "name": "Message",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "timestamp",
+            "type": "u32"
+          },
+          {
+            "name": "text",
+            "type": {
+              "array": ["u8", 32]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "CreateDialectEvent",
+      "fields": [
+        {
+          "name": "dialect",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SendMessageEvent",
+      "fields": [
+        {
+          "name": "dialect",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "sender",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SubscribeUserEvent",
+      "fields": [
+        {
+          "name": "metadata",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "dialect",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
     }
   ],
   "metadata": {
