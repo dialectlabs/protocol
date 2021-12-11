@@ -111,7 +111,7 @@ const sendMessages = async (
     .map((_, i) => `Hello, world! ${i}`);
   for (let i = 0; i < numMessages; i++) {
     console.log(`sending message ${i}...`);
-    const message = await sendMessage(
+    await sendMessage(
       program,
       dialect,
       keypairs[i % keypairs.length],
@@ -123,9 +123,9 @@ const sendMessages = async (
 const index = async (): Promise<void> => {
   const numMembers = 2;
   const [program, keypairs, members] = await setup(numMembers);
-  let metadatas = await createMetadatas(program, keypairs);
+  await createMetadatas(program, keypairs);
   const dialect = await createDialect(program, keypairs[0], members);
-  metadatas = await subscribeUsers(program, dialect, keypairs);
+  await subscribeUsers(program, dialect, keypairs);
   await sendMessages(program, dialect, keypairs);
 };
 
