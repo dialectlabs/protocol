@@ -95,7 +95,7 @@ pub mod dialect {
     pub fn send_message(
         ctx: Context<SendMessage>,
         _dialect_nonce: u8,
-        text: [u8; 32],
+        text: [u8; 256],
     ) -> ProgramResult {
         let dialect = &mut ctx.accounts.dialect;
         let sender = &mut ctx.accounts.sender;
@@ -103,7 +103,7 @@ pub mod dialect {
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
         dialect.messages[idx as usize] = Some(Message {
             owner: *sender.key,
-            text,
+            text: Text { array: text },
             timestamp,
         });
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
@@ -211,8 +211,8 @@ pub struct CreateDialect<'info> {
         constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
         bump = dialect_nonce,
         payer = owner,
-        // space = discriminator + 2 * Member + 32 * Message
-        space = 8 + (2 * 34) + (32 * 68),
+        // space = discriminator + 2 * Member + 8 * Message
+        space = 8 + (2 * 34) + (8 * 256 + 4 + 32),
     )]
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -310,9 +310,10 @@ pub struct MetadataAccount {
 #[account]
 #[derive(Default)]
 // TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
+// space = 2336
 pub struct DialectAccount {
     pub members: [Member; 2],           // 2 * Member = 68
-    pub messages: [Option<Message>; 8], // 32 * Message = 2176 (will be 9344 with message length 256)
+    pub messages: [Option<Message>; 8], // 8 * Message = 800 (will be 9344 with message length 256)
     pub next_message_idx: u8,           // 1 -- index of next message (not the latest)
     pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
 }
@@ -344,13 +345,25 @@ pub struct Member {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
-// space = 68
+// space = 292
 pub struct Message {
     pub owner: Pubkey, // 32
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
     pub timestamp: u32, // 4
-    pub text: [u8; 32], // 32
+    pub text: Text,     // 256
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
+// space = 256
+pub struct Text {
+    array: [u8; 256],
+}
+
+impl Default for Text {
+    fn default() -> Self {
+        Text { array: [0; 256] }
+    }
 }
 
 #[event]

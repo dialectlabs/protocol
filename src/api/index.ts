@@ -11,6 +11,7 @@ User metadata
 */
 
 export const MESSAGES_PER_DIALECT = 8;
+export const MESSAGE_LENGTH = 256;
 
 export type Metadata = {
   deviceToken: string;
@@ -161,9 +162,13 @@ export async function getDialectProgramAddress(
   );
 }
 
+type Text = {
+  array: number[];
+}
+
 type RawMessage = {
   owner: PublicKey;
-  text: number[];
+  text: Text;
   timestamp: number;
 };
 
@@ -197,7 +202,7 @@ export async function getDialect(
             m && {
               ...m,
               text: new TextDecoder().decode(
-                new Uint8Array(m.text.slice(0, m.text.indexOf(0)))
+                new Uint8Array(m.text.array.slice(0, m.text.array.indexOf(0)))
               ),
               timestamp: m.timestamp * 1000,
             }
@@ -344,7 +349,7 @@ export async function sendMessage(
     dialect.dialect.members
   );
 
-  const intArray = Array(32).fill(0);
+  const intArray = Array(MESSAGE_LENGTH).fill(0);
   const charArray = Buffer.from(text);
   for (let i = 0; i < charArray.length; i++) {
     intArray[i] = charArray[i];
