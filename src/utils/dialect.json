@@ -34,7 +34,10 @@
         {
           "name": "deviceToken",
           "type": {
-            "array": ["u8", 32]
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]
@@ -83,7 +86,10 @@
           "type": {
             "array": [
               {
-                "array": ["bool", 2]
+                "array": [
+                  "bool",
+                  2
+                ]
               },
               2
             ]
@@ -168,7 +174,10 @@
         {
           "name": "text",
           "type": {
-            "array": ["u8", 32]
+            "array": [
+              "u8",
+              32
+            ]
           }
         }
       ]
@@ -258,7 +267,10 @@
           {
             "name": "deviceToken",
             "type": {
-              "array": ["u8", 32]
+              "array": [
+                "u8",
+                32
+              ]
             }
           },
           {
@@ -359,7 +371,10 @@
           {
             "name": "scopes",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           }
         ]
@@ -381,29 +396,10 @@
           {
             "name": "text",
             "type": {
-              "array": ["u8", 32]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "Message",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "timestamp",
-            "type": "u32"
-          },
-          {
-            "name": "text",
-            "type": {
-              "array": ["u8", 32]
+              "array": [
+                "u8",
+                32
+              ]
             }
           }
         ]
@@ -451,8 +447,5 @@
         }
       ]
     }
-  ],
-  "metadata": {
-    "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
-  }
+  ]
 }
