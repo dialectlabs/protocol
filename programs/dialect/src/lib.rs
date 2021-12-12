@@ -57,6 +57,10 @@ pub mod dialect {
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
 
+        emit!(CreateDialectEvent {
+            dialect: dialect.key(),
+        });
+
         Ok(())
     }
 
@@ -77,6 +81,10 @@ pub mod dialect {
             metadata.subscriptions[num_subscriptions] = Some(Subscription {
                 pubkey: dialect.key(),
                 enabled: true,
+            });
+            emit!(SubscribeUserEvent {
+                metadata: metadata.key(),
+                dialect: dialect.key()
             });
         } else {
             msg!("User already subscribed to 4 dialects");
@@ -100,6 +108,10 @@ pub mod dialect {
         });
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
         dialect.last_message_timestamp = timestamp;
+        emit!(SendMessageEvent {
+            dialect: dialect.key(),
+            sender: *sender.key,
+        });
         Ok(())
     }
 
@@ -171,7 +183,7 @@ pub struct CreateMetadata<'info> {
         bump = metadata_nonce,
         payer = user,
         // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 8 + 32 + 32 + 4 * 33,
+        space = 8 + 32 + 32 + (4 * 33),
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -199,8 +211,8 @@ pub struct CreateDialect<'info> {
         constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
         bump = dialect_nonce,
         // payer = owner,
-        // space = discriminator + 2 * Member + 32 * Message = 8 + 2 * 34 + 32 * 68
-        // space = 8 + (2 * 34) + (32 * 68), // TODO: Choose space
+        // space = discriminator + 2 * Member + 32 * Message
+        // space = 8 + (2 * 34) + (32 * 68),
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -351,4 +363,21 @@ impl Default for Text {
     fn default() -> Self {
         Text { array: [0; 32] }
     }
+}
+
+#[event]
+pub struct CreateDialectEvent {
+    pub dialect: Pubkey,
+}
+
+#[event]
+pub struct SendMessageEvent {
+    pub dialect: Pubkey,
+    pub sender: Pubkey,
+}
+
+#[event]
+pub struct SubscribeUserEvent {
+    pub metadata: Pubkey,
+    pub dialect: Pubkey,
 }

@@ -12,7 +12,7 @@ User metadata
 
 export const MESSAGES_PER_DIALECT = 8;
 
-type Metadata = {
+export type Metadata = {
   deviceToken: string;
   subscriptions: Subscription[];
 };
@@ -236,14 +236,12 @@ export async function createDialect(
   );
   const tx = await program.rpc.createDialect(
     new anchor.BN(nonce),
-    // ...metadata_nonces.map((n) => new anchor.BN(n)),
     sortedMembers.map((m) => m.scopes),
     {
       accounts: {
         dialect: publicKey,
         owner: owner.publicKey,
         ...keyedMembers,
-        // ...keyedMetadatas,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
