@@ -247,6 +247,9 @@ export async function createDialect(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
+      instructions: [
+        await program.account.dialect.createInstruction(publicKey),
+      ],
       signers: [owner],
     }
   );

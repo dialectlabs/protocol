@@ -38,10 +38,10 @@ pub mod dialect {
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert owner in members
-        let dialect = &mut ctx.accounts.dialect;
+        let mut dialect = ctx.accounts.dialect.load_init()?;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
-
+        let mut dialect = ctx.accounts.dialect.load_mut()?;
         dialect.members = [
             Member {
                 public_key: *members[0].key,
@@ -89,13 +89,13 @@ pub mod dialect {
         _dialect_nonce: u8,
         text: [u8; 32],
     ) -> ProgramResult {
-        let dialect = &mut ctx.accounts.dialect;
+        let mut dialect = &mut ctx.accounts.dialect.load_mut()?;
         let sender = &mut ctx.accounts.sender;
         let idx = dialect.next_message_idx;
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
         dialect.messages[idx as usize] = Some(Message {
             owner: *sender.key,
-            text,
+            text: Text { array: text },
             timestamp,
         });
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
@@ -189,7 +189,7 @@ pub struct CreateDialect<'info> {
     pub member1: AccountInfo<'info>,
     // TODO: Support more users
     #[account(
-        init,
+        zero,
         // TODO: Assert that owner is a member with admin privileges
         seeds = [
             b"dialect".as_ref(),
@@ -198,11 +198,11 @@ pub struct CreateDialect<'info> {
         ],
         constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
         bump = dialect_nonce,
-        payer = owner,
+        // payer = owner,
         // space = discriminator + 2 * Member + 32 * Message = 8 + 2 * 34 + 32 * 68
-        space = 8 + (2 * 34) + (32 * 68), // TODO: Choose space
+        // space = 8 + (2 * 34) + (32 * 68), // TODO: Choose space
     )]
-    pub dialect: Account<'info, DialectAccount>,
+    pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -245,19 +245,19 @@ pub struct SendMessage<'info> {
     #[account(
         signer,
         mut,
-        constraint = dialect.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
+        constraint = dialect.load_mut()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
     )]
     pub sender: AccountInfo<'info>,
     #[account(
         mut,
         seeds = [
             b"dialect".as_ref(),
-            dialect.members[0].public_key.as_ref(),
-            dialect.members[1].public_key.as_ref(),
+            dialect.load_mut()?.members[0].public_key.as_ref(),
+            dialect.load_mut()?.members[1].public_key.as_ref(),
         ],
         bump = dialect_nonce,
     )]
-    pub dialect: Account<'info, DialectAccount>,
+    pub dialect: AccountLoader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -295,7 +295,7 @@ pub struct MetadataAccount {
     subscriptions: [Option<Subscription>; 4], // 4 * space(Subscription) TODO: More subscriptions
 }
 
-#[account]
+#[account(zero_copy)]
 #[derive(Default)]
 // TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
 pub struct DialectAccount {
@@ -331,12 +331,24 @@ pub struct Member {
     pub scopes: [bool; 2], // 2
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+#[zero_copy]
+#[derive(Default)]
 // space = 68
 pub struct Message {
     pub owner: Pubkey, // 32
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
     pub timestamp: u32, // 4
-    pub text: [u8; 32], // 32
+    pub text: Text,     // 32
+}
+
+#[zero_copy]
+pub struct Text {
+    pub array: [u8; 32],
+}
+
+impl Default for Text {
+    fn default() -> Self {
+        Text { array: [0; 32] }
+    }
 }
