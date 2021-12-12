@@ -212,7 +212,7 @@ pub struct CreateDialect<'info> {
         bump = dialect_nonce,
         payer = owner,
         // space = discriminator + 2 * Member + 8 * Message
-        space = 8 + (2 * 34) + (8 * 256 + 4 + 32),
+        space = 8 + (2 * 34) + 8 * (256 + 4 + 32),
     )]
     pub dialect: Account<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
