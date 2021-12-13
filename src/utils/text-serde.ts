@@ -1,10 +1,17 @@
 const NUL_CHAR = 0;
 
+export class SerializationOverflowError extends Error {
+  constructor(maxSize: number, text: string) {
+    super(`Cannot serialize: ${text} exceeds max size '${maxSize}'`);
+  }
+}
 
-export function serializeText(text: string, sizeBytes: number): Uint8Array {
-  const alignedToSize = text.substring(0, sizeBytes);
-  const intArray = Array(sizeBytes).fill(NUL_CHAR);
-  const charArray = Buffer.from(alignedToSize);
+export function serializeText(text: string, binarySize: number): Uint8Array {
+  if (text.length > binarySize) {
+    throw new SerializationOverflowError(binarySize, text);
+  }
+  const intArray = Array(binarySize).fill(NUL_CHAR);
+  const charArray = Buffer.from(text);
   for (let i = 0; i < charArray.length; i++) {
     intArray[i] = charArray[i];
   }
