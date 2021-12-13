@@ -39,7 +39,7 @@ describe('ECDH encryptor/decryptor test', async () => {
     });
   });
 
-  it('should be possible to decrypt using his the same keypair as was used in encryption', () => {
+  it('should be possible to decrypt using the same keypair that was used in encryption', () => {
     // given
     const unencrypted = randomBytes(10);
     const nonce = randomBytes(24);
