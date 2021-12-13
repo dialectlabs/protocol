@@ -3,7 +3,8 @@ import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { waitForFinality, Wallet_ } from '../utils';
-import { ecdhEncrypt, createDummyNonce, ecdhDecrypt, Ed25519KeyPair } from '../utils/ecdh-encryption';
+import { createDummyNonce, ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
+import { deserializeText, serializeText } from '../utils/text-serde';
 
 // TODO: Switch from types to classes
 
@@ -13,7 +14,6 @@ User metadata
 
 export const MESSAGES_PER_DIALECT = 8;
 export const MAX_MESSAGE_SIZE_IN_BLOCKCHAIN_BYTES = 32;
-export const ENCRYPTION_OVERHEAD_BYTES = 16;
 export const MAX_MESSAGE_SIZE_BYTES = MAX_MESSAGE_SIZE_IN_BLOCKCHAIN_BYTES - ENCRYPTION_OVERHEAD_BYTES;
 
 export type Metadata = {
@@ -171,10 +171,20 @@ type RawMessage = {
   timestamp: number;
 };
 
+function findOtherMember(dialect: Dialect, authority: anchor.web3.Keypair) {
+  const member = dialect.members.find((it) =>
+    it.publicKey.toBytes() !== authority.publicKey.toBytes(),
+  );
+  if (!member) {
+    throw new Error('Expected to have other member');
+  }
+  return member;
+}
+
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  authority: anchor.web3.Keypair
+  authority: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
   const dialect = await program.account.dialectAccount.fetch(publicKey) as Dialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
@@ -188,7 +198,7 @@ export async function getDialect(
     const m = unpermutedMessages[idx];
     messages.push(m);
   }
-
+  const otherParty = findOtherMember(dialect, authority);
   return {
     ...account,
     publicKey: publicKey,
@@ -201,12 +211,7 @@ export async function getDialect(
           (m: RawMessage | null) => {
             if (!m) return;
             const encryptedMessage = new Uint8Array(m.text);
-            const otherParty = dialect.members.find((it) =>
-              it.publicKey.toBytes() !== authority.publicKey.toBytes(),
-            );
-            if (!otherParty) {
-              throw new Error('Expected to have a receiver member');
-            }
+
             const decryptedMessage = ecdhDecrypt(
               encryptedMessage,
               {
@@ -214,17 +219,12 @@ export async function getDialect(
                 publicKey: authority.publicKey.toBytes(),
               },
               otherParty.publicKey.toBytes(),
-              createDummyNonce()
+              createDummyNonce(),
             );
-            if (!decryptedMessage) {
-              throw new Error() // TODO
-            }
-            const unpacked = new Uint8Array(decryptedMessage.slice(0, decryptedMessage.indexOf(0)));
+            const text = deserializeText(decryptedMessage);
             return {
               ...m,
-              text: new TextDecoder().decode(
-                unpacked,
-              ),
+              text,
               timestamp: m.timestamp * 1000,
             };
           },
@@ -236,7 +236,7 @@ export async function getDialect(
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[],
-  authority: anchor.web3.Keypair
+  authority: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
@@ -371,30 +371,17 @@ export async function sendMessage(
     program,
     dialect.dialect.members,
   );
-
-  const intArray = Array(MAX_MESSAGE_SIZE_BYTES).fill(0);
-  const charArray = Buffer.from(text);
-  for (let i = 0; i < charArray.length; i++) {
-    intArray[i] = charArray[i];
-  }
-  const messageBytes = new Uint8Array(intArray);
-
-  const receiver = dialect.dialect.members.find((it) =>
-    it.publicKey.toBytes() !== sender.publicKey.toBytes(),
-  );
-  if (!receiver) {
-    throw new Error('Expected to have a receiver member');
-  }
+  const otherMember = findOtherMember(dialect.dialect, sender);
+  const textBytes = serializeText(text, MAX_MESSAGE_SIZE_BYTES);
   const encrypted = ecdhEncrypt(
-    messageBytes,
+    textBytes,
     {
       secretKey: sender.secretKey,
       publicKey: sender.publicKey.toBytes(),
     },
-    receiver.publicKey.toBytes(),
-    createDummyNonce()
+    otherMember.publicKey.toBytes(),
+    createDummyNonce(),
   );
-
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
     encrypted,
