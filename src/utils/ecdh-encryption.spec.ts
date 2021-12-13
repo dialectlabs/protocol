@@ -4,6 +4,41 @@ import { randomBytes } from 'tweetnacl';
 
 describe('ECDH encryptor/decryptor test', async () => {
 
+  /*
+   tweetnacl source code references:
+   https://github.com/dchest/tweetnacl-js/blob/master/nacl-fast.js#L2076
+   https://github.com/dchest/tweetnacl-js/blob/master/nacl-fast.js#L2202
+   https://github.com/dchest/tweetnacl-js/blob/master/nacl-fast.js#L2266
+ */
+  it('should be always 16 bytes overhead after encryption', () => {
+    // given
+    // generate arithmetic progression a_0 = 1, d = 8, n = 128
+    const messageSizes = Array(128)
+      .fill(1)
+      .map((element, index) => (index + 1) * 8);
+    // when
+    const sizesComparison = messageSizes
+      .map((size) => {
+        const unencrypted = randomBytes(size);
+        const nonce = randomBytes(24);
+        const encrypted = ecdhEncrypt(
+          unencrypted,
+          generateEd25519KeyPair(),
+          generateEd25519KeyPair().publicKey,
+          nonce,
+        );
+        return ({
+          sizeBefore: unencrypted.byteLength,
+          sizeAfter: encrypted.byteLength,
+          sizeDiff: encrypted.byteLength - unencrypted.byteLength,
+        });
+      });
+    // then
+    sizesComparison.forEach(({ sizeDiff }) => {
+      expect(sizeDiff).to.eq(16);
+    });
+  });
+
   it('should be possible to decrypt using his the same keypair as was used in encryption', () => {
     // given
     const unencrypted = randomBytes(10);
