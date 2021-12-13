@@ -187,22 +187,57 @@ describe('Test messaging with a standard dialect', () => {
     );
   });
 
-  it('Writer sends a message', async () => {
-    let dialect = await getDialectForMembers(program, members, writer);
+  it('Message sender can send msg and then read the message text and time', async () => {
+    // given
+    const dialect = await getDialectForMembers(program, members, writer);
     const text = 'Hello, world!';
+    // when
     await sendMessage(program, dialect, writer, text);
-    dialect = await getDialectForMembers(program, dialect.dialect.members, writer);
-    const message = dialect.dialect.messages[0];
+    // then
+    const senderDialect = await getDialectForMembers(program, dialect.dialect.members, writer);
+    const message = senderDialect.dialect.messages[0];
     chai.expect(message.text).to.be.eq(text);
-    chai.expect(dialect.dialect.nextMessageIdx === 1).to.be.true;
-    chai.expect(dialect.dialect.lastMessageTimestamp).to
+    chai.expect(senderDialect.dialect.lastMessageTimestamp).to
       .be.eq(message.timestamp);
   });
 
-  it('All members can read the message', async () => {
-    // N.b. of course non-members can as well, if not encrypted
-    // TODO: Implement when encrypted
-    chai.expect(true).to.be.true;
+  // TODO: need to make tests be stateless and run independently
+  it('Message sender can send and then read the correct next message idx', async () => {
+    // given
+    const dialect = await getDialectForMembers(program, members, writer);
+    const text = 'Hello, world!';
+    // when
+    await sendMessage(program, dialect, writer, text);
+    // then
+    const senderDialect = await getDialectForMembers(program, dialect.dialect.members, writer);
+    chai.expect(senderDialect.dialect.nextMessageIdx).to.be.eq(1);
+  });
+
+  it('Message receiver can read the message text and time sent by sender', async () => {
+    // given
+    const senderDialect = await getDialectForMembers(program, members, writer);
+    const text = 'Hello, world!';
+    // when
+    await sendMessage(program, senderDialect, writer, text);
+    // then
+    const receiverDialect = await getDialectForMembers(program, dialect.dialect.members, owner);
+    const message = receiverDialect.dialect.messages[0];
+    chai.expect(message.text).to.be.eq(text);
+    chai.expect(receiverDialect.dialect.lastMessageTimestamp).to
+      .be.eq(message.timestamp);
+  });
+
+
+  // TODO: need to make tests be stateless and run independently
+  it('Message receiver can read the correct next message idx after receiving message', async () => {
+    // given
+    const senderDialect = await getDialectForMembers(program, members, writer);
+    const text = 'Hello, world!';
+    // when
+    await sendMessage(program, senderDialect, writer, text);
+    // then
+    const receiverDialect = await getDialectForMembers(program, dialect.dialect.members, owner);
+    chai.expect(receiverDialect.dialect.nextMessageIdx).to.be.eq(1);
   });
 
   it('All writers can send a message', async () => {

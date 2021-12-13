@@ -171,20 +171,20 @@ type RawMessage = {
   timestamp: number;
 };
 
-function findOtherMember(dialect: Dialect, authority: anchor.web3.Keypair) {
-  const member = dialect.members.find((it) =>
-    it.publicKey.toBytes() !== authority.publicKey.toBytes(),
+function findOtherMember(dialect: Dialect, member: anchor.web3.Keypair) {
+  const otherMember = dialect.members.find((it) =>
+    !it.publicKey.equals(member.publicKey),
   );
-  if (!member) {
+  if (!otherMember) {
     throw new Error('Expected to have other member');
   }
-  return member;
+  return otherMember;
 }
 
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  authority: anchor.web3.Keypair,
+  user: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
   const dialect = await program.account.dialectAccount.fetch(publicKey) as Dialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
@@ -196,9 +196,9 @@ export async function getDialect(
         ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
         : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
     const m = unpermutedMessages[idx];
-    messages.push(m);
+    messages.push(m as unknown as RawMessage);
   }
-  const otherParty = findOtherMember(dialect, authority);
+  const otherMember = findOtherMember(dialect, user);
   return {
     ...account,
     publicKey: publicKey,
@@ -211,14 +211,13 @@ export async function getDialect(
           (m: RawMessage | null) => {
             if (!m) return;
             const encryptedMessage = new Uint8Array(m.text);
-
             const decryptedMessage = ecdhDecrypt(
               encryptedMessage,
               {
-                secretKey: authority.secretKey,
-                publicKey: authority.publicKey.toBytes(),
+                secretKey: user.secretKey,
+                publicKey: user.publicKey.toBytes(),
               },
-              otherParty.publicKey.toBytes(),
+              otherMember.publicKey.toBytes(),
               createDummyNonce(),
             );
             const text = deserializeText(decryptedMessage);
@@ -236,13 +235,13 @@ export async function getDialect(
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[],
-  authority: anchor.web3.Keypair,
+  user: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
-  return await getDialect(program, publicKey, authority);
+  return await getDialect(program, publicKey, user);
 }
 
 export async function createDialect(
