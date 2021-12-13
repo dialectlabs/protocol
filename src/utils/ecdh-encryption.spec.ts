@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { ecdhDecrypt, ecdhEncrypt, generateEd25519KeyPair } from './ecdh-encryption';
+import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES, generateEd25519KeyPair } from './ecdh-encryption';
 import { randomBytes } from 'tweetnacl';
 
 describe('ECDH encryptor/decryptor test', async () => {
@@ -35,7 +35,7 @@ describe('ECDH encryptor/decryptor test', async () => {
       });
     // then
     sizesComparison.forEach(({ sizeDiff }) => {
-      expect(sizeDiff).to.eq(16);
+      expect(sizeDiff).to.eq(ENCRYPTION_OVERHEAD_BYTES);
     });
   });
 

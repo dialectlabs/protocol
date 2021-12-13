@@ -3,10 +3,17 @@ import nacl from 'tweetnacl';
 import { Keypair } from '@solana/web3.js';
 
 export const NONCE_SIZE_BYTES = 24;
+export const ENCRYPTION_OVERHEAD_BYTES = 16;
 
 export class IncorrectPublicKeyFormatError extends Error {
   constructor(party: string) {
     super(`Given '${party}' public key is not valid Ed25519 key`);
+  }
+}
+
+export class AuthenticationFailedDecryptionError extends Error {
+  constructor() {
+    super('Authentication failed during decryption attempt');
   }
 }
 
@@ -52,7 +59,7 @@ export function ecdhDecrypt(
   payload: Uint8Array,
   { secretKey, publicKey }: Ed25519KeyPair,
   otherPartyPublicKey: Ed25519Key,
-  nonce: Uint8Array): Uint8Array | null {
+  nonce: Uint8Array): Uint8Array {
   const curve25519KeyPair = ed2curve.convertKeyPair({
     publicKey,
     secretKey,
@@ -64,5 +71,9 @@ export function ecdhDecrypt(
   if (!otherPartyCurve25519PublicKey) {
     throw new IncorrectPublicKeyFormatError('other party');
   }
-  return nacl.box.open(payload, nonce, otherPartyCurve25519PublicKey, curve25519KeyPair.secretKey);
+  const decrypted = nacl.box.open(payload, nonce, otherPartyCurve25519PublicKey, curve25519KeyPair.secretKey);
+  if (!decrypted) {
+    throw new AuthenticationFailedDecryptionError();
+  }
+  return decrypted;
 }
