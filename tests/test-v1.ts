@@ -178,7 +178,7 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Find a dialect for a given member pair, verify correct scopes.', async () => {
-    const dialect = await getDialectForMembers(program, members);
+    const dialect = await getDialectForMembers(program, members, writer);
     members.every((m, i) =>
       assert(
         m.publicKey.equals(dialect.dialect.members[i].publicKey) &&
@@ -188,15 +188,15 @@ describe('Test messaging with a standard dialect', () => {
   });
 
   it('Writer sends a message', async () => {
-    let dialect = await getDialectForMembers(program, members);
+    let dialect = await getDialectForMembers(program, members, writer);
     const text = 'Hello, world!';
     await sendMessage(program, dialect, writer, text);
-    dialect = await getDialectForMembers(program, dialect.dialect.members);
+    dialect = await getDialectForMembers(program, dialect.dialect.members, writer);
     const message = dialect.dialect.messages[0];
-    chai.expect(message.text === text).to.be.true;
+    chai.expect(message.text).to.be.eq(text);
     chai.expect(dialect.dialect.nextMessageIdx === 1).to.be.true;
-    chai.expect(dialect.dialect.lastMessageTimestamp === message.timestamp).to
-      .be.true;
+    chai.expect(dialect.dialect.lastMessageTimestamp).to
+      .be.eq(message.timestamp);
   });
 
   it('All members can read the message', async () => {
@@ -211,14 +211,14 @@ describe('Test messaging with a standard dialect', () => {
 
   it('New messages overwrite old, retrieved messages are in order.', async () => {
     // TODO: Test max message length, fully filled
-    const dialect = await getDialectForMembers(program, members);
+    const dialect = await getDialectForMembers(program, members, writer);
     const numMessages = 17;
     const texts = Array(numMessages)
       .fill(0)
       .map((_, i) => `Hello, world! ${i}`);
     for (let i = 0; i < numMessages; i++) {
       await sendMessage(program, dialect, writer, texts[i]);
-      const d = await getDialect(program, dialect.publicKey);
+      const d = await getDialect(program, dialect.publicKey, writer);
       // verify last N messages look correct
       for (let j = 0; j <= Math.min(i + 1, MESSAGES_PER_DIALECT - 1); j++) {
         const message = d.dialect.messages[j].text;
@@ -226,7 +226,7 @@ describe('Test messaging with a standard dialect', () => {
           i - j === -1 ? 'Hello, world!' : `Hello, world! ${i - j}`; // +1 for readability
         console.log('         message', d.dialect.messages[j].text);
         console.log('expected message', expectedMessage);
-        chai.expect(message === expectedMessage).to.be.true;
+        chai.expect(message).to.be.eq(expectedMessage);
       }
       console.log('\n');
     }

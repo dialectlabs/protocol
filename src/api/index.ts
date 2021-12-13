@@ -3,6 +3,7 @@ import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { waitForFinality, Wallet_ } from '../utils';
+import { ecdhEncrypt, createDummyNonce, ecdhDecrypt, Ed25519KeyPair } from '../utils/ecdh-encryption';
 
 // TODO: Switch from types to classes
 
@@ -11,6 +12,9 @@ User metadata
 */
 
 export const MESSAGES_PER_DIALECT = 8;
+export const MAX_MESSAGE_SIZE_IN_BLOCKCHAIN_BYTES = 32;
+export const ENCRYPTION_OVERHEAD_BYTES = 16;
+export const MAX_MESSAGE_SIZE_BYTES = MAX_MESSAGE_SIZE_IN_BLOCKCHAIN_BYTES - ENCRYPTION_OVERHEAD_BYTES;
 
 export type Metadata = {
   deviceToken: string;
@@ -24,7 +28,7 @@ type Subscription = {
 
 export async function accountInfoGet(
   connection: Connection,
-  publicKey: PublicKey
+  publicKey: PublicKey,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   return await connection.getAccountInfo(publicKey);
 }
@@ -32,7 +36,7 @@ export async function accountInfoGet(
 export async function accountInfoFetch(
   _url: string,
   connection: Connection,
-  publicKeyStr: string
+  publicKeyStr: string,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   const publicKey = new anchor.web3.PublicKey(publicKeyStr);
   return await accountInfoGet(connection, publicKey);
@@ -41,7 +45,7 @@ export async function accountInfoFetch(
 export async function ownerFetcher(
   _url: string,
   wallet: Wallet_,
-  connection: Connection
+  connection: Connection,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   const r = await accountInfoGet(connection, wallet.publicKey);
   return r;
@@ -49,18 +53,18 @@ export async function ownerFetcher(
 
 export async function getMetadataProgramAddress(
   program: anchor.Program,
-  user: PublicKey
+  user: PublicKey,
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from('metadata'), user.toBuffer()],
-    program.programId
+    program.programId,
   );
 }
 
 // Get with keypair, for decryption
 export async function getMetadata(
   program: anchor.Program,
-  user: PublicKey
+  user: PublicKey,
 ): Promise<Metadata> {
   const [publicKey] = await getMetadataProgramAddress(program, user);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
@@ -73,11 +77,11 @@ export async function getMetadata(
 export async function createMetadata(
   program: anchor.Program,
   user: Keypair,
-  deviceToken: string
+  deviceToken: string,
 ): Promise<Metadata> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
-    user.publicKey
+    user.publicKey,
   );
   const tx = await program.rpc.createMetadata(
     new anchor.BN(metadataNonce),
@@ -90,7 +94,7 @@ export async function createMetadata(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [user],
-    }
+    },
   );
   await waitForFinality(program, tx);
   return await getMetadata(program, user.publicKey);
@@ -100,15 +104,15 @@ export async function subscribeUser(
   program: anchor.Program,
   dialect: DialectAccount,
   user: PublicKey,
-  signer: Keypair
+  signer: Keypair,
 ): Promise<Metadata> {
   const [publicKey, nonce] = await getDialectProgramAddress(
     program,
-    dialect.dialect.members
+    dialect.dialect.members,
   );
   const [metadata, metadataNonce] = await getMetadataProgramAddress(
     program,
-    user
+    user,
   );
   console.log('metadata', metadata.toString());
   const tx = await program.rpc.subscribeUser(
@@ -124,7 +128,7 @@ export async function subscribeUser(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [signer],
-    }
+    },
   );
   await waitForFinality(program, tx);
   return await getMetadata(program, user);
@@ -148,7 +152,7 @@ export type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
 
 export async function getDialectProgramAddress(
   program: anchor.Program,
-  members: Member[]
+  members: Member[],
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [
@@ -157,7 +161,7 @@ export async function getDialectProgramAddress(
         .map((m) => m.publicKey.toBuffer())
         .sort((a, b) => a.compare(b)), // TODO: test that buffers sort as expected
     ],
-    program.programId
+    program.programId,
   );
 }
 
@@ -169,9 +173,10 @@ type RawMessage = {
 
 export async function getDialect(
   program: anchor.Program,
-  publicKey: PublicKey
+  publicKey: PublicKey,
+  authority: anchor.web3.Keypair
 ): Promise<DialectAccount> {
-  const dialect = await program.account.dialectAccount.fetch(publicKey);
+  const dialect = await program.account.dialectAccount.fetch(publicKey) as Dialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
   const unpermutedMessages = dialect.messages.filter((m: Message | null) => m);
   const messages: RawMessage[] = [];
@@ -186,21 +191,43 @@ export async function getDialect(
 
   return {
     ...account,
-    publicKey,
+    publicKey: publicKey,
     // dialect,
     dialect: {
       ...dialect,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
       messages:
         messages.map(
-          (m: RawMessage | null) =>
-            m && {
+          (m: RawMessage | null) => {
+            if (!m) return;
+            const encryptedMessage = new Uint8Array(m.text);
+            const otherParty = dialect.members.find((it) =>
+              it.publicKey.toBytes() !== authority.publicKey.toBytes(),
+            );
+            if (!otherParty) {
+              throw new Error('Expected to have a receiver member');
+            }
+            const decryptedMessage = ecdhDecrypt(
+              encryptedMessage,
+              {
+                secretKey: authority.secretKey,
+                publicKey: authority.publicKey.toBytes(),
+              },
+              otherParty.publicKey.toBytes(),
+              createDummyNonce()
+            );
+            if (!decryptedMessage) {
+              throw new Error() // TODO
+            }
+            const unpacked = new Uint8Array(decryptedMessage.slice(0, decryptedMessage.indexOf(0)));
+            return {
               ...m,
               text: new TextDecoder().decode(
-                new Uint8Array(m.text.slice(0, m.text.indexOf(0)))
+                unpacked,
               ),
               timestamp: m.timestamp * 1000,
-            }
+            };
+          },
         ) || null,
     },
   } as DialectAccount;
@@ -208,31 +235,32 @@ export async function getDialect(
 
 export async function getDialectForMembers(
   program: anchor.Program,
-  members: Member[]
+  members: Member[],
+  authority: anchor.web3.Keypair
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
-    a.publicKey.toBuffer().compare(b.publicKey.toBuffer())
+    a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
-  return await getDialect(program, publicKey);
+  return await getDialect(program, publicKey, authority);
 }
 
 export async function createDialect(
   program: anchor.Program,
   owner: anchor.web3.Keypair,
-  members: Member[]
+  members: Member[],
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
-    a.publicKey.toBuffer().compare(b.publicKey.toBuffer())
+    a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
   );
   const [publicKey, nonce] = await getDialectProgramAddress(
     program,
-    sortedMembers
+    sortedMembers,
   );
   // TODO: assert owner in members
   const keyedMembers = sortedMembers.reduce(
     (ms, m, idx) => ({ ...ms, [`member${idx}`]: m.publicKey }),
-    {}
+    {},
   );
   const tx = await program.rpc.createDialect(
     new anchor.BN(nonce),
@@ -246,10 +274,10 @@ export async function createDialect(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [owner],
-    }
+    },
   );
   await waitForFinality(program, tx);
-  return await getDialectForMembers(program, members);
+  return await getDialectForMembers(program, members, owner);
 }
 
 /*
@@ -267,17 +295,17 @@ type MintDialectAccount = anchor.web3.AccountInfo<Buffer> & {
 
 export async function getMintDialectProgramAddress(
   program: anchor.Program,
-  mint: splToken.Token
+  mint: splToken.Token,
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from('dialect'), mint.publicKey.toBuffer()],
-    program.programId
+    program.programId,
   );
 }
 
 export async function getMintDialect(
   program: anchor.Program,
-  mint: splToken.Token
+  mint: splToken.Token,
 ): Promise<MintDialectAccount> {
   const [publicKey] = await getMintDialectProgramAddress(program, mint);
   const dialect = await program.account.mintDialectAccount.fetch(publicKey);
@@ -292,7 +320,7 @@ export async function getMintDialect(
 export async function createMintDialect(
   program: anchor.Program,
   mint: splToken.Token,
-  mintAuthority: anchor.web3.Keypair
+  mintAuthority: anchor.web3.Keypair,
 ): Promise<MintDialectAccount> {
   const [publicKey, nonce] = await getMintDialectProgramAddress(program, mint);
   const tx = await program.rpc.createMintDialect(new anchor.BN(nonce), {
@@ -337,22 +365,39 @@ export async function sendMessage(
   program: anchor.Program,
   dialect: DialectAccount,
   sender: anchor.web3.Keypair,
-  text: string
+  text: string,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
-    dialect.dialect.members
+    dialect.dialect.members,
   );
 
-  const intArray = Array(32).fill(0);
+  const intArray = Array(MAX_MESSAGE_SIZE_BYTES).fill(0);
   const charArray = Buffer.from(text);
   for (let i = 0; i < charArray.length; i++) {
     intArray[i] = charArray[i];
   }
+  const messageBytes = new Uint8Array(intArray);
+
+  const receiver = dialect.dialect.members.find((it) =>
+    it.publicKey.toBytes() !== sender.publicKey.toBytes(),
+  );
+  if (!receiver) {
+    throw new Error('Expected to have a receiver member');
+  }
+  const encrypted = ecdhEncrypt(
+    messageBytes,
+    {
+      secretKey: sender.secretKey,
+      publicKey: sender.publicKey.toBytes(),
+    },
+    receiver.publicKey.toBytes(),
+    createDummyNonce()
+  );
 
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
-    new Uint8Array(intArray),
+    encrypted,
     {
       accounts: {
         dialect: dialectPublicKey,
@@ -363,9 +408,9 @@ export async function sendMessage(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [sender],
-    }
+    },
   );
 
-  const d = await getDialect(program, dialect.publicKey);
+  const d = await getDialect(program, dialect.publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }

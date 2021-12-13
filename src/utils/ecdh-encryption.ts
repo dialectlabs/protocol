@@ -2,6 +2,8 @@ import ed2curve from 'ed2curve';
 import nacl from 'tweetnacl';
 import { Keypair } from '@solana/web3.js';
 
+export const NONCE_SIZE_BYTES = 24;
+
 export class IncorrectPublicKeyFormatError extends Error {
   constructor(party: string) {
     super(`Given '${party}' public key is not valid Ed25519 key`);
@@ -21,6 +23,10 @@ export function generateEd25519KeyPair(): Ed25519KeyPair {
     publicKey: keypair.publicKey.toBytes(),
     secretKey: keypair.secretKey,
   };
+}
+
+export function createDummyNonce(): Uint8Array {
+  return new Uint8Array(Array(NONCE_SIZE_BYTES).fill(1));
 }
 
 export function ecdhEncrypt(
