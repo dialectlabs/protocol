@@ -1,5 +1,11 @@
 import { expect } from 'chai';
-import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES, generateEd25519KeyPair } from './ecdh-encryption';
+import {
+  ecdhDecrypt,
+  ecdhEncrypt,
+  ENCRYPTION_OVERHEAD_BYTES,
+  generateEd25519KeyPair,
+  NONCE_SIZE_BYTES,
+} from './ecdh-encryption';
 import { randomBytes } from 'tweetnacl';
 
 describe('ECDH encryptor/decryptor test', async () => {
@@ -20,7 +26,7 @@ describe('ECDH encryptor/decryptor test', async () => {
     const sizesComparison = messageSizes
       .map((size) => {
         const unencrypted = randomBytes(size);
-        const nonce = randomBytes(24);
+        const nonce = randomBytes(NONCE_SIZE_BYTES);
         const encrypted = ecdhEncrypt(
           unencrypted,
           generateEd25519KeyPair(),
@@ -42,7 +48,7 @@ describe('ECDH encryptor/decryptor test', async () => {
   it('should be possible to decrypt using the same keypair that was used in encryption', () => {
     // given
     const unencrypted = randomBytes(10);
-    const nonce = randomBytes(24);
+    const nonce = randomBytes(NONCE_SIZE_BYTES);
     const party1KeyPair = generateEd25519KeyPair();
     const party2KeyPair = generateEd25519KeyPair();
     const encrypted = ecdhEncrypt(
@@ -66,7 +72,7 @@ describe('ECDH encryptor/decryptor test', async () => {
   it('should be possible to decrypt using other party keypair', () => {
     // given
     const unencrypted = randomBytes(10);
-    const nonce = randomBytes(24);
+    const nonce = randomBytes(NONCE_SIZE_BYTES);
     const party1KeyPair = generateEd25519KeyPair();
     const party2KeyPair = generateEd25519KeyPair();
     const encrypted = ecdhEncrypt(
