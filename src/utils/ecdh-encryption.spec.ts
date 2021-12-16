@@ -1,12 +1,7 @@
 import { expect } from 'chai';
-import {
-  ecdhDecrypt,
-  ecdhEncrypt,
-  ENCRYPTION_OVERHEAD_BYTES,
-  generateEd25519KeyPair,
-  NONCE_SIZE_BYTES,
-} from './ecdh-encryption';
+import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES, generateEd25519KeyPair } from './ecdh-encryption';
 import { randomBytes } from 'tweetnacl';
+import { NONCE_SIZE_BYTES } from './nonce-generator';
 
 describe('ECDH encryptor/decryptor test', async () => {
 

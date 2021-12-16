@@ -225,7 +225,6 @@ describe('Protocol v1 test', () => {
       dialect = await createDialect(program, owner, members);
     });
 
-
     it('Message sender can send msg and then read the message text and time', async () => {
       // given
       const dialect = await getDialectForMembers(program, members, writer);
@@ -278,15 +277,15 @@ describe('Protocol v1 test', () => {
 
     it('New messages overwrite old, retrieved messages are in order.', async () => {
       // TODO: Test max message length, fully filled
-      const dialect = await getDialectForMembers(program, members, writer);
       const numMessages = 17;
       const texts = Array(numMessages)
         .fill(0)
         .map((_, i) => `Hello world! ${i + 1}`);
       for (let messageIdx = 0; messageIdx < numMessages; messageIdx++) {
-        await sendMessage(program, dialect, writer, texts[messageIdx]);
         // verify last last N messages look correct
         const messageCounter = messageIdx + 1;
+        const dialect = await getDialectForMembers(program, members, writer);
+        await sendMessage(program, dialect, writer, texts[messageIdx]);
         const sliceStart = messageCounter <= MESSAGES_PER_DIALECT ? 0 : messageCounter - MESSAGES_PER_DIALECT;
         const expectedMessagesCount = Math.min(messageCounter, MESSAGES_PER_DIALECT);
         const sliceEnd = sliceStart + expectedMessagesCount;

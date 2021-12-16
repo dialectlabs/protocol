@@ -3,8 +3,9 @@ import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { waitForFinality, Wallet_ } from '../utils';
-import { createDummyNonce, ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
+import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { deserializeText, serializeText } from '../utils/text-serde';
+import { generateNonce } from '../utils/nonce-generator';
 
 // TODO: Switch from types to classes
 
@@ -181,6 +182,25 @@ function findOtherMember(dialect: Dialect, member: anchor.web3.Keypair) {
   return otherMember;
 }
 
+function readMessage(message: Message, messageIdx: number, user: anchor.web3.Keypair, otherMember: Member) {
+  const rawMessage = message as unknown as RawMessage;
+  const encryptedText = new Uint8Array(rawMessage.text);
+  const messageNonce = generateNonce(messageIdx);
+  const decryptedText = ecdhDecrypt(
+    encryptedText,
+    {
+      secretKey: user.secretKey,
+      publicKey: user.publicKey.toBytes(),
+    },
+    otherMember.publicKey.toBytes(),
+    messageNonce);
+  const text = deserializeText(decryptedText);
+  return ({
+    ...message,
+    text,
+  });
+}
+
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
@@ -188,17 +208,21 @@ export async function getDialect(
 ): Promise<DialectAccount> {
   const dialect = await program.account.dialectAccount.fetch(publicKey) as Dialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  const unpermutedMessages = dialect.messages.filter((m: Message | null) => m);
-  const messages: RawMessage[] = [];
-  for (let i = 0; i < unpermutedMessages.length; i++) {
+  const otherMember = findOtherMember(dialect, user);
+  const messageRingBuffer: Message[] = dialect.messages
+    .filter((m: Message | null) => m)
+    .map((message: Message, idx) =>
+      readMessage(message, idx, user, otherMember),
+    );
+  const permutedAndOrderedMessages: Message[] = [];
+  for (let i = 0; i < messageRingBuffer.length; i++) {
     const idx =
       (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
         ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
         : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
-    const m = unpermutedMessages[idx];
-    messages.push(m as unknown as RawMessage);
+    const m = messageRingBuffer[idx];
+    permutedAndOrderedMessages.push(m);
   }
-  const otherMember = findOtherMember(dialect, user);
   return {
     ...account,
     publicKey: publicKey,
@@ -207,23 +231,10 @@ export async function getDialect(
       ...dialect,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
       messages:
-        messages.map(
-          (m: RawMessage | null) => {
-            if (!m) return;
-            const encryptedMessage = new Uint8Array(m.text);
-            const decryptedMessage = ecdhDecrypt(
-              encryptedMessage,
-              {
-                secretKey: user.secretKey,
-                publicKey: user.publicKey.toBytes(),
-              },
-              otherMember.publicKey.toBytes(),
-              createDummyNonce(),
-            );
-            const text = deserializeText(decryptedMessage);
+        permutedAndOrderedMessages.map(
+          (m: Message) => {
             return {
               ...m,
-              text,
               timestamp: m.timestamp * 1000,
             };
           },
@@ -372,18 +383,19 @@ export async function sendMessage(
   );
   const otherMember = findOtherMember(dialect.dialect, sender);
   const textBytes = serializeText(text, MAX_MESSAGE_SIZE_BYTES);
-  const encrypted = ecdhEncrypt(
+  const textEncryptionNonce = generateNonce(dialect.dialect.nextMessageIdx);
+  const encryptedText = ecdhEncrypt(
     textBytes,
     {
       secretKey: sender.secretKey,
       publicKey: sender.publicKey.toBytes(),
     },
     otherMember.publicKey.toBytes(),
-    createDummyNonce(),
+    textEncryptionNonce,
   );
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
-    encrypted,
+    encryptedText,
     {
       accounts: {
         dialect: dialectPublicKey,
@@ -396,7 +408,6 @@ export async function sendMessage(
       signers: [sender],
     },
   );
-
   const d = await getDialect(program, dialect.publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
