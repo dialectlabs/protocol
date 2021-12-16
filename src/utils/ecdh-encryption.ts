@@ -10,7 +10,7 @@ export class IncorrectPublicKeyFormatError extends Error {
   }
 }
 
-export class AuthenticationFailedDecryptionError extends Error {
+export class AuthenticationFailedError extends Error {
   constructor() {
     super('Authentication failed during decryption attempt');
   }
@@ -68,7 +68,7 @@ export function ecdhDecrypt(
   }
   const decrypted = nacl.box.open(payload, nonce, otherPartyCurve25519PublicKey, curve25519KeyPair.secretKey);
   if (!decrypted) {
-    throw new AuthenticationFailedDecryptionError();
+    throw new AuthenticationFailedError();
   }
   return decrypted;
 }

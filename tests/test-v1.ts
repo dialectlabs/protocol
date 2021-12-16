@@ -200,6 +200,7 @@ describe('Protocol v1 test', () => {
 
     let owner: web3.Keypair;
     let writer: web3.Keypair;
+    let nonmember: web3.Keypair;
     let members: Member[] = [];
     let dialect: DialectAccount;
 
@@ -211,6 +212,10 @@ describe('Protocol v1 test', () => {
       writer = await createUser({
         requestAirdrop: true,
         createMeta: true,
+      });
+      nonmember = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
       });
       members = [
         {
@@ -273,6 +278,15 @@ describe('Protocol v1 test', () => {
       // then
       const receiverDialect = await getDialectForMembers(program, dialect.dialect.members, owner);
       chai.expect(receiverDialect.dialect.nextMessageIdx).to.be.eq(1);
+    });
+
+    it('Non-member can\'t read (decrypt) any of the messages', async () => {
+      // given
+      const senderDialect = await getDialectForMembers(program, members, writer);
+      const text = 'Hello, world!';
+      await sendMessage(program, senderDialect, writer, text);
+      // when / then
+      expect(getDialectForMembers(program, dialect.dialect.members, nonmember)).to.eventually.be.rejected;
     });
 
     it('New messages overwrite old, retrieved messages are in order.', async () => {
