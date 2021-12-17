@@ -14,8 +14,8 @@ User metadata
 */
 
 export const MESSAGES_PER_DIALECT = 8;
-export const MAX_MESSAGE_SIZE_IN_BLOCKCHAIN_BYTES = 32;
-export const MAX_MESSAGE_SIZE_BYTES = MAX_MESSAGE_SIZE_IN_BLOCKCHAIN_BYTES - ENCRYPTION_OVERHEAD_BYTES;
+export const MAX_RAW_MESSAGE_SIZE = 32;
+export const MAX_MESSAGE_SIZE_BYTES = MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
 
 export type Metadata = {
   deviceToken: string;
@@ -182,7 +182,7 @@ function findOtherMember(dialect: Dialect, member: anchor.web3.Keypair) {
   return otherMember;
 }
 
-function readMessage(message: Message, messageIdx: number, user: anchor.web3.Keypair, otherMember: Member) {
+function decryptMessage(message: Message, messageIdx: number, user: anchor.web3.Keypair, otherMember: Member) {
   const rawMessage = message as unknown as RawMessage;
   const encryptedText = new Uint8Array(rawMessage.text);
   const messageNonce = generateNonce(messageIdx);
@@ -212,7 +212,7 @@ export async function getDialect(
   const messageRingBuffer: Message[] = dialect.messages
     .filter((m: Message | null) => m)
     .map((message: Message, idx) =>
-      readMessage(message, idx, user, otherMember),
+      decryptMessage(message, idx, user, otherMember),
     );
   const permutedAndOrderedMessages: Message[] = [];
   for (let i = 0; i < messageRingBuffer.length; i++) {
