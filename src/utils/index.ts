@@ -1,13 +1,10 @@
 import * as anchor from '@project-serum/anchor';
 import { Keypair, PublicKey, Transaction } from '@solana/web3.js';
 
-// @ts-ignore
-import ed2curve from 'ed2curve';
-import nacl from 'tweetnacl';
-
 import { EmbeddedWallet } from './Wallet';
 import * as idl_ from './dialect.json';
 import * as programs_ from './programs.json';
+import { ecdhDecrypt, ecdhEncrypt } from './ecdh-encryption';
 
 export const idl = idl_;
 export const programs = programs_;
@@ -114,12 +111,14 @@ export function encryptMessage(
   rPublicKey: PublicKey,
   nonce: Uint8Array
 ): Uint8Array {
-  const dhKeys = ed2curve.convertKeyPair({
-    publicKey: sAccount.publicKey.toBuffer(),
-    secretKey: sAccount.secretKey,
-  });
-  const dhrPk = ed2curve.convertPublicKey(rPublicKey);
-  return nacl.box(msg, nonce, dhrPk, dhKeys.secretKey);
+  return ecdhEncrypt(
+    msg,
+    {
+      publicKey: sAccount.publicKey.toBytes(),
+      secretKey: sAccount.secretKey
+    },
+    rPublicKey.toBytes(),
+    nonce);
 }
 
 export function decryptMessage(
@@ -128,10 +127,13 @@ export function decryptMessage(
   fromPk: PublicKey,
   nonce: Uint8Array
 ): Uint8Array | null {
-  const dhKeys = ed2curve.convertKeyPair({
-    publicKey: account.publicKey.toBuffer(),
-    secretKey: account.secretKey,
-  });
-  const dhrPk = ed2curve.convertPublicKey(fromPk);
-  return nacl.box.open(msg, nonce, dhrPk, dhKeys.secretKey);
+  return ecdhDecrypt(
+    msg,
+    {
+      publicKey: account.publicKey.toBytes(),
+      secretKey: account.secretKey
+    },
+    fromPk.toBytes(),
+    nonce
+  );
 }
