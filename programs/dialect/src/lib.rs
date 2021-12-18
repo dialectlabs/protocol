@@ -41,7 +41,7 @@ pub mod dialect {
         let mut dialect = ctx.accounts.dialect.load_init()?;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
-        let mut dialect = ctx.accounts.dialect.load_mut()?;
+
         dialect.members = [
             Member {
                 public_key: *members[0].key,
@@ -53,13 +53,13 @@ pub mod dialect {
             },
         ];
 
-        dialect.messages = [None; 8];
+        dialect.messages = [Message::default(); 32];
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
 
-        emit!(CreateDialectEvent {
-            dialect: dialect.key(),
-        });
+        // emit!(CreateDialectEvent {
+        //     dialect: dialect.key(),
+        // });
 
         Ok(())
     }
@@ -95,23 +95,23 @@ pub mod dialect {
     pub fn send_message(
         ctx: Context<SendMessage>,
         _dialect_nonce: u8,
-        text: [u8; 32],
+        text: [u8; 256],
     ) -> ProgramResult {
-        let mut dialect = &mut ctx.accounts.dialect.load_mut()?;
+        let mut dialect = ctx.accounts.dialect.load_mut()?;
         let sender = &mut ctx.accounts.sender;
         let idx = dialect.next_message_idx;
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
-        dialect.messages[idx as usize] = Some(Message {
+        dialect.messages[idx as usize] = Message {
             owner: *sender.key,
-            text: Text { array: text },
+            text,
             timestamp,
-        });
-        dialect.next_message_idx = (dialect.next_message_idx + 1) % 8;
+        };
+        dialect.next_message_idx = (dialect.next_message_idx + 1) % 32;
         dialect.last_message_timestamp = timestamp;
-        emit!(SendMessageEvent {
-            dialect: dialect.key(),
-            sender: *sender.key,
-        });
+        // emit!(SendMessageEvent {
+        //     dialect: dialect.key(),
+        //     sender: *sender.key,
+        // });
         Ok(())
     }
 
@@ -175,15 +175,15 @@ pub struct CreateMetadata<'info> {
     #[account(signer, mut)]
     pub user: AccountInfo<'info>,
     #[account(
-        init,
-        seeds = [
-            b"metadata".as_ref(),
-            user.key.as_ref(),
-        ],
-        bump = metadata_nonce,
-        payer = user,
-        // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 8 + 32 + 32 + (4 * 33),
+    init,
+    seeds = [
+    b"metadata".as_ref(),
+    user.key.as_ref(),
+    ],
+    bump = metadata_nonce,
+    payer = user,
+    // discriminator (8) + user + device_token + 4 x (subscription) = 72
+    space = 8 + 32 + 32 + (4 * 33),
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -201,18 +201,19 @@ pub struct CreateDialect<'info> {
     pub member1: AccountInfo<'info>,
     // TODO: Support more users
     #[account(
-        zero,
-        // TODO: Assert that owner is a member with admin privileges
-        seeds = [
-            b"dialect".as_ref(),
-            member0.key().as_ref(),
-            member1.key().as_ref(),
-        ],
-        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
-        bump = dialect_nonce,
-        // payer = owner,
-        // space = discriminator + 2 * Member + 32 * Message
-        // space = 8 + (2 * 34) + (32 * 68),
+    init,
+    // TODO: Assert that owner is a member with admin privileges
+    seeds = [
+    b"dialect".as_ref(),
+    member0.key().as_ref(),
+    member1.key().as_ref(),
+    ],
+    constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
+    bump = dialect_nonce,
+    payer = owner,
+    // space = discriminator + 2 * Member + 32 * Message
+    // space = 10240
+    space = 8 + 68 + 9344 + 1 + 4
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -227,12 +228,12 @@ pub struct SubscribeUser<'info> {
     // TOOD: Consider at some point enforcing user = signer
     pub user: AccountInfo<'info>,
     #[account(
-        mut,
-        seeds = [
-            b"metadata".as_ref(),
-            user.key().as_ref(),
-        ],
-        bump = metadata_nonce,
+    mut,
+    seeds = [
+    b"metadata".as_ref(),
+    user.key().as_ref(),
+    ],
+    bump = metadata_nonce,
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
@@ -255,21 +256,21 @@ pub struct Transfer<'info> {
 #[instruction(dialect_nonce: u8)]
 pub struct SendMessage<'info> {
     #[account(
-        signer,
-        mut,
-        constraint = dialect.load_mut()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
+    signer,
+    mut,
+    constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
     )]
     pub sender: AccountInfo<'info>,
     #[account(
-        mut,
-        seeds = [
-            b"dialect".as_ref(),
-            dialect.load_mut()?.members[0].public_key.as_ref(),
-            dialect.load_mut()?.members[1].public_key.as_ref(),
-        ],
-        bump = dialect_nonce,
+    mut,
+    seeds = [
+    b"dialect".as_ref(),
+    dialect.load()?.members[0].public_key.as_ref(),
+    dialect.load()?.members[1].public_key.as_ref(),
+    ],
+    bump = dialect_nonce,
     )]
-    pub dialect: AccountLoader<'info, DialectAccount>,
+    pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -283,11 +284,11 @@ pub struct CreateMintDialect<'info> {
     #[account(constraint = COption::Some(mint_authority.key()) == mint.mint_authority)]
     pub mint: Account<'info, Mint>,
     #[account(
-        init,
-        seeds = [b"dialect".as_ref(), mint.key().as_ref()],
-        bump = dialect_nonce,
-        payer = mint_authority,
-        space = 512, // TODO: Choose space
+    init,
+    seeds = [b"dialect".as_ref(), mint.key().as_ref()],
+    bump = dialect_nonce,
+    payer = mint_authority,
+    space = 512, // TODO: Choose space
     )]
     pub dialect: Account<'info, MintDialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -312,7 +313,7 @@ pub struct MetadataAccount {
 // TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
 pub struct DialectAccount {
     pub members: [Member; 2],           // 2 * Member = 68
-    pub messages: [Option<Message>; 8], // 32 * Message = 2176 (will be 9344 with message length 256)
+    pub messages: [Message; 32], // 32 * Message = 2176 (will be 9344 with message length 256)
     pub next_message_idx: u8,           // 1 -- index of next message (not the latest)
     pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
 }
@@ -334,8 +335,8 @@ pub struct Subscription {
     pub pubkey: Pubkey, // 32
     pub enabled: bool,  // 1
 }
-
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+#[zero_copy]
+#[derive(Default)]
 // space = 34
 pub struct Member {
     pub public_key: Pubkey, // 32
@@ -344,24 +345,23 @@ pub struct Member {
 }
 
 #[zero_copy]
-#[derive(Default)]
-// space = 68
+// #[derive(Default)]
+// space = 68 if 32, 292 if 256
 pub struct Message {
     pub owner: Pubkey, // 32
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
     pub timestamp: u32, // 4
-    pub text: Text,     // 32
+    pub text: [u8; 256], // 32
 }
 
-#[zero_copy]
-pub struct Text {
-    pub array: [u8; 32],
-}
-
-impl Default for Text {
+impl Default for Message {
     fn default() -> Self {
-        Text { array: [0; 32] }
+        Self {
+            owner: Pubkey::default(),
+            text: [0; 256],
+            timestamp: 0,
+        }
     }
 }
 

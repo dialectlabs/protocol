@@ -13,9 +13,9 @@ import { generateNonce } from '../utils/nonce-generator';
 User metadata
 */
 
-export const MESSAGES_PER_DIALECT = 8;
-export const MAX_RAW_MESSAGE_SIZE = 32;
-export const MAX_MESSAGE_SIZE_BYTES = MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
+export const MESSAGES_PER_DIALECT = 32;
+export const MAX_RAW_MESSAGE_SIZE = 256;
+export const MAX_MESSAGE_SIZE = MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
 
 export type Metadata = {
   deviceToken: string;
@@ -201,6 +201,10 @@ function decryptMessage(message: Message, messageIdx: number, user: anchor.web3.
   });
 }
 
+function isPresent(m: Message) {
+  return m.timestamp !== 0;
+}
+
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
@@ -210,7 +214,7 @@ export async function getDialect(
   const account = await program.provider.connection.getAccountInfo(publicKey);
   const otherMember = findOtherMember(dialect, user);
   const messageRingBuffer: Message[] = dialect.messages
-    .filter((m: Message | null) => m)
+    .filter((m: Message) => isPresent(m))
     .map((message: Message, idx) =>
       decryptMessage(message, idx, user, otherMember),
     );
@@ -283,9 +287,6 @@ export async function createDialect(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      instructions: [
-        await program.account.dialect.createInstruction(publicKey),
-      ],
       signers: [owner],
     },
   );
@@ -385,7 +386,7 @@ export async function sendMessage(
     dialect.dialect.members,
   );
   const otherMember = findOtherMember(dialect.dialect, sender);
-  const textBytes = serializeText(text, MAX_MESSAGE_SIZE_BYTES);
+  const textBytes = serializeText(text, MAX_MESSAGE_SIZE);
   const textEncryptionNonce = generateNonce(dialect.dialect.nextMessageIdx);
   const encryptedText = ecdhEncrypt(
     textBytes,
