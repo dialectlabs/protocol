@@ -38,7 +38,8 @@ pub mod dialect {
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert owner in members
-        let mut dialect = ctx.accounts.dialect.load_init()?;
+        let dialect_loader = &ctx.accounts.dialect;
+        let mut dialect = dialect_loader.load_init()?;
         let owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
 
@@ -57,9 +58,9 @@ pub mod dialect {
         dialect.next_message_idx = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
 
-        // emit!(CreateDialectEvent {
-        //     dialect: dialect.key(),
-        // });
+        emit!(CreateDialectEvent {
+            dialect: dialect_loader.key(),
+        });
 
         Ok(())
     }
@@ -97,7 +98,8 @@ pub mod dialect {
         _dialect_nonce: u8,
         text: [u8; 256],
     ) -> ProgramResult {
-        let mut dialect = ctx.accounts.dialect.load_mut()?;
+        let dialect_loader = &ctx.accounts.dialect;
+        let mut dialect = dialect_loader.load_mut()?;
         let sender = &mut ctx.accounts.sender;
         let idx = dialect.next_message_idx;
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
@@ -108,10 +110,10 @@ pub mod dialect {
         };
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 32;
         dialect.last_message_timestamp = timestamp;
-        // emit!(SendMessageEvent {
-        //     dialect: dialect.key(),
-        //     sender: *sender.key,
-        // });
+        emit!(SendMessageEvent {
+            dialect: dialect_loader.key(),
+            sender: *sender.key,
+        });
         Ok(())
     }
 
@@ -312,9 +314,9 @@ pub struct MetadataAccount {
 #[derive(Default)]
 // TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
 pub struct DialectAccount {
-    pub members: [Member; 2],           // 2 * Member = 68
-    pub messages: [Message; 32], // 32 * Message = 2176 (will be 9344 with message length 256)
-    pub next_message_idx: u8,           // 1 -- index of next message (not the latest)
+    pub members: [Member; 2],        // 2 * Member = 68
+    pub messages: [Message; 32],     // 32 * Message = 2176 (will be 9344 with message length 256)
+    pub next_message_idx: u8,        // 1 -- index of next message (not the latest)
     pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
 }
 
@@ -351,7 +353,7 @@ pub struct Message {
     pub owner: Pubkey, // 32
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
-    pub timestamp: u32, // 4
+    pub timestamp: u32,  // 4
     pub text: [u8; 256], // 32
 }
 
