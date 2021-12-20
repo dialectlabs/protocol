@@ -227,15 +227,7 @@ function isPresent(message: RawMessage): boolean {
   return message.timestamp !== 0;
 }
 
-export async function getDialect(
-  program: anchor.Program,
-  publicKey: PublicKey,
-  user: anchor.web3.Keypair,
-): Promise<DialectAccount> {
-  const dialect = (await program.account.dialectAccount.fetch(
-    publicKey,
-  )) as RawDialect;
-  const account = await program.provider.connection.getAccountInfo(publicKey);
+function getMessages(dialect: RawDialect, user: anchor.web3.Keypair) {
   const otherMember = findOtherMember(dialect.members, user);
   const decryptedMessages: Message[] = dialect.messages
     .filter((m: RawMessage) => isPresent(m))
@@ -249,6 +241,24 @@ export async function getDialect(
     const m = decryptedMessages[idx];
     permutedAndOrderedMessages.push(m);
   }
+  return permutedAndOrderedMessages.map((m: Message) => {
+    return {
+      ...m,
+      timestamp: m.timestamp * 1000,
+    };
+  });
+}
+
+export async function getDialect(
+  program: anchor.Program,
+  publicKey: PublicKey,
+  user?: anchor.web3.Keypair,
+): Promise<DialectAccount> {
+  const dialect = (await program.account.dialectAccount.fetch(
+    publicKey,
+  )) as RawDialect;
+  const account = await program.provider.connection.getAccountInfo(publicKey);
+  const messages = user ? getMessages(dialect, user) : [];
   return {
     ...account,
     publicKey: publicKey,
@@ -256,13 +266,7 @@ export async function getDialect(
     dialect: {
       ...dialect,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
-      messages:
-        permutedAndOrderedMessages.map((m: Message) => {
-          return {
-            ...m,
-            timestamp: m.timestamp * 1000,
-          };
-        }) || null,
+      messages,
     },
   } as DialectAccount;
 }
@@ -270,7 +274,7 @@ export async function getDialect(
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[],
-  user: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
