@@ -177,15 +177,15 @@ pub struct CreateMetadata<'info> {
     #[account(signer, mut)]
     pub user: AccountInfo<'info>,
     #[account(
-    init,
-    seeds = [
-    b"metadata".as_ref(),
-    user.key.as_ref(),
-    ],
-    bump = metadata_nonce,
-    payer = user,
-    // discriminator (8) + user + device_token + 4 x (subscription) = 72
-    space = 8 + 32 + 32 + (4 * 33),
+        init,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key.as_ref(),
+        ],
+        bump = metadata_nonce,
+        payer = user,
+        // discriminator (8) + user + device_token + 4 x (subscription) = 72
+        space = 8 + 32 + 32 + (4 * 33),
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -203,19 +203,19 @@ pub struct CreateDialect<'info> {
     pub member1: AccountInfo<'info>,
     // TODO: Support more users
     #[account(
-    init,
-    // TODO: Assert that owner is a member with admin privileges
-    seeds = [
-    b"dialect".as_ref(),
-    member0.key().as_ref(),
-    member1.key().as_ref(),
-    ],
-    constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
-    bump = dialect_nonce,
-    payer = owner,
-    // space = discriminator + 2 * Member + 32 * Message
-    // space = 10240
-    space = 8 + 68 + 9344 + 1 + 4
+        init,
+        // TODO: Assert that owner is a member with admin privileges
+        seeds = [
+            b"dialect".as_ref(),
+            member0.key().as_ref(),
+            member1.key().as_ref(),
+        ],
+        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
+        bump = dialect_nonce,
+        payer = owner,
+        // NB: max space for PDA = 10240
+        // space = discriminator + 2 * Member + 32 * Message
+        space = 8 + 68 + 9344 + 1 + 4
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -230,12 +230,12 @@ pub struct SubscribeUser<'info> {
     // TOOD: Consider at some point enforcing user = signer
     pub user: AccountInfo<'info>,
     #[account(
-    mut,
-    seeds = [
-    b"metadata".as_ref(),
-    user.key().as_ref(),
-    ],
-    bump = metadata_nonce,
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key().as_ref(),
+        ],
+        bump = metadata_nonce,
     )]
     pub metadata: Account<'info, MetadataAccount>,
     pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
@@ -258,19 +258,19 @@ pub struct Transfer<'info> {
 #[instruction(dialect_nonce: u8)]
 pub struct SendMessage<'info> {
     #[account(
-    signer,
-    mut,
-    constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
+        signer,
+        mut,
+        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
     )]
     pub sender: AccountInfo<'info>,
     #[account(
-    mut,
-    seeds = [
-    b"dialect".as_ref(),
-    dialect.load()?.members[0].public_key.as_ref(),
-    dialect.load()?.members[1].public_key.as_ref(),
-    ],
-    bump = dialect_nonce,
+        mut,
+        seeds = [
+            b"dialect".as_ref(),
+            dialect.load()?.members[0].public_key.as_ref(),
+            dialect.load()?.members[1].public_key.as_ref(),
+        ],
+        bump = dialect_nonce,
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -286,11 +286,11 @@ pub struct CreateMintDialect<'info> {
     #[account(constraint = COption::Some(mint_authority.key()) == mint.mint_authority)]
     pub mint: Account<'info, Mint>,
     #[account(
-    init,
-    seeds = [b"dialect".as_ref(), mint.key().as_ref()],
-    bump = dialect_nonce,
-    payer = mint_authority,
-    space = 512, // TODO: Choose space
+        init,
+        seeds = [b"dialect".as_ref(), mint.key().as_ref()],
+        bump = dialect_nonce,
+        payer = mint_authority,
+        space = 512, // TODO: Choose space
     )]
     pub dialect: Account<'info, MintDialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -347,8 +347,7 @@ pub struct Member {
 }
 
 #[zero_copy]
-// #[derive(Default)]
-// space = 68 if 32, 292 if 256
+// space = 292
 pub struct Message {
     pub owner: Pubkey, // 32
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
