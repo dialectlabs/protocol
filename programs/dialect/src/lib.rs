@@ -17,6 +17,7 @@ pub mod dialect {
 
     pub fn create_metadata(ctx: Context<CreateMetadata>, _metadata_nonce: u8) -> ProgramResult {
         let metadata = &mut ctx.accounts.metadata;
+        metadata.user = ctx.accounts.user.key();
         metadata.device_token = None;
         metadata.subscriptions = [None; 4];
         Ok(())
@@ -208,6 +209,7 @@ pub struct UpdateDeviceToken<'info> {
             b"metadata".as_ref(),
             user.key.as_ref(),
         ],
+        has_one = user, // TODO: Confirm if seeds solves this
         bump = metadata_nonce,
     )]
     pub metadata: Account<'info, MetadataAccount>,
