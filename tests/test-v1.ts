@@ -9,7 +9,8 @@ import {
   getDialect,
   getDialectForMembers,
   getDialectProgramAddress,
-  getMetadata, MAX_MESSAGE_SIZE,
+  getMetadata,
+  MAX_MESSAGE_SIZE,
   Member,
   MESSAGES_PER_DIALECT,
   sendMessage,
@@ -20,12 +21,10 @@ chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 
 describe('Protocol v1 test', () => {
-
   const program: anchor.Program = anchor.workspace.Dialect;
   const connection = program.provider.connection;
 
   describe('Metadata tests', () => {
-
     let owner: web3.Keypair;
     let writer: web3.Keypair;
 
@@ -49,11 +48,9 @@ describe('Protocol v1 test', () => {
         expect(gottenMetadata.deviceToken.toString()).to.be.eq(deviceToken);
       }
     });
-
   });
 
   describe('Dialect initialization tests', () => {
-
     let owner: web3.Keypair;
     let writer: web3.Keypair;
     let nonmember: web3.Keypair;
@@ -85,7 +82,7 @@ describe('Protocol v1 test', () => {
       ];
     });
 
-    it('Transfers funds to writer\'s account', async () => {
+    it("Transfers funds to writer's account", async () => {
       const senderBalanceBefore =
         (await program.provider.connection.getAccountInfo(owner.publicKey))!
           .lamports / web3.LAMPORTS_PER_SOL;
@@ -181,7 +178,9 @@ describe('Protocol v1 test', () => {
       members.every((m, i) =>
         expect(
           m.publicKey.equals(dialect.dialect.members[i].publicKey) &&
-          m.scopes.every((s, j) => s === dialect.dialect.members[i].scopes[j]),
+            m.scopes.every(
+              (s, j) => s === dialect.dialect.members[i].scopes[j],
+            ),
         ),
       );
     });
@@ -197,7 +196,6 @@ describe('Protocol v1 test', () => {
     // });
 
     describe('Messaging tests', () => {
-
       let owner: web3.Keypair;
       let writer: web3.Keypair;
       let nonmember: web3.Keypair;
@@ -237,11 +235,16 @@ describe('Protocol v1 test', () => {
         // when
         await sendMessage(program, dialect, writer, text);
         // then
-        const senderDialect = await getDialectForMembers(program, dialect.dialect.members, writer);
+        const senderDialect = await getDialectForMembers(
+          program,
+          dialect.dialect.members,
+          writer,
+        );
         const message = senderDialect.dialect.messages[0];
         chai.expect(message.text).to.be.eq(text);
-        chai.expect(senderDialect.dialect.lastMessageTimestamp).to
-          .be.eq(message.timestamp);
+        chai
+          .expect(senderDialect.dialect.lastMessageTimestamp)
+          .to.be.eq(message.timestamp);
       });
 
       it('Message sender can send and then read the correct next message idx', async () => {
@@ -251,42 +254,69 @@ describe('Protocol v1 test', () => {
         // when
         await sendMessage(program, dialect, writer, text);
         // then
-        const senderDialect = await getDialectForMembers(program, dialect.dialect.members, writer);
+        const senderDialect = await getDialectForMembers(
+          program,
+          dialect.dialect.members,
+          writer,
+        );
         chai.expect(senderDialect.dialect.nextMessageIdx).to.be.eq(1);
       });
 
       it('Message receiver can read the message text and time sent by sender', async () => {
         // given
-        const senderDialect = await getDialectForMembers(program, members, writer);
+        const senderDialect = await getDialectForMembers(
+          program,
+          members,
+          writer,
+        );
         const text = generateRandomText(MAX_MESSAGE_SIZE);
         // when
         await sendMessage(program, senderDialect, writer, text);
         // then
-        const receiverDialect = await getDialectForMembers(program, dialect.dialect.members, owner);
+        const receiverDialect = await getDialectForMembers(
+          program,
+          dialect.dialect.members,
+          owner,
+        );
         const message = receiverDialect.dialect.messages[0];
         chai.expect(message.text).to.be.eq(text);
-        chai.expect(receiverDialect.dialect.lastMessageTimestamp).to
-          .be.eq(message.timestamp);
+        chai
+          .expect(receiverDialect.dialect.lastMessageTimestamp)
+          .to.be.eq(message.timestamp);
       });
 
       it('Message receiver can read the correct next message idx after receiving message', async () => {
         // given
-        const senderDialect = await getDialectForMembers(program, members, writer);
+        const senderDialect = await getDialectForMembers(
+          program,
+          members,
+          writer,
+        );
         const text = generateRandomText(MAX_MESSAGE_SIZE);
         // when
         await sendMessage(program, senderDialect, writer, text);
         // then
-        const receiverDialect = await getDialectForMembers(program, dialect.dialect.members, owner);
+        const receiverDialect = await getDialectForMembers(
+          program,
+          dialect.dialect.members,
+          owner,
+        );
         chai.expect(receiverDialect.dialect.nextMessageIdx).to.be.eq(1);
       });
 
-      it('Non-member can\'t read (decrypt) any of the messages', async () => {
+      it("Non-member can't read (decrypt) any of the messages", async () => {
         // given
-        const senderDialect = await getDialectForMembers(program, members, writer);
+        const senderDialect = await getDialectForMembers(
+          program,
+          members,
+          writer,
+        );
         const text = generateRandomText(MAX_MESSAGE_SIZE);
         await sendMessage(program, senderDialect, writer, text);
         // when / then
-        expect(getDialectForMembers(program, dialect.dialect.members, nonmember)).to.eventually.be.rejected;
+        expect(
+          getDialectForMembers(program, dialect.dialect.members, nonmember),
+        ).to.eventually.be.rejected;
       });
 
       it('New messages overwrite old, retrieved messages are in order.', async () => {
@@ -300,11 +330,16 @@ describe('Protocol v1 test', () => {
           console.log(`Message ${messageCounter}/${numMessages}`);
           const dialect = await getDialectForMembers(program, members, writer);
           await sendMessage(program, dialect, writer, texts[messageIdx]);
-          const sliceStart = messageCounter <= MESSAGES_PER_DIALECT ? 0 : messageCounter - MESSAGES_PER_DIALECT;
-          const expectedMessagesCount = Math.min(messageCounter, MESSAGES_PER_DIALECT);
+          const sliceStart =
+            messageCounter <= MESSAGES_PER_DIALECT
+              ? 0
+              : messageCounter - MESSAGES_PER_DIALECT;
+          const expectedMessagesCount = Math.min(
+            messageCounter,
+            MESSAGES_PER_DIALECT,
+          );
           const sliceEnd = sliceStart + expectedMessagesCount;
-          const expectedMessages = texts.slice(sliceStart, sliceEnd)
-            .reverse();
+          const expectedMessages = texts.slice(sliceStart, sliceEnd).reverse();
           const d = await getDialect(program, dialect.publicKey, writer);
           const actualMessages = d.dialect.messages.map((m) => m.text);
           expect(actualMessages).to.be.deep.eq(expectedMessages);
@@ -325,50 +360,47 @@ describe('Protocol v1 test', () => {
       //
       // it('Non-member can\'t read (decrypt) any of the messages', async () => {
       //
-      });
-
     });
-
-    async function createUser({
-                                requestAirdrop,
-                                createMeta,
-                              }: CreateUserOptions = {
-      requestAirdrop: true,
-      createMeta: true,
-    }) {
-      const user = web3.Keypair.generate();
-      if (requestAirdrop) {
-        const airDropRequest = await connection.requestAirdrop(
-          user.publicKey,
-          10 * web3.LAMPORTS_PER_SOL,
-        );
-        await connection.confirmTransaction(airDropRequest);
-      }
-      if (createMeta) {
-        const deviceToken = 'a'.repeat(32);
-        await createMetadata(program, user, deviceToken);
-      }
-      return user;
-    }
   });
 
-
-  interface CreateUserOptions {
-    requestAirdrop: boolean,
-    createMeta: boolean,
-  }
-
-  function generateRandomText(maxLength: number) {
-    let result = '';
-    const targetLen = randomIntFromInterval(maxLength / 2, maxLength);
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < targetLen; i++) {
-      result += characters.charAt(Math.floor(Math.random() *
-        characters.length));
+  async function createUser(
+    { requestAirdrop, createMeta }: CreateUserOptions = {
+      requestAirdrop: true,
+      createMeta: true,
+    },
+  ) {
+    const user = web3.Keypair.generate();
+    if (requestAirdrop) {
+      const airDropRequest = await connection.requestAirdrop(
+        user.publicKey,
+        10 * web3.LAMPORTS_PER_SOL,
+      );
+      await connection.confirmTransaction(airDropRequest);
     }
-    return result;
+    if (createMeta) {
+      const deviceToken = 'a'.repeat(32);
+      await createMetadata(program, user, deviceToken);
+    }
+    return user;
   }
+});
 
-  function randomIntFromInterval(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min + 1) + min);
+interface CreateUserOptions {
+  requestAirdrop: boolean;
+  createMeta: boolean;
+}
+
+function generateRandomText(maxLength: number) {
+  let result = '';
+  const targetLen = randomIntFromInterval(maxLength / 2, maxLength);
+  const characters =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < targetLen; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
+  return result;
+}
+
+function randomIntFromInterval(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
