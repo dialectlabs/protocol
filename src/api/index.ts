@@ -105,7 +105,9 @@ export async function getMetadata(
   const [publicKey] = await getMetadataProgramAddress(program, user);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
   return {
-    deviceToken: metadata.deviceToken ? new TextDecoder().decode(new Uint8Array(metadata.deviceToken)) : null,
+    deviceToken: metadata.deviceToken
+      ? new TextDecoder().decode(new Uint8Array(metadata.deviceToken))
+      : null,
     subscriptions: metadata.subscriptions.filter((s: Subscription | null) => s),
   };
 }
@@ -118,18 +120,15 @@ export async function createMetadata(
     program,
     user.publicKey,
   );
-  const tx = await program.rpc.createMetadata(
-    new anchor.BN(metadataNonce),
-    {
-      accounts: {
-        user: user.publicKey,
-        metadata: metadataAddress,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [user],
+  const tx = await program.rpc.createMetadata(new anchor.BN(metadataNonce), {
+    accounts: {
+      user: user.publicKey,
+      metadata: metadataAddress,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
     },
-  );
+    signers: [user],
+  });
   await waitForFinality(program, tx);
   return await getMetadata(program, user.publicKey);
 }

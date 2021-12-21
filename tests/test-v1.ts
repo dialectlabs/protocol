@@ -47,7 +47,11 @@ describe('Protocol v1 test', () => {
         const gottenMetadata = await getMetadata(program, member.publicKey);
         expect(metadata.deviceToken).to.be.eq(null);
         expect(gottenMetadata.deviceToken).to.be.eq(null);
-        const updatedMetadata = await updateDeviceToken(program, member, deviceToken);
+        const updatedMetadata = await updateDeviceToken(
+          program,
+          member,
+          deviceToken,
+        );
         expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
       }
     });

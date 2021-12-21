@@ -23,7 +23,7 @@ describe('Test messaging with a fungible token', () => {
   it('Create a new fungible mint & token account', async () => {
     const fromAirdropSignature = await connection.requestAirdrop(
       senderKeypair.publicKey,
-      web3.LAMPORTS_PER_SOL
+      web3.LAMPORTS_PER_SOL,
     );
     await connection.confirmTransaction(fromAirdropSignature);
 
@@ -33,16 +33,16 @@ describe('Test messaging with a fungible token', () => {
       senderKeypair.publicKey,
       null,
       9,
-      splToken.TOKEN_PROGRAM_ID
+      splToken.TOKEN_PROGRAM_ID,
     );
     const mintInfo = await mint.getMintInfo();
     assert.equal(
       mintInfo.mintAuthority?.toString(),
-      senderKeypair.publicKey.toString()
+      senderKeypair.publicKey.toString(),
     );
 
     senderTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
-      senderKeypair.publicKey
+      senderKeypair.publicKey,
     );
 
     assert.equal(senderTokenAccount.amount.toString(), '0');
@@ -50,12 +50,12 @@ describe('Test messaging with a fungible token', () => {
       senderTokenAccount.address,
       senderKeypair.publicKey,
       [],
-      mintAmount
+      mintAmount,
     );
 
     // refresh
     senderTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
-      senderKeypair.publicKey
+      senderKeypair.publicKey,
     );
     assert.equal(senderTokenAccount.amount.toString(), mintAmount.toString());
   });
@@ -64,11 +64,11 @@ describe('Test messaging with a fungible token', () => {
     const dialectAccount = await createMintDialect(
       program,
       mint,
-      senderKeypair
+      senderKeypair,
     );
     assert.equal(
       dialectAccount.dialect.mint.toString(),
-      mint.publicKey.toString()
+      mint.publicKey.toString(),
     );
   });
 
@@ -88,7 +88,7 @@ describe('Test messaging with a fungible token', () => {
     const nonMintKeypair = web3.Keypair.generate();
     const [dialectPubkey, dialectNonce] = await getMintDialectProgramAddress(
       program,
-      mint
+      mint,
     );
     chai
       .expect(
@@ -101,7 +101,7 @@ describe('Test messaging with a fungible token', () => {
             systemProgram: anchor.web3.SystemProgram.programId,
           },
           signers: [senderKeypair],
-        })
+        }),
       )
       .to.eventually.be.rejectedWith(Error);
   });
@@ -113,7 +113,7 @@ describe('Test messaging with a fungible token', () => {
 
   it('Transfer one token to the receiver', async () => {
     receiverTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
-      receiverKeypair.publicKey
+      receiverKeypair.publicKey,
     );
     assert.equal(receiverTokenAccount.amount.toString(), '0');
 
@@ -124,27 +124,27 @@ describe('Test messaging with a fungible token', () => {
         receiverTokenAccount.address,
         senderKeypair.publicKey,
         [],
-        1
-      )
+        1,
+      ),
     );
 
     await web3.sendAndConfirmTransaction(
       connection,
       transaction,
       [senderKeypair],
-      { commitment: 'confirmed' }
+      { commitment: 'confirmed' },
     );
 
     // refresh
     senderTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
-      senderKeypair.publicKey
+      senderKeypair.publicKey,
     );
     receiverTokenAccount = await mint.getOrCreateAssociatedAccountInfo(
-      receiverKeypair.publicKey
+      receiverKeypair.publicKey,
     );
     assert.equal(
       senderTokenAccount.amount.toString(),
-      (mintAmount - 1).toString()
+      (mintAmount - 1).toString(),
     );
     assert.equal(receiverTokenAccount.amount.toString(), '1');
   });
