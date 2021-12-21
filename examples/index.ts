@@ -5,23 +5,24 @@ import {
   createDialect,
   createMetadata,
   DialectAccount,
+  getDialectForMembers,
+  idl,
   Member,
   Metadata,
   programs,
-  Wallet_,
-  idl,
   sendMessage,
   subscribeUser,
+  Wallet_,
 } from '..';
 
 const NETWORK_NAME = 'localnet';
 const local = new web3.Connection(
   programs['localnet'].clusterAddress,
-  'recent'
+  'recent',
 );
 
 const setup = async (
-  n: number
+  n: number,
 ): Promise<[anchor.Program, web3.Keypair[], Member[]]> => {
   // create keypairs & wallet
   const keypairs = createKeypairs(n);
@@ -29,11 +30,11 @@ const setup = async (
 
   // configure anchor
   anchor.setProvider(
-    new anchor.Provider(local, wallet, anchor.Provider.defaultOptions())
+    new anchor.Provider(local, wallet, anchor.Provider.defaultOptions()),
   );
   const program = new anchor.Program(
     idl as anchor.Idl,
-    new anchor.web3.PublicKey(programs[NETWORK_NAME].programAddress)
+    new anchor.web3.PublicKey(programs[NETWORK_NAME].programAddress),
   );
 
   // fund keypairs
@@ -44,7 +45,7 @@ const setup = async (
       ({
         publicKey: kp.publicKey,
         scopes: [true, true],
-      } as Member)
+      } as Member),
   );
 
   return [program, keypairs, members];
@@ -57,29 +58,30 @@ const createKeypairs = (n: number): web3.Keypair[] => {
 const fundKeypairs = async (
   program: anchor.Program,
   keypairs: web3.Keypair[],
-  amount: number | undefined = 10 * web3.LAMPORTS_PER_SOL
+  amount: number | undefined = 10 * web3.LAMPORTS_PER_SOL,
 ): Promise<void> => {
   await Promise.all(
     keypairs.map(async (keypair) => {
-      const fromAirdropSignature = await program.provider.connection.requestAirdrop(
-        keypair.publicKey,
-        amount
-      );
+      const fromAirdropSignature =
+        await program.provider.connection.requestAirdrop(
+          keypair.publicKey,
+          amount,
+        );
       await program.provider.connection.confirmTransaction(
-        fromAirdropSignature
+        fromAirdropSignature,
       );
-    })
+    }),
   );
 };
 
 const createMetadatas = async (
   program: anchor.Program,
-  keypairs: Keypair[]
+  keypairs: Keypair[],
 ): Promise<Metadata[]> => {
   const metadatas = await Promise.all(
     keypairs.map(async (keypair, idx) => {
       return await createMetadata(program, keypair, `${idx}`.repeat(32));
-    })
+    }),
   );
   return metadatas;
 };
@@ -87,36 +89,37 @@ const createMetadatas = async (
 const subscribeUsers = async (
   program: anchor.Program,
   dialect: DialectAccount,
-  keypairs: web3.Keypair[]
+  keypairs: web3.Keypair[],
 ): Promise<Metadata[]> => {
   const metadatas: Metadata[] = [];
   await Promise.all(
     keypairs.map(async (keypair) => {
       metadatas.push(
-        await subscribeUser(program, dialect, keypair.publicKey, keypair)
+        await subscribeUser(program, dialect, keypair.publicKey, keypair),
       );
-    })
+    }),
   );
   return metadatas;
 };
 
 const sendMessages = async (
   program: anchor.Program,
-  dialect: DialectAccount,
-  keypairs: web3.Keypair[]
+  keypairs: web3.Keypair[],
+  members: Member[],
 ): Promise<void> => {
   const numMessages = 8;
   const texts = Array(numMessages)
     .fill(0)
     .map((_, i) => `Hello, world! ${i}`);
   for (let i = 0; i < numMessages; i++) {
-    console.log(`sending message ${i}...`);
-    await sendMessage(
+    const user = i % keypairs.length;
+    const dialect = await getDialectForMembers(
       program,
-      dialect,
-      keypairs[i % keypairs.length],
-      texts[i]
+      members,
+      keypairs[user],
     );
+    console.log(`sending message ${i}...`);
+    await sendMessage(program, dialect, keypairs[user], texts[i]);
   }
 };
 
@@ -126,7 +129,7 @@ const index = async (): Promise<void> => {
   await createMetadatas(program, keypairs);
   const dialect = await createDialect(program, keypairs[0], members);
   await subscribeUsers(program, dialect, keypairs);
-  await sendMessages(program, dialect, keypairs);
+  await sendMessages(program, keypairs, members);
 };
 
 index();

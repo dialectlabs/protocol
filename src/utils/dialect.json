@@ -168,7 +168,10 @@
         {
           "name": "text",
           "type": {
-            "array": ["u8", 32]
+            "array": [
+              "u8",
+              256
+            ]
           }
         }
       ]
@@ -298,11 +301,9 @@
             "type": {
               "array": [
                 {
-                  "option": {
-                    "defined": "Message"
-                  }
+                  "defined": "Message"
                 },
-                8
+                32
               ]
             }
           },
@@ -359,7 +360,10 @@
           {
             "name": "scopes",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           }
         ]
@@ -381,7 +385,10 @@
           {
             "name": "text",
             "type": {
-              "array": ["u8", 32]
+              "array": [
+                "u8",
+                256
+              ]
             }
           }
         ]
