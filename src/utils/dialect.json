@@ -30,12 +30,6 @@
         {
           "name": "metadataNonce",
           "type": "u8"
-        },
-        {
-          "name": "deviceToken",
-          "type": {
-            "array": ["u8", 32]
-          }
         }
       ]
     },
@@ -87,6 +81,45 @@
               },
               2
             ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateDeviceToken",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "dialectNonce",
+          "type": "u8"
+        },
+        {
+          "name": "deviceToken",
+          "type": {
+            "option": {
+              "array": ["u8", 32]
+            }
           }
         }
       ]
@@ -258,7 +291,9 @@
           {
             "name": "deviceToken",
             "type": {
-              "array": ["u8", 32]
+              "option": {
+                "array": ["u8", 32]
+              }
             }
           },
           {

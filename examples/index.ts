@@ -78,8 +78,8 @@ const createMetadatas = async (
   keypairs: Keypair[],
 ): Promise<Metadata[]> => {
   const metadatas = await Promise.all(
-    keypairs.map(async (keypair, idx) => {
-      return await createMetadata(program, keypair, `${idx}`.repeat(32));
+    keypairs.map(async (keypair) => {
+      return await createMetadata(program, keypair);
     }),
   );
   return metadatas;
