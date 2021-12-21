@@ -3,9 +3,13 @@ import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { waitForFinality, Wallet_ } from '../utils';
-import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
+import {
+  ecdhDecrypt,
+  ecdhEncrypt,
+  ENCRYPTION_OVERHEAD_BYTES,
+} from '../utils/ecdh-encryption';
 import { deserializeText, serializeText } from '../utils/text-serde';
-import { generateNonce } from '../utils/nonce-generator';
+import { generateNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
 
 // TODO: Switch from types to classes
 
@@ -13,18 +17,50 @@ import { generateNonce } from '../utils/nonce-generator';
 User metadata
 */
 
-export const MESSAGES_PER_DIALECT = 8;
-export const MAX_RAW_MESSAGE_SIZE = 32;
-export const MAX_MESSAGE_SIZE_BYTES = MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
+export const MESSAGES_PER_DIALECT = 32;
+export const MAX_RAW_MESSAGE_SIZE = 256;
+export const MAX_MESSAGE_SIZE =
+  MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
+
+type Subscription = {
+  pubkey: PublicKey;
+  enabled: boolean;
+};
+
+type RawDialect = {
+  members: Member[];
+  messages: RawMessage[];
+  nextMessageIdx: number;
+  lastMessageTimestamp: number;
+};
+
+type RawMessage = {
+  owner: PublicKey;
+  text: number[];
+  timestamp: number;
+};
 
 export type Metadata = {
   deviceToken: string;
   subscriptions: Subscription[];
 };
 
-type Subscription = {
-  pubkey: PublicKey;
-  enabled: boolean;
+export type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
+  dialect: Dialect;
+  publicKey: PublicKey;
+};
+
+export type Dialect = {
+  members: Member[];
+  messages: Message[];
+  nextMessageIdx: number;
+  lastMessageTimestamp: number;
+};
+
+type Message = {
+  owner: PublicKey;
+  text: string;
+  timestamp: number;
 };
 
 export async function accountInfoGet(
@@ -43,13 +79,12 @@ export async function accountInfoFetch(
   return await accountInfoGet(connection, publicKey);
 }
 
-export async function ownerFetcher(
+export function ownerFetcher(
   _url: string,
   wallet: Wallet_,
   connection: Connection,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
-  const r = await accountInfoGet(connection, wallet.publicKey);
-  return r;
+  return accountInfoGet(connection, wallet.publicKey);
 }
 
 export async function getMetadataProgramAddress(
@@ -72,7 +107,7 @@ export async function getMetadata(
   return {
     deviceToken: new TextDecoder().decode(new Uint8Array(metadata.deviceToken)),
     subscriptions: metadata.subscriptions.filter((s: Subscription | null) => s),
-  } as Metadata;
+  };
 }
 
 export async function createMetadata(
@@ -139,18 +174,6 @@ export async function subscribeUser(
 Dialect
 */
 
-type Dialect = {
-  members: Member[];
-  messages: Message[];
-  nextMessageIdx: number;
-  lastMessageTimestamp: number;
-};
-
-export type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
-  dialect: Dialect;
-  publicKey: PublicKey;
-};
-
 export async function getDialectProgramAddress(
   program: anchor.Program,
   members: Member[],
@@ -166,15 +189,9 @@ export async function getDialectProgramAddress(
   );
 }
 
-type RawMessage = {
-  owner: PublicKey;
-  text: number[];
-  timestamp: number;
-};
-
-function findOtherMember(dialect: Dialect, member: anchor.web3.Keypair) {
-  const otherMember = dialect.members.find((it) =>
-    !it.publicKey.equals(member.publicKey),
+function findOtherMember(allMembers: Member[], me: anchor.web3.Keypair) {
+  const otherMember = allMembers.find(
+    (it) => !it.publicKey.equals(me.publicKey),
   );
   if (!otherMember) {
     throw new Error('Expected to have other member');
@@ -182,9 +199,13 @@ function findOtherMember(dialect: Dialect, member: anchor.web3.Keypair) {
   return otherMember;
 }
 
-function decryptMessage(message: Message, messageIdx: number, user: anchor.web3.Keypair, otherMember: Member) {
-  const rawMessage = message as unknown as RawMessage;
-  const encryptedText = new Uint8Array(rawMessage.text);
+function decryptMessage(
+  message: RawMessage,
+  messageIdx: number,
+  user: anchor.web3.Keypair,
+  otherMember: Member,
+): Message {
+  const encryptedText = new Uint8Array(message.text);
   const messageNonce = generateNonce(messageIdx);
   const decryptedText = ecdhDecrypt(
     encryptedText,
@@ -193,36 +214,51 @@ function decryptMessage(message: Message, messageIdx: number, user: anchor.web3.
       publicKey: user.publicKey.toBytes(),
     },
     otherMember.publicKey.toBytes(),
-    messageNonce);
+    messageNonce,
+  );
   const text = deserializeText(decryptedText);
-  return ({
+  return {
     ...message,
     text,
+  };
+}
+
+function isPresent(message: RawMessage): boolean {
+  return message.timestamp !== 0;
+}
+
+function getMessages(dialect: RawDialect, user: anchor.web3.Keypair) {
+  const otherMember = findOtherMember(dialect.members, user);
+  const decryptedMessages: Message[] = dialect.messages
+    .filter((m: RawMessage) => isPresent(m))
+    .map((m: RawMessage, idx) => decryptMessage(m, idx, user, otherMember));
+  const permutedAndOrderedMessages: Message[] = [];
+  for (let i = 0; i < decryptedMessages.length; i++) {
+    const idx =
+      (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
+        ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
+        : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
+    const m = decryptedMessages[idx];
+    permutedAndOrderedMessages.push(m);
+  }
+  return permutedAndOrderedMessages.map((m: Message) => {
+    return {
+      ...m,
+      timestamp: m.timestamp * 1000,
+    };
   });
 }
 
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  user: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
-  const dialect = await program.account.dialectAccount.fetch(publicKey) as Dialect;
+  const dialect = (await program.account.dialectAccount.fetch(
+    publicKey,
+  )) as RawDialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  const otherMember = findOtherMember(dialect, user);
-  const messageRingBuffer: Message[] = dialect.messages
-    .filter((m: Message | null) => m)
-    .map((message: Message, idx) =>
-      decryptMessage(message, idx, user, otherMember),
-    );
-  const permutedAndOrderedMessages: Message[] = [];
-  for (let i = 0; i < messageRingBuffer.length; i++) {
-    const idx =
-      (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
-        ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
-        : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
-    const m = messageRingBuffer[idx];
-    permutedAndOrderedMessages.push(m);
-  }
+  const messages = user ? getMessages(dialect, user) : [];
   return {
     ...account,
     publicKey: publicKey,
@@ -230,15 +266,7 @@ export async function getDialect(
     dialect: {
       ...dialect,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
-      messages:
-        permutedAndOrderedMessages.map(
-          (m: Message) => {
-            return {
-              ...m,
-              timestamp: m.timestamp * 1000,
-            };
-          },
-        ) || null,
+      messages,
     },
   } as DialectAccount;
 }
@@ -246,7 +274,7 @@ export async function getDialect(
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[],
-  user: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
@@ -360,30 +388,19 @@ export type Member = {
 Messages
 */
 
-type Message = {
-  owner: PublicKey;
-  text: string;
-  timestamp: number;
-};
-
-type MessagesAccount = anchor.web3.AccountInfo<Buffer> & {
-  messages: Message[];
-  publicKey: PublicKey;
-};
-
 export async function sendMessage(
   program: anchor.Program,
-  dialect: DialectAccount,
+  { dialect, publicKey }: DialectAccount,
   sender: anchor.web3.Keypair,
   text: string,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
-    dialect.dialect.members,
+    dialect.members,
   );
-  const otherMember = findOtherMember(dialect.dialect, sender);
-  const textBytes = serializeText(text, MAX_MESSAGE_SIZE_BYTES);
-  const textEncryptionNonce = generateNonce(dialect.dialect.nextMessageIdx);
+  const otherMember = findOtherMember(dialect.members, sender);
+  const textBytes = serializeText(text, MAX_MESSAGE_SIZE);
+  const textEncryptionNonce = generateNonce(dialect.nextMessageIdx);
   const encryptedText = ecdhEncrypt(
     textBytes,
     {
@@ -393,21 +410,17 @@ export async function sendMessage(
     otherMember.publicKey.toBytes(),
     textEncryptionNonce,
   );
-  await program.rpc.sendMessage(
-    new anchor.BN(nonce),
-    encryptedText,
-    {
-      accounts: {
-        dialect: dialectPublicKey,
-        sender: sender.publicKey,
-        member0: dialect.dialect.members[0].publicKey,
-        member1: dialect.dialect.members[1].publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [sender],
+  await program.rpc.sendMessage(new anchor.BN(nonce), encryptedText, {
+    accounts: {
+      dialect: dialectPublicKey,
+      sender: sender.publicKey,
+      member0: dialect.members[0].publicKey,
+      member1: dialect.members[1].publicKey,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
     },
-  );
-  const d = await getDialect(program, dialect.publicKey, sender);
+    signers: [sender],
+  });
+  const d = await getDialect(program, publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
