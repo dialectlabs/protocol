@@ -1,10 +1,14 @@
 import { expect } from 'chai';
-import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES, generateEd25519KeyPair } from './ecdh-encryption';
+import {
+  ecdhDecrypt,
+  ecdhEncrypt,
+  ENCRYPTION_OVERHEAD_BYTES,
+  generateEd25519KeyPair,
+} from './ecdh-encryption';
 import { randomBytes } from 'tweetnacl';
 import { NONCE_SIZE_BYTES } from './nonce-generator';
 
 describe('ECDH encryptor/decryptor test', async () => {
-
   /*
    tweetnacl source code references:
    https://github.com/dchest/tweetnacl-js/blob/master/nacl-fast.js#L2076
@@ -18,22 +22,21 @@ describe('ECDH encryptor/decryptor test', async () => {
       .fill(1)
       .map((element, index) => (index + 1) * 8);
     // when
-    const sizesComparison = messageSizes
-      .map((size) => {
-        const unencrypted = randomBytes(size);
-        const nonce = randomBytes(NONCE_SIZE_BYTES);
-        const encrypted = ecdhEncrypt(
-          unencrypted,
-          generateEd25519KeyPair(),
-          generateEd25519KeyPair().publicKey,
-          nonce,
-        );
-        return ({
-          sizeBefore: unencrypted.byteLength,
-          sizeAfter: encrypted.byteLength,
-          sizeDiff: encrypted.byteLength - unencrypted.byteLength,
-        });
-      });
+    const sizesComparison = messageSizes.map((size) => {
+      const unencrypted = randomBytes(size);
+      const nonce = randomBytes(NONCE_SIZE_BYTES);
+      const encrypted = ecdhEncrypt(
+        unencrypted,
+        generateEd25519KeyPair(),
+        generateEd25519KeyPair().publicKey,
+        nonce,
+      );
+      return {
+        sizeBefore: unencrypted.byteLength,
+        sizeAfter: encrypted.byteLength,
+        sizeDiff: encrypted.byteLength - unencrypted.byteLength,
+      };
+    });
     // then
     sizesComparison.forEach(({ sizeDiff }) => {
       expect(sizeDiff).to.eq(ENCRYPTION_OVERHEAD_BYTES);

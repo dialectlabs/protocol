@@ -33,7 +33,7 @@ transferTransaction.add(
     fromPubkey: PROGRAM.provider.wallet.publicKey,
     toPubkey: newkp.publicKey,
     lamports: 1000000000,
-  })
+  }),
 );
 
 describe('test watcher create', () => {
@@ -46,25 +46,25 @@ describe('test settings', () => {
   it('creates a settings account for the user', async () => {
     const settingsAccount = await settingsCreate(
       PROGRAM.provider.wallet,
-      PROGRAM
+      PROGRAM,
     );
     const gottenSettingsAccount = await settingsGet(
       PROGRAM,
       PROGRAM.provider.connection,
-      PROGRAM.provider.wallet.publicKey
+      PROGRAM.provider.wallet.publicKey,
     );
     assert.ok(
       settingsAccount.settings.owner.toString() ===
-        PROGRAM.provider.wallet.publicKey.toString()
+        PROGRAM.provider.wallet.publicKey.toString(),
     );
     assert.ok(settingsAccount.settings.threads.length === 0);
     assert.ok(
       settingsAccount.publicKey.toString() ==
-        gottenSettingsAccount.publicKey.toString()
+        gottenSettingsAccount.publicKey.toString(),
     );
     assert.ok(
       settingsAccount.settings.threads.length ===
-        gottenSettingsAccount.settings.threads.length
+        gottenSettingsAccount.settings.threads.length,
     );
   });
 
@@ -83,8 +83,8 @@ describe('test settings', () => {
           PROGRAM,
           newkp.publicKey,
           [newkp],
-          [await PROGRAM.account.settingsAccount.createInstruction(newkp)] // TODO: is this failing bc newkp is not for the settingsAccount?
-        )
+          [await PROGRAM.account.settingsAccount.createInstruction(newkp)], // TODO: is this failing bc newkp is not for the settingsAccount?
+        ),
       )
       .to.eventually.be.rejectedWith(Error); // 0x92 (A seeds constraint was violated)
   });
@@ -100,23 +100,23 @@ describe('test threads', () => {
     const settingsAccount = await settingsGet(
       PROGRAM,
       PROGRAM.provider.connection,
-      PROGRAM.provider.wallet.publicKey
+      PROGRAM.provider.wallet.publicKey,
     );
     assert.ok(settingsAccount.settings.threads.length === 1);
     assert.ok(
       settingsAccount.settings.threads[0].key.toString() ===
-        threadAccount.publicKey.toString()
+        threadAccount.publicKey.toString(),
     );
 
     const gottenThreadAccount = await threadGet(PROGRAM, threadpk);
     assert.ok(threadAccount.thread.members.length === 1);
     assert.ok(
       threadAccount.thread.members[0].key.toString() ===
-        PROGRAM.provider.wallet.publicKey.toString()
+        PROGRAM.provider.wallet.publicKey.toString(),
     );
     assert.ok(
       threadAccount.publicKey.toString() ===
-        gottenThreadAccount.publicKey.toString()
+        gottenThreadAccount.publicKey.toString(),
     );
   });
 
@@ -126,7 +126,7 @@ describe('test threads', () => {
       PROGRAM.provider.wallet,
       PROGRAM,
       newkp.publicKey,
-      [newkp]
+      [newkp],
     );
     // thread owner invites new user to thread
     await addUserToThread(PROGRAM, threadpk, newkp.publicKey);
@@ -135,19 +135,19 @@ describe('test threads', () => {
     const gottenSettingsAccount = await settingsGet(
       PROGRAM,
       PROGRAM.provider.connection,
-      newkp.publicKey
+      newkp.publicKey,
     );
     assert.ok(gottenSettingsAccount.settings.threads.length === 1);
     assert.ok(
       gottenSettingsAccount.settings.threads[0].key.toString() ===
-        threadpk.toString()
+        threadpk.toString(),
     );
 
     const threadAccount = await threadGet(PROGRAM, threadpk);
     assert.ok(threadAccount.thread.members.length === 2);
     assert.ok(
       threadAccount.thread.members[1].key.toString() ===
-        newkp.publicKey.toString()
+        newkp.publicKey.toString(),
     );
   });
 });
@@ -171,13 +171,13 @@ describe('encrypt-decrypt', () => {
       data,
       PROGRAM.provider.wallet.payer,
       newkp.publicKey,
-      nonce
+      nonce,
     );
     const decrypted = decryptMessage(
       encrypted,
       newkp,
       PROGRAM.provider.wallet.publicKey,
-      nonce
+      nonce,
     );
     const result = new TextDecoder().decode(decrypted!);
     assert.strictEqual(text, result);
@@ -200,13 +200,13 @@ describe('test messages', () => {
 
     const messages = await messagesGet(PROGRAM, threadAccount, n);
     const received_timestamps = messages.map((m) =>
-      m.message.timestamp.valueOf()
+      m.message.timestamp.valueOf(),
     );
     const message_texts = messages.map((m) => m.message.text);
     for (let i = 0; i < n; i++) {
       // Check that timestamps are sorta close to when we sent the message.
       assert.ok(
-        Math.abs(computed_timestamps[i] - received_timestamps[i]) < 10_000
+        Math.abs(computed_timestamps[i] - received_timestamps[i]) < 10_000,
       );
       assert.strictEqual(message_texts[i], sent_texts[i]);
     }
@@ -228,7 +228,7 @@ describe('test encrypted messages', () => {
         threadAccount,
         text,
         PROGRAM.provider.wallet.payer,
-        true
+        true,
       );
       threadAccount = await threadGet(PROGRAM, threadpk);
     }

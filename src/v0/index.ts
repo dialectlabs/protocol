@@ -12,7 +12,7 @@ export async function accountDiscriminator(name: string): Promise<Buffer> {
 
 export async function accountInfoGet(
   connection: Connection,
-  publicKey: PublicKey
+  publicKey: PublicKey,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   return await connection.getAccountInfo(publicKey);
 }
@@ -20,7 +20,7 @@ export async function accountInfoGet(
 export async function accountInfoFetch(
   _url: string,
   connection: Connection,
-  publicKeyStr: string
+  publicKeyStr: string,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   const publicKey = new anchor.web3.PublicKey(publicKeyStr);
   return await accountInfoGet(connection, publicKey);
@@ -29,7 +29,7 @@ export async function accountInfoFetch(
 export async function ownerFetcher(
   _url: string,
   wallet: Wallet_,
-  connection: Connection
+  connection: Connection,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   const r = await accountInfoGet(connection, wallet.publicKey);
   return r;
@@ -38,7 +38,7 @@ export async function ownerFetcher(
 export async function validMemberFetch(
   _url: string,
   program: anchor.Program,
-  publicKeyStr: string
+  publicKeyStr: string,
 ): Promise<anchor.web3.AccountInfo<Buffer> | null> {
   const publicKey = new anchor.web3.PublicKey(publicKeyStr);
   let accountInfo: anchor.web3.AccountInfo<Buffer> | null = null;
@@ -50,7 +50,7 @@ export async function validMemberFetch(
 
   const [settingsAccount] = await settingsProgramAddressGet(program, publicKey);
   const settingsAccountInfo = await program.provider.connection.getAccountInfo(
-    settingsAccount
+    settingsAccount,
   );
   if (!settingsAccountInfo) {
     throw new Error('Account has not signed up');
@@ -66,17 +66,17 @@ type WatcherData = {
 };
 
 export async function watcherProgramAddressGet(
-  program: anchor.Program
+  program: anchor.Program,
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from('watcher_account')],
-    program.programId
+    program.programId,
   );
 }
 
 export async function watcherCreate(
   program: anchor.Program,
-  owner?: anchor.web3.PublicKey
+  owner?: anchor.web3.PublicKey,
 ): Promise<void> {
   const [watcherpk, watcher_nonce] = await watcherProgramAddressGet(program);
   const tx = await program.rpc.createWatcherAccount(
@@ -88,17 +88,17 @@ export async function watcherCreate(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-    }
+    },
   );
   await waitForFinality(program, tx);
 }
 
 export async function watcherThreadsGet(
-  program: anchor.Program
+  program: anchor.Program,
 ): Promise<SettingsThreadRef[]> {
   const [watcherpk] = await watcherProgramAddressGet(program);
   const watcherDataObject = await program.account.watcherAccount.fetch(
-    watcherpk
+    watcherpk,
   );
   const watcherData = watcherDataObject as WatcherData;
   return watcherData.threads;
@@ -110,11 +110,11 @@ Settings
 
 async function settingsProgramAddressGet(
   program: anchor.Program,
-  publicKey: anchor.web3.PublicKey
+  publicKey: anchor.web3.PublicKey,
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [publicKey.toBuffer(), Buffer.from('settings_account')],
-    program.programId
+    program.programId,
   );
 }
 
@@ -135,7 +135,7 @@ type SettingsAccount = anchor.web3.AccountInfo<Buffer> & {
 export async function settingsGet(
   program: anchor.Program,
   connection: Connection,
-  publicKey: PublicKey
+  publicKey: PublicKey,
 ): Promise<SettingsAccount> {
   const [settingspk] = await settingsProgramAddressGet(program, publicKey);
   const data = await program.account.settingsAccount.fetch(settingspk);
@@ -151,7 +151,7 @@ export async function settingsFetch(
   _url: string,
   program: anchor.Program,
   connection: Connection,
-  publicKey: PublicKey | string
+  publicKey: PublicKey | string,
 ): Promise<SettingsAccount> {
   if (typeof publicKey === 'string') {
     publicKey = new anchor.web3.PublicKey(publicKey);
@@ -164,11 +164,11 @@ export async function settingsCreate(
   program: anchor.Program,
   owner?: anchor.web3.PublicKey | undefined,
   signers?: anchor.web3.Keypair[] | undefined,
-  instructions?: anchor.web3.TransactionInstruction[] | undefined
+  instructions?: anchor.web3.TransactionInstruction[] | undefined,
 ): Promise<SettingsAccount> {
   const [publicKey, nonce] = await settingsProgramAddressGet(
     program,
-    owner || wallet.publicKey
+    owner || wallet.publicKey,
   );
   const tx = await program.rpc.createUserSettingsAccount(new anchor.BN(nonce), {
     accounts: {
@@ -184,7 +184,7 @@ export async function settingsCreate(
   const sett = await settingsGet(
     program,
     program.provider.connection,
-    owner || wallet.publicKey
+    owner || wallet.publicKey,
   );
   return sett;
 }
@@ -192,7 +192,7 @@ export async function settingsCreate(
 export async function settingsMutate(
   _url: string,
   wallet: Wallet_,
-  program: anchor.Program
+  program: anchor.Program,
 ): Promise<SettingsAccount> {
   return await settingsCreate(wallet, program);
 }
@@ -219,19 +219,19 @@ export type ThreadAccount = anchor.web3.AccountInfo<Buffer> & {
 export async function threadMutate(
   _url: string,
   program: anchor.Program,
-  wallet: Wallet_
+  wallet: Wallet_,
 ): Promise<ThreadAccount> {
   return await threadCreate(program, wallet);
 }
 
 export async function threadCreate(
   program: anchor.Program,
-  wallet: Wallet_
+  wallet: Wallet_,
 ): Promise<ThreadAccount> {
   const kp = anchor.web3.Keypair.generate();
   const [settingspk, settings_nonce] = await settingsProgramAddressGet(
     program,
-    wallet.publicKey
+    wallet.publicKey,
   );
   const tx = await program.rpc.createThreadAccount(
     new anchor.BN(settings_nonce),
@@ -244,7 +244,7 @@ export async function threadCreate(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: [kp],
-    }
+    },
   );
 
   await waitForFinality(program, tx);
@@ -254,7 +254,7 @@ export async function threadCreate(
 export async function threadFetch(
   _url: string,
   program: anchor.Program,
-  publicKey: PublicKey | string
+  publicKey: PublicKey | string,
 ): Promise<ThreadAccount> {
   if (typeof publicKey === 'string') {
     publicKey = new anchor.web3.PublicKey(publicKey);
@@ -264,7 +264,7 @@ export async function threadFetch(
 
 export async function threadGet(
   program: anchor.Program,
-  publicKey: PublicKey
+  publicKey: PublicKey,
 ): Promise<ThreadAccount> {
   const data = await program.account.threadAccount.fetch(publicKey);
   const account = await program.provider.connection.getAccountInfo(publicKey);
@@ -274,12 +274,12 @@ export async function threadGet(
 export async function threadsFetch(
   _url: string,
   program: anchor.Program,
-  publicKeys: PublicKey[] | string[]
+  publicKeys: PublicKey[] | string[],
 ): Promise<ThreadAccount[]> {
   if (publicKeys.length < 1) return [];
   if (typeof publicKeys[0] === 'string') {
     publicKeys = publicKeys.map(
-      (publicKey) => new anchor.web3.PublicKey(publicKey)
+      (publicKey) => new anchor.web3.PublicKey(publicKey),
     );
   }
   return await threadsGet(program, publicKeys as PublicKey[]);
@@ -287,11 +287,11 @@ export async function threadsFetch(
 
 export async function threadsGet(
   program: anchor.Program,
-  publicKeys: PublicKey[]
+  publicKeys: PublicKey[],
 ): Promise<ThreadAccount[]> {
   const accountInfos = await anchor.utils.rpc.getMultipleAccounts(
     program.provider.connection,
-    publicKeys
+    publicKeys,
   );
   const threadAccounts: ThreadAccount[] = [];
   const indexedMessageAccounts: {
@@ -313,7 +313,7 @@ export async function threadsGet(
         publicKey: publicKeys[idx],
         thread: program.account.threadAccount.coder.accounts.decode(
           'ThreadAccount',
-          accountInfo.account.data
+          accountInfo.account.data,
         ),
       } as ThreadAccount;
 
@@ -322,7 +322,7 @@ export async function threadsGet(
         threadAccounts.push(threadAccount);
         indexedMessageAccounts.push({ messageAccount: latestMessages[0], idx });
       }
-    })
+    }),
   );
 
   // Sort threads according to descending most recent message timestamps
@@ -345,7 +345,7 @@ export async function userThreadMutate(
   _url: string,
   program: anchor.Program,
   thread: PublicKey,
-  invitee: PublicKey
+  invitee: PublicKey,
 ): Promise<ThreadAccount> {
   return await addUserToThread(program, thread, invitee);
 }
@@ -355,7 +355,7 @@ export async function addUserToThread(
   thread: PublicKey,
   invitee: PublicKey,
   signers?: anchor.web3.Keypair[] | null,
-  instructions?: anchor.web3.TransactionInstruction[] | null
+  instructions?: anchor.web3.TransactionInstruction[] | null,
 ): Promise<ThreadAccount> {
   const [publicKey, nonce] = await settingsProgramAddressGet(program, invitee);
   const tx = await program.rpc.addUserToThread(new anchor.BN(nonce), {
@@ -391,7 +391,7 @@ type MessageAccount = anchor.web3.AccountInfo<Buffer> & {
 export async function messageProgramAddressGet(
   program: anchor.Program,
   threadPubkey: PublicKey,
-  messageIdx: string
+  messageIdx: string,
 ): Promise<[anchor.web3.PublicKey, number]> {
   return await anchor.web3.PublicKey.findProgramAddress(
     [
@@ -399,7 +399,7 @@ export async function messageProgramAddressGet(
       Buffer.from('message_account'),
       Buffer.from(messageIdx),
     ],
-    program.programId
+    program.programId,
   );
 }
 
@@ -408,7 +408,7 @@ export async function messageMutate(
   program: anchor.Program,
   thread: ThreadAccount | string,
   text: string,
-  sender?: anchor.web3.Keypair | null
+  sender?: anchor.web3.Keypair | null,
 ): Promise<MessageAccount[]> {
   if (typeof thread === 'string') {
     thread = await threadGet(program, new anchor.web3.PublicKey(thread));
@@ -450,7 +450,7 @@ if (IN_NODE) {
         .split('')
         .map(function (c) {
           return c.charCodeAt(0);
-        })
+        }),
     );
   };
 }
@@ -460,12 +460,12 @@ export async function messageCreate(
   thread: ThreadAccount,
   text: string,
   sender?: anchor.web3.Signer | null,
-  encrypted = false
+  encrypted = false,
 ): Promise<MessageAccount[]> {
   const [messagepk, nonce] = await messageProgramAddressGet(
     program,
     thread.publicKey,
-    (thread.thread.messageIdx + 1).toString()
+    (thread.thread.messageIdx + 1).toString(),
   );
 
   let textBuffer = new TextEncoder().encode(text);
@@ -479,7 +479,7 @@ export async function messageCreate(
 
     const targetPublicKey = getOtherPublicKey(
       thread.thread.members,
-      sender.publicKey
+      sender.publicKey,
     );
     // Encrypt message
     const encryptionNonce = getMessageEncryptionNonce(messagepk);
@@ -487,7 +487,7 @@ export async function messageCreate(
       textBuffer,
       sender,
       targetPublicKey,
-      encryptionNonce
+      encryptionNonce,
     );
   }
 
@@ -506,7 +506,7 @@ export async function messageCreate(
         systemProgram: anchor.web3.SystemProgram.programId,
       },
       signers: sender ? [sender] : [],
-    }
+    },
   );
   await waitForFinality(program, tx);
   const updatedThread = await threadGet(program, thread.publicKey);
@@ -517,7 +517,7 @@ export async function messagesFetch(
   _url: string,
   program: anchor.Program,
   thread: ThreadAccount,
-  batchSize?: number | undefined
+  batchSize?: number | undefined,
 ): Promise<MessageAccount[]> {
   return await messagesGet(program, thread, batchSize);
 }
@@ -526,7 +526,7 @@ export async function messagesGet(
   program: anchor.Program,
   thread: ThreadAccount,
   batchSize?: number | undefined,
-  receiver?: anchor.web3.Keypair
+  receiver?: anchor.web3.Keypair,
 ): Promise<MessageAccount[]> {
   // TODO: Protect against invalid batch size
   if (!batchSize) {
@@ -543,14 +543,14 @@ export async function messagesGet(
       const [messagepk] = await messageProgramAddressGet(
         program,
         thread.publicKey,
-        idx.toString()
+        idx.toString(),
       );
       return messagepk;
-    })
+    }),
   );
   const messageAccountInfos = await anchor.utils.rpc.getMultipleAccounts(
     program.provider.connection,
-    publicKeys
+    publicKeys,
   );
   const messages = await Promise.all(
     messageAccountInfos.map(async (messageAccountInfo, idx) => {
@@ -565,28 +565,28 @@ export async function messagesGet(
 
       let message = program.account.messageAccount.coder.accounts.decode(
         'MessageAccount',
-        messageAccountInfo.account.data
+        messageAccountInfo.account.data,
       );
       let messageBuffer = base64Decode(message.text);
       if (message.encrypted && receiver) {
         if (thread.thread.members.length !== 2) {
           throw new Error(
-            'Can only decrypt messages in threads with two members.'
+            'Can only decrypt messages in threads with two members.',
           );
         }
         messageAccountInfo.publicKey;
         const sourcePublicKey = getOtherPublicKey(
           thread.thread.members,
-          receiver.publicKey
+          receiver.publicKey,
         );
         const encryptionNonce = getMessageEncryptionNonce(
-          messageAccountInfo.publicKey
+          messageAccountInfo.publicKey,
         );
         messageBuffer = decryptMessage(
           messageBuffer,
           receiver,
           sourcePublicKey,
-          encryptionNonce
+          encryptionNonce,
         )!;
         if (!messageBuffer) {
           throw new Error('Failed to decrypt');
@@ -599,7 +599,7 @@ export async function messagesGet(
         publicKey: publicKeys[idx],
         message,
       } as MessageAccount;
-    })
+    }),
   );
   return messages.reverse();
 }
@@ -610,7 +610,7 @@ export async function newGroupMutate(
   wallet: Wallet_,
   invitees: PublicKey[] | string[],
   text: string,
-  sender?: anchor.web3.Keypair | null
+  sender?: anchor.web3.Keypair | null,
 ): Promise<ThreadAccount> {
   if (typeof invitees[0] === 'string') {
     invitees = invitees.map((invitee) => new anchor.web3.PublicKey(invitee));
@@ -620,7 +620,7 @@ export async function newGroupMutate(
     threadAccount = await addUserToThread(
       program,
       threadAccount.publicKey,
-      invitee as anchor.web3.PublicKey
+      invitee as anchor.web3.PublicKey,
     );
   });
   await messageCreate(program, threadAccount, text, sender);

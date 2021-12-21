@@ -22,7 +22,7 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
   useEffect(() => {
     if (networkName) {
       setConnection(
-        new Connection(programs[networkName].clusterAddress, 'recent')
+        new Connection(programs[networkName].clusterAddress, 'recent'),
       );
     }
   }, [networkName]);
@@ -34,12 +34,12 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
         new anchor.Provider(
           connection,
           wallet,
-          anchor.Provider.defaultOptions()
-        )
+          anchor.Provider.defaultOptions(),
+        ),
       );
       const program = new anchor.Program(
         idl as anchor.Idl,
-        new anchor.web3.PublicKey(programs[networkName].programAddress)
+        new anchor.web3.PublicKey(programs[networkName].programAddress),
       );
       setProgram(program);
     }
