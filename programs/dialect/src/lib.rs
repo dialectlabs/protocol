@@ -16,10 +16,10 @@ pub mod dialect {
     */
 
     pub fn create_metadata(ctx: Context<CreateMetadata>, _metadata_nonce: u8) -> ProgramResult {
-        let metadata = &mut ctx.accounts.metadata;
+        let metadata = &mut ctx.accounts.metadata.load_init()?;
         metadata.user = ctx.accounts.user.key();
-        metadata.device_token = None;
-        metadata.subscriptions = [None; 4];
+        metadata.device_token = DeviceToken::default();
+        metadata.subscriptions = [Subscription::default(); 4];
         Ok(())
     }
 
@@ -63,11 +63,22 @@ pub mod dialect {
     pub fn update_device_token(
         ctx: Context<UpdateDeviceToken>,
         _dialect_nonce: u8,
-        device_token: Option<[u8; 32]>,
+        encrypted_device_token_array: EncryptedDeviceTokenArray,
+        encryption_nonce: [u8; 24],
     ) -> ProgramResult {
         // TODO: Confirm unsetting works
-        let metadata = &mut ctx.accounts.metadata;
-        metadata.device_token = device_token;
+        let metadata = &mut ctx.accounts.metadata.load_mut()?;
+        // let device_token = match (encrypted_device_token_array, encryption_nonce) {
+        //     (Some(encrypted_device_token_array), Some(encryption_nonce)) => DeviceToken {
+        //         encrypted_array: encrypted_device_token_array,
+        //         nonce: encryption_nonce,
+        //     },
+        //     _ => DeviceToken::default(),
+        // };
+        metadata.device_token = DeviceToken {
+            encrypted_array: encrypted_device_token_array.0,
+            nonce: encryption_nonce,
+        };
         Ok(())
     }
 
@@ -77,20 +88,21 @@ pub mod dialect {
         _metadata_nonce: u8,
     ) -> ProgramResult {
         let dialect = &mut ctx.accounts.dialect;
-        let metadata = &mut ctx.accounts.metadata;
+        let metadata_loader = &mut ctx.accounts.metadata;
+        let metadata = &mut metadata_loader.load_mut()?;
         let num_subscriptions = metadata
             .subscriptions
             .iter()
-            .filter(|s| s.is_some())
+            .filter(|s| is_present(s))
             .count();
         // TODO: handle max subscriptions
         if num_subscriptions < 4 {
-            metadata.subscriptions[num_subscriptions] = Some(Subscription {
+            metadata.subscriptions[num_subscriptions] = Subscription {
                 pubkey: dialect.key(),
                 enabled: true,
-            });
+            };
             emit!(SubscribeUserEvent {
-                metadata: metadata.key(),
+                metadata: metadata_loader.key(),
                 dialect: dialect.key()
             });
         } else {
@@ -193,7 +205,7 @@ pub struct CreateMetadata<'info> {
         // discriminator (8) + user + device_token + 4 x (subscription) = 72
         space = 8 + 32 + 32 + (4 * 33),
     )]
-    pub metadata: Account<'info, MetadataAccount>,
+    pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -212,7 +224,7 @@ pub struct UpdateDeviceToken<'info> {
         has_one = user, // TODO: Confirm if seeds solves this
         bump = metadata_nonce,
     )]
-    pub metadata: Account<'info, MetadataAccount>,
+    pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -232,7 +244,7 @@ pub struct SubscribeUser<'info> {
         ],
         bump = metadata_nonce,
     )]
-    pub metadata: Account<'info, MetadataAccount>,
+    pub metadata: Loader<'info, MetadataAccount>,
     pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
@@ -326,13 +338,13 @@ pub struct CreateMintDialect<'info> {
 Accounts
 */
 
-#[account]
+#[account(zero_copy)] // in anticipation of more subscriptions
 #[derive(Default)]
 pub struct MetadataAccount {
     // TODO: Add profile
-    user: Pubkey,                             // 32
-    device_token: Option<[u8; 32]>,           // 32. TODO: Encrypt
-    subscriptions: [Option<Subscription>; 4], // 4 * space(Subscription) TODO: More subscriptions
+    user: Pubkey,                     // 32
+    device_token: DeviceToken,        // 32. TODO: Encrypt
+    subscriptions: [Subscription; 4], // 4 * space(Subscription) TODO: More subscriptions
 }
 
 #[account(zero_copy)]
@@ -356,12 +368,48 @@ pub struct MintDialectAccount {
 Data
 */
 
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+pub struct EncryptedDeviceTokenArray([u8; 48]);
+
+impl AnchorSerialize for EncryptedDeviceTokenArray {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        writer.write_all(&self.0)
+    }
+}
+
+impl AnchorDeserialize for EncryptedDeviceTokenArray {
+    fn deserialize(d: &mut &[u8]) -> Result<Self, std::io::Error> {
+        Ok(Self([0u8; 48]))
+    }
+}
+
+// #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
+#[zero_copy]
+pub struct DeviceToken {
+    pub encrypted_array: [u8; 48], // 32-byte token, 16-byte encryption overhead
+    pub nonce: [u8; 24], // https://github.com/dchest/tweetnacl-js/blob/3389b7c9f00545e516a0fdafb324b7857cf1527d/nacl-fast.js#L2074
+}
+
+impl Default for DeviceToken {
+    fn default() -> Self {
+        DeviceToken {
+            encrypted_array: [0; 48],
+            nonce: [0; 24],
+        }
+    }
+}
+
+pub fn is_present(subscription: &Subscription) -> bool {
+    subscription.pubkey != Pubkey::default()
+}
+
+#[zero_copy]
+#[derive(Default)]
 // space = 33
 pub struct Subscription {
     pub pubkey: Pubkey, // 32
     pub enabled: bool,  // 1
 }
+
 #[zero_copy]
 #[derive(Default)]
 // space = 34
@@ -378,7 +426,7 @@ pub struct Message {
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
     pub timestamp: u32,  // 4
-    pub text: [u8; 256], // 32
+    pub text: [u8; 256], // 256
 }
 
 impl Default for Message {

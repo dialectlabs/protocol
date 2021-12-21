@@ -9,7 +9,7 @@ import {
   ENCRYPTION_OVERHEAD_BYTES,
 } from '../utils/ecdh-encryption';
 import { deserializeText, serializeText } from '../utils/text-serde';
-import { generateNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
+import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
 
 export const DIALECT_PUBLIC_KEY = process.env.DIALECT_PUBLIC_KEY
   ? new anchor.web3.PublicKey(process.env.DIALECT_PUBLIC_KEY)
@@ -120,13 +120,13 @@ export async function getMetadata(
   let deviceToken: string | null = null;
   if (userKeypair && metadata.deviceToken) {
     const decryptedDeviceToken = ecdhDecrypt(
-      new Uint8Array(metadata.deviceToken),
+      new Uint8Array(metadata.deviceToken.encryptedArray),
       {
         secretKey: userKeypair.secretKey,
         publicKey: userKeypair.publicKey.toBytes(),
       },
       DIALECT_PUBLIC_KEY.toBytes(),
-      generateNonce(0),
+      metadata.deviceToken.nonce,
     );
     deviceToken = new TextDecoder().decode(decryptedDeviceToken);
   }
@@ -175,7 +175,7 @@ export async function updateDeviceToken(
         secretKey: user.secretKey,
       },
       DIALECT_PUBLIC_KEY.toBytes(),
-      generateNonce(0),
+      generateRandomNonce(),
     );
   }
   const tx = await program.rpc.updateDeviceToken(

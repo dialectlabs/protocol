@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 export const NONCE_SIZE_BYTES = 24;
 
 /**
@@ -13,4 +15,8 @@ export function generateNonce(messageCounter: number): Uint8Array {
     messageCounterModule = Math.floor(messageCounterModule / 10);
   }
   return nonce.reverse();
+}
+
+export function generateRandomNonce(): Uint8Array {
+  return crypto.randomBytes(NONCE_SIZE_BYTES);
 }
