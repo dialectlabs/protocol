@@ -218,6 +218,27 @@ pub struct UpdateDeviceToken<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
+pub struct SubscribeUser<'info> {
+    #[account(signer, mut)]
+    pub signer: AccountInfo<'info>,
+    // TOOD: Consider at some point enforcing user = signer
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key().as_ref(),
+        ],
+        bump = metadata_nonce,
+    )]
+    pub metadata: Account<'info, MetadataAccount>,
+    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
 pub struct CreateDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
@@ -243,27 +264,6 @@ pub struct CreateDialect<'info> {
         space = 8 + 68 + 9344 + 1 + 4
     )]
     pub dialect: Loader<'info, DialectAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
-pub struct SubscribeUser<'info> {
-    #[account(signer, mut)]
-    pub signer: AccountInfo<'info>,
-    // TOOD: Consider at some point enforcing user = signer
-    pub user: AccountInfo<'info>,
-    #[account(
-        mut,
-        seeds = [
-            b"metadata".as_ref(),
-            user.key().as_ref(),
-        ],
-        bump = metadata_nonce,
-    )]
-    pub metadata: Account<'info, MetadataAccount>,
-    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
