@@ -14,6 +14,7 @@ import {
   Member,
   MESSAGES_PER_DIALECT,
   sendMessage,
+  updateDeviceToken,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
@@ -42,10 +43,12 @@ describe('Protocol v1 test', () => {
     it('Create user metadata object(s)', async () => {
       const deviceToken = 'a'.repeat(32);
       for (const member of [owner, writer]) {
-        const metadata = await createMetadata(program, member, deviceToken);
+        const metadata = await createMetadata(program, member);
         const gottenMetadata = await getMetadata(program, member.publicKey);
-        expect(metadata.deviceToken.toString()).to.be.eq(deviceToken);
-        expect(gottenMetadata.deviceToken.toString()).to.be.eq(deviceToken);
+        expect(metadata.deviceToken).to.be.eq(null);
+        expect(gottenMetadata.deviceToken).to.be.eq(null);
+        const updatedMetadata = await updateDeviceToken(program, member, deviceToken);
+        expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
       }
     });
   });
@@ -379,7 +382,8 @@ describe('Protocol v1 test', () => {
     }
     if (createMeta) {
       const deviceToken = 'a'.repeat(32);
-      await createMetadata(program, user, deviceToken);
+      await createMetadata(program, user);
+      await updateDeviceToken(program, user, deviceToken);
     }
     return user;
   }

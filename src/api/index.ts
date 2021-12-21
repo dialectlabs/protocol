@@ -41,7 +41,7 @@ type RawMessage = {
 };
 
 export type Metadata = {
-  deviceToken: string;
+  deviceToken: string | null;
   subscriptions: Subscription[];
 };
 
@@ -105,7 +105,7 @@ export async function getMetadata(
   const [publicKey] = await getMetadataProgramAddress(program, user);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
   return {
-    deviceToken: new TextDecoder().decode(new Uint8Array(metadata.deviceToken)),
+    deviceToken: metadata.deviceToken ? new TextDecoder().decode(new Uint8Array(metadata.deviceToken)) : null,
     subscriptions: metadata.subscriptions.filter((s: Subscription | null) => s),
   };
 }
@@ -113,7 +113,6 @@ export async function getMetadata(
 export async function createMetadata(
   program: anchor.Program,
   user: Keypair,
-  deviceToken: string,
 ): Promise<Metadata> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
@@ -121,7 +120,32 @@ export async function createMetadata(
   );
   const tx = await program.rpc.createMetadata(
     new anchor.BN(metadataNonce),
-    Buffer.from(deviceToken),
+    {
+      accounts: {
+        user: user.publicKey,
+        metadata: metadataAddress,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [user],
+    },
+  );
+  await waitForFinality(program, tx);
+  return await getMetadata(program, user.publicKey);
+}
+
+export async function updateDeviceToken(
+  program: anchor.Program,
+  user: Keypair,
+  deviceToken: string | null,
+): Promise<Metadata> {
+  const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
+    program,
+    user.publicKey,
+  );
+  const tx = await program.rpc.updateDeviceToken(
+    new anchor.BN(metadataNonce),
+    deviceToken ? Buffer.from(deviceToken) : null,
     {
       accounts: {
         user: user.publicKey,

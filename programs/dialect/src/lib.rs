@@ -15,16 +15,11 @@ pub mod dialect {
     User metadata
     */
 
-    // TODO: Make device_token optional
-    pub fn create_metadata(
-        ctx: Context<CreateMetadata>,
-        _metadata_nonce: u8,
-        device_token: [u8; 32],
-    ) -> ProgramResult {
+    pub fn create_metadata(ctx: Context<CreateMetadata>, _metadata_nonce: u8) -> ProgramResult {
         let metadata = &mut ctx.accounts.metadata;
-        metadata.device_token = device_token;
+        metadata.user = ctx.accounts.user.key();
+        metadata.device_token = None;
         metadata.subscriptions = [None; 4];
-        msg!("device_token: {:?}", device_token);
         Ok(())
     }
 
@@ -62,6 +57,17 @@ pub mod dialect {
             dialect: dialect_loader.key(),
         });
 
+        Ok(())
+    }
+
+    pub fn update_device_token(
+        ctx: Context<UpdateDeviceToken>,
+        _dialect_nonce: u8,
+        device_token: Option<[u8; 32]>,
+    ) -> ProgramResult {
+        // TODO: Confirm unsetting works
+        let metadata = &mut ctx.accounts.metadata;
+        metadata.device_token = device_token;
         Ok(())
     }
 
@@ -193,6 +199,25 @@ pub struct CreateMetadata<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(metadata_nonce: u8)]
+pub struct UpdateDeviceToken<'info> {
+    #[account(signer, mut)]
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key.as_ref(),
+        ],
+        has_one = user, // TODO: Confirm if seeds solves this
+        bump = metadata_nonce,
+    )]
+    pub metadata: Account<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
 pub struct CreateDialect<'info> {
     #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
@@ -306,7 +331,7 @@ Accounts
 pub struct MetadataAccount {
     // TODO: Add profile
     user: Pubkey,                             // 32
-    device_token: [u8; 32],                   // 32. TODO: Encrypt
+    device_token: Option<[u8; 32]>,           // 32. TODO: Encrypt
     subscriptions: [Option<Subscription>; 4], // 4 * space(Subscription) TODO: More subscriptions
 }
 
