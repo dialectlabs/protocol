@@ -62,11 +62,10 @@ const fundKeypairs = async (
 ): Promise<void> => {
   await Promise.all(
     keypairs.map(async (keypair) => {
-      const fromAirdropSignature =
-        await program.provider.connection.requestAirdrop(
-          keypair.publicKey,
-          amount,
-        );
+      const fromAirdropSignature = await program.provider.connection.requestAirdrop(
+        keypair.publicKey,
+        amount,
+      );
       await program.provider.connection.confirmTransaction(
         fromAirdropSignature,
       );

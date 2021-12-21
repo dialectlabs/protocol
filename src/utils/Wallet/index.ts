@@ -34,7 +34,7 @@ export default class Wallet extends EventEmitter {
       }).toString();
     } else {
       throw new Error(
-        'provider parameter must be an injected provider or a URL string.'
+        'provider parameter must be an injected provider or a URL string.',
       );
     }
   }
@@ -49,7 +49,7 @@ export default class Wallet extends EventEmitter {
       };
       result?: string;
       error?: string;
-    }>
+    }>,
   ): void => {
     if (
       (this._injectedProvider && e.source === window) ||
@@ -104,7 +104,7 @@ export default class Wallet extends EventEmitter {
         this._popup = window.open(
           this._providerUrl?.toString(),
           '_blank',
-          'location,resizable,width=460,height=675'
+          'location,resizable,width=460,height=675',
         );
       }
       return new Promise((resolve) => {
@@ -155,7 +155,7 @@ export default class Wallet extends EventEmitter {
             method,
             params,
           },
-          this._providerUrl?.origin ?? ''
+          this._providerUrl?.origin ?? '',
         );
 
         if (!this.autoApprove) {
@@ -200,7 +200,7 @@ export default class Wallet extends EventEmitter {
 
   async sign(
     data: Uint8Array,
-    display: unknown
+    display: unknown,
   ): Promise<{
     signature: Buffer;
     publicKey: PublicKey;
@@ -232,7 +232,7 @@ export default class Wallet extends EventEmitter {
   }
 
   async signAllTransactions(
-    transactions: Transaction[]
+    transactions: Transaction[],
   ): Promise<Transaction[]> {
     const response = (await this.sendRequest('signAllTransactions', {
       messages: transactions.map((tx) => bs58.encode(tx.serializeMessage())),

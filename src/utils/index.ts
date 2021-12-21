@@ -20,7 +20,7 @@ export const display = (publicKey: PublicKey | string): string => {
 
 export const getPublicKey = (
   wallet: EmbeddedWallet | null | undefined,
-  abbreviate = false
+  abbreviate = false,
 ): string | null => {
   // if (!wallet || !wallet.connected) return null;
   if (!wallet) return null;
@@ -50,7 +50,7 @@ export class Wallet_ extends EmbeddedWallet {
 }
 
 export function sleep(
-  ms: number
+  ms: number,
 ): Promise<(value: (() => void) | PromiseLike<() => void>) => void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -64,7 +64,7 @@ export async function waitForFinality(
   transactionStr: string,
   finality: anchor.web3.Finality | undefined = 'confirmed',
   maxRetries = 10, // try 10 times
-  sleepDuration = 500 // wait 0.5s between tries
+  sleepDuration = 500, // wait 0.5s between tries
 ): Promise<anchor.web3.TransactionResponse> {
   try {
     return await waitForFinality_inner(
@@ -72,7 +72,7 @@ export async function waitForFinality(
       transactionStr,
       finality,
       maxRetries,
-      sleepDuration
+      sleepDuration,
     );
   } catch (e) {
     console.error(e);
@@ -85,13 +85,13 @@ async function waitForFinality_inner(
   transactionStr: string,
   finality: anchor.web3.Finality | undefined = 'confirmed',
   maxRetries = 10, // try 10 times
-  sleepDuration = 500 // wait 0.5s between tries
+  sleepDuration = 500, // wait 0.5s between tries
 ): Promise<anchor.web3.TransactionResponse> {
   let transaction: anchor.web3.TransactionResponse | null = null;
   for (let n = 0; n < maxRetries; n++) {
     transaction = await program.provider.connection.getTransaction(
       transactionStr,
-      { commitment: finality }
+      { commitment: finality },
     );
     if (transaction) {
       break;
@@ -109,31 +109,32 @@ export function encryptMessage(
   msg: Uint8Array,
   sAccount: anchor.web3.Signer,
   rPublicKey: PublicKey,
-  nonce: Uint8Array
+  nonce: Uint8Array,
 ): Uint8Array {
   return ecdhEncrypt(
     msg,
     {
       publicKey: sAccount.publicKey.toBytes(),
-      secretKey: sAccount.secretKey
+      secretKey: sAccount.secretKey,
     },
     rPublicKey.toBytes(),
-    nonce);
+    nonce,
+  );
 }
 
 export function decryptMessage(
   msg: Uint8Array,
   account: anchor.web3.Keypair,
   fromPk: PublicKey,
-  nonce: Uint8Array
+  nonce: Uint8Array,
 ): Uint8Array | null {
   return ecdhDecrypt(
     msg,
     {
       publicKey: account.publicKey.toBytes(),
-      secretKey: account.secretKey
+      secretKey: account.secretKey,
     },
     fromPk.toBytes(),
-    nonce
+    nonce,
   );
 }
