@@ -12,6 +12,7 @@ import {
   programs,
   sendMessage,
   subscribeUser,
+  updateDeviceToken,
   Wallet_,
 } from '..';
 
@@ -92,9 +93,10 @@ const subscribeUsers = async (
 ): Promise<Metadata[]> => {
   const metadatas: Metadata[] = [];
   await Promise.all(
-    keypairs.map(async (keypair) => {
+    keypairs.map(async (keypair, idx) => {
+      await subscribeUser(program, dialect, keypair.publicKey, keypair),
       metadatas.push(
-        await subscribeUser(program, dialect, keypair.publicKey, keypair),
+        await updateDeviceToken(program, keypair, `${idx}`.repeat(32)),
       );
     }),
   );
