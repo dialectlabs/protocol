@@ -19,7 +19,7 @@ pub mod dialect {
         let metadata = &mut ctx.accounts.metadata.load_init()?;
         metadata.user = ctx.accounts.user.key();
         metadata.device_token = DeviceToken::default();
-        metadata.subscriptions = [Subscription::default(); 4];
+        metadata.subscriptions = [Subscription::default(); 32];
         Ok(())
     }
 
@@ -90,7 +90,7 @@ pub mod dialect {
             .filter(|s| is_present(s))
             .count();
         // TODO: handle max subscriptions
-        if num_subscriptions < 4 {
+        if num_subscriptions < 32 {
             metadata.subscriptions[num_subscriptions] = Subscription {
                 pubkey: dialect.key(),
                 enabled: true,
@@ -196,8 +196,8 @@ pub struct CreateMetadata<'info> {
         ],
         bump = metadata_nonce,
         payer = user,
-        // discriminator (8) + user + device_token + 4 x (subscription) = 244
-        space = 8 + 32 + 72 + (4 * 33),
+        // discriminator (8) + user + device_token + 32 x (subscription) = 1168
+        space = 8 + 32 + 72 + (32 * 33),
     )]
     pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -336,9 +336,9 @@ Accounts
 #[derive(Default)]
 pub struct MetadataAccount {
     // TODO: Add profile
-    user: Pubkey,                     // 32
-    device_token: DeviceToken,        // 32. TODO: Encrypt
-    subscriptions: [Subscription; 4], // 4 * space(Subscription) TODO: More subscriptions
+    user: Pubkey,                      // 32
+    device_token: DeviceToken,         // 32. TODO: Encrypt
+    subscriptions: [Subscription; 32], // 4 * space(Subscription) TODO: More subscriptions
 }
 
 #[account(zero_copy)]
