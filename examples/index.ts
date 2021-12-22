@@ -94,10 +94,10 @@ const subscribeUsers = async (
   const metadatas: Metadata[] = [];
   await Promise.all(
     keypairs.map(async (keypair, idx) => {
-      await subscribeUser(program, dialect, keypair.publicKey, keypair),
-        metadatas.push(
-          await updateDeviceToken(program, keypair, `${idx}`.repeat(32)),
-        );
+      await subscribeUser(program, dialect, keypair.publicKey, keypair);
+      metadatas.push(
+        await updateDeviceToken(program, keypair, `${idx}`.repeat(32)),
+      );
     }),
   );
   return metadatas;

@@ -90,6 +90,11 @@ describe('Protocol v1 test', () => {
       ];
     });
 
+    it('Confirm only each user (& dialect) can read encrypted device tokens', async () => {
+      // TODO: Implement
+      chai.expect(true).to.be.true;
+    });
+
     it("Transfers funds to writer's account", async () => {
       const senderBalanceBefore =
         (await program.provider.connection.getAccountInfo(owner.publicKey))!
