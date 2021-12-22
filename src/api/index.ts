@@ -25,7 +25,7 @@ export const MESSAGES_PER_DIALECT = 32;
 export const MAX_RAW_MESSAGE_SIZE = 256;
 export const MAX_MESSAGE_SIZE =
   MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
-export const DEVICE_TOKEN_LENGTH = 16;
+export const DEVICE_TOKEN_LENGTH = 32;
 
 type Subscription = {
   pubkey: PublicKey;
@@ -117,6 +117,7 @@ export async function getMetadata(
   }
   const [publicKey] = await getMetadataProgramAddress(program, userPubkey);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
+
   let deviceToken: string | null = null;
   if (userKeypair && metadata.deviceToken) {
     const decryptedDeviceToken = ecdhDecrypt(
@@ -126,7 +127,7 @@ export async function getMetadata(
         publicKey: userKeypair.publicKey.toBytes(),
       },
       DIALECT_PUBLIC_KEY.toBytes(),
-      metadata.deviceToken.nonce,
+      new Uint8Array(metadata.deviceToken.nonce),
     );
     deviceToken = new TextDecoder().decode(decryptedDeviceToken);
   }
@@ -167,20 +168,25 @@ export async function updateDeviceToken(
     user.publicKey,
   );
   let encryptedDeviceToken: Uint8Array | null = null;
+  const nonce = generateRandomNonce();
   if (deviceToken) {
-    encryptedDeviceToken = ecdhEncrypt(
+    const unpaddedDeviceToken = ecdhEncrypt(
       new Uint8Array(Buffer.from(deviceToken)),
       {
         publicKey: user.publicKey.toBytes(),
         secretKey: user.secretKey,
       },
       DIALECT_PUBLIC_KEY.toBytes(),
-      generateRandomNonce(),
+      nonce,
     );
+    // TODO: Retire this padding
+    const padding = new Uint8Array(new Array(16).fill(0));
+    encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
   }
   const tx = await program.rpc.updateDeviceToken(
     new anchor.BN(metadataNonce),
     encryptedDeviceToken ? Buffer.from(encryptedDeviceToken) : null,
+    nonce,
     {
       accounts: {
         user: user.publicKey,

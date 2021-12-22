@@ -17,6 +17,6 @@ export function generateNonce(messageCounter: number): Uint8Array {
   return nonce.reverse();
 }
 
-export function generateRandomNonce(): Uint8Array {
+export function generateRandomNonce(): Buffer {
   return crypto.randomBytes(NONCE_SIZE_BYTES);
 }

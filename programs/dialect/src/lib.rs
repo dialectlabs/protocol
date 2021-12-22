@@ -63,20 +63,14 @@ pub mod dialect {
     pub fn update_device_token(
         ctx: Context<UpdateDeviceToken>,
         _dialect_nonce: u8,
-        encrypted_device_token_array: EncryptedDeviceTokenArray,
+        encrypted_device_token_array: [u8; 64], // TODO: Reduce this to 48 in payload
         encryption_nonce: [u8; 24],
     ) -> ProgramResult {
         // TODO: Confirm unsetting works
         let metadata = &mut ctx.accounts.metadata.load_mut()?;
-        // let device_token = match (encrypted_device_token_array, encryption_nonce) {
-        //     (Some(encrypted_device_token_array), Some(encryption_nonce)) => DeviceToken {
-        //         encrypted_array: encrypted_device_token_array,
-        //         nonce: encryption_nonce,
-        //     },
-        //     _ => DeviceToken::default(),
-        // };
+        let arr = slice(&encrypted_device_token_array);
         metadata.device_token = DeviceToken {
-            encrypted_array: encrypted_device_token_array.0,
+            encrypted_array: arr,
             nonce: encryption_nonce,
         };
         Ok(())
@@ -202,8 +196,8 @@ pub struct CreateMetadata<'info> {
         ],
         bump = metadata_nonce,
         payer = user,
-        // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 8 + 32 + 32 + (4 * 33),
+        // discriminator (8) + user + device_token + 4 x (subscription) = 244
+        space = 8 + 32 + 72 + (4 * 33),
     )]
     pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -368,22 +362,8 @@ pub struct MintDialectAccount {
 Data
 */
 
-pub struct EncryptedDeviceTokenArray([u8; 48]);
-
-impl AnchorSerialize for EncryptedDeviceTokenArray {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        writer.write_all(&self.0)
-    }
-}
-
-impl AnchorDeserialize for EncryptedDeviceTokenArray {
-    fn deserialize(d: &mut &[u8]) -> Result<Self, std::io::Error> {
-        Ok(Self([0u8; 48]))
-    }
-}
-
-// #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 #[zero_copy]
+// space = 48 + 24 = 72
 pub struct DeviceToken {
     pub encrypted_array: [u8; 48], // 32-byte token, 16-byte encryption overhead
     pub nonce: [u8; 24], // https://github.com/dchest/tweetnacl-js/blob/3389b7c9f00545e516a0fdafb324b7857cf1527d/nacl-fast.js#L2074
@@ -396,10 +376,6 @@ impl Default for DeviceToken {
             nonce: [0; 24],
         }
     }
-}
-
-pub fn is_present(subscription: &Subscription) -> bool {
-    subscription.pubkey != Pubkey::default()
 }
 
 #[zero_copy]
@@ -454,4 +430,25 @@ pub struct SendMessageEvent {
 pub struct SubscribeUserEvent {
     pub metadata: Pubkey,
     pub dialect: Pubkey,
+}
+
+/*
+Helper functions
+*/
+
+pub fn is_present(subscription: &Subscription) -> bool {
+    subscription.pubkey != Pubkey::default()
+}
+
+fn slice(input: &[u8]) -> [u8; 48] {
+    // :sob:
+    // TODO: Either use try_into a la https://stackoverflow.com/a/50080940, or retire the need to slice entirely by passing up [u8; 48] from client.
+    [
+        input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8],
+        input[9], input[10], input[11], input[12], input[13], input[14], input[15], input[16],
+        input[17], input[18], input[19], input[20], input[21], input[22], input[23], input[24],
+        input[25], input[26], input[27], input[28], input[29], input[30], input[31], input[32],
+        input[33], input[34], input[35], input[36], input[37], input[38], input[39], input[40],
+        input[41], input[42], input[43], input[44], input[45], input[46], input[47],
+    ]
 }
