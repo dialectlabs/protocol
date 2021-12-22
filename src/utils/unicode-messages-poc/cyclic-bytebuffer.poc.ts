@@ -15,7 +15,7 @@ export class CyclicByteBuffer {
 
   append(item: ByteBuffer) {
     if (
-      this.buffer.offset !== ITEM_SEPARATOR &&
+      this.buffer.offset !== 0 &&
       this.buffer.offset < this.buffer.capacity()
     ) {
       // write separator byte if buffer contains items and has space
