@@ -15,6 +15,7 @@ import {
   Member,
   MESSAGES_PER_DIALECT,
   sendMessage,
+  subscribeUser,
   updateDeviceToken,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
@@ -197,7 +198,19 @@ describe('Protocol v1 test', () => {
         ),
       );
     });
-    //
+
+    it('Subscribe users to dialect', async () => {
+      const dialect = await createDialect(program, owner, members);
+      // owner subscribes themselves
+      await subscribeUser(program, dialect, owner.publicKey, owner);
+      // owner subscribes writer
+      await subscribeUser(program, dialect, writer.publicKey, owner);
+      const writerMeta = await getMetadata(program, writer.publicKey);
+      const ownerMeta = await getMetadata(program, owner.publicKey);
+      console.log('writerMeta', writerMeta);
+      console.log('ownerMeta', ownerMeta);
+    });
+
     //   it('Non-owners fail to close the dialect account', async () => {
     //     chai.expect(true).to.be.true;
     //   });
