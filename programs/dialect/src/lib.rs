@@ -16,10 +16,10 @@ pub mod dialect {
     */
 
     pub fn create_metadata(ctx: Context<CreateMetadata>, _metadata_nonce: u8) -> ProgramResult {
-        let metadata = &mut ctx.accounts.metadata;
+        let metadata = &mut ctx.accounts.metadata.load_init()?;
         metadata.user = ctx.accounts.user.key();
-        metadata.device_token = None;
-        metadata.subscriptions = [None; 4];
+        metadata.device_token = DeviceToken::default();
+        metadata.subscriptions = [Subscription::default(); 4];
         Ok(())
     }
 
@@ -63,11 +63,16 @@ pub mod dialect {
     pub fn update_device_token(
         ctx: Context<UpdateDeviceToken>,
         _dialect_nonce: u8,
-        device_token: Option<[u8; 32]>,
+        encrypted_device_token_array: [u8; 64], // TODO: Reduce this to 48 in payload
+        encryption_nonce: [u8; 24],
     ) -> ProgramResult {
         // TODO: Confirm unsetting works
-        let metadata = &mut ctx.accounts.metadata;
-        metadata.device_token = device_token;
+        let metadata = &mut ctx.accounts.metadata.load_mut()?;
+        let arr = slice(&encrypted_device_token_array);
+        metadata.device_token = DeviceToken {
+            encrypted_array: arr,
+            nonce: encryption_nonce,
+        };
         Ok(())
     }
 
@@ -77,20 +82,21 @@ pub mod dialect {
         _metadata_nonce: u8,
     ) -> ProgramResult {
         let dialect = &mut ctx.accounts.dialect;
-        let metadata = &mut ctx.accounts.metadata;
+        let metadata_loader = &mut ctx.accounts.metadata;
+        let metadata = &mut metadata_loader.load_mut()?;
         let num_subscriptions = metadata
             .subscriptions
             .iter()
-            .filter(|s| s.is_some())
+            .filter(|s| is_present(s))
             .count();
         // TODO: handle max subscriptions
         if num_subscriptions < 4 {
-            metadata.subscriptions[num_subscriptions] = Some(Subscription {
+            metadata.subscriptions[num_subscriptions] = Subscription {
                 pubkey: dialect.key(),
                 enabled: true,
-            });
+            };
             emit!(SubscribeUserEvent {
-                metadata: metadata.key(),
+                metadata: metadata_loader.key(),
                 dialect: dialect.key()
             });
         } else {
@@ -190,10 +196,10 @@ pub struct CreateMetadata<'info> {
         ],
         bump = metadata_nonce,
         payer = user,
-        // discriminator (8) + user + device_token + 4 x (subscription) = 72
-        space = 8 + 32 + 32 + (4 * 33),
+        // discriminator (8) + user + device_token + 4 x (subscription) = 244
+        space = 8 + 32 + 72 + (4 * 33),
     )]
-    pub metadata: Account<'info, MetadataAccount>,
+    pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -212,7 +218,28 @@ pub struct UpdateDeviceToken<'info> {
         has_one = user, // TODO: Confirm if seeds solves this
         bump = metadata_nonce,
     )]
-    pub metadata: Account<'info, MetadataAccount>,
+    pub metadata: Loader<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
+pub struct SubscribeUser<'info> {
+    #[account(signer, mut)]
+    pub signer: AccountInfo<'info>,
+    // TOOD: Consider at some point enforcing user = signer
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key().as_ref(),
+        ],
+        bump = metadata_nonce,
+    )]
+    pub metadata: Loader<'info, MetadataAccount>,
+    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -243,27 +270,6 @@ pub struct CreateDialect<'info> {
         space = 8 + 68 + 9344 + 1 + 4
     )]
     pub dialect: Loader<'info, DialectAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
-pub struct SubscribeUser<'info> {
-    #[account(signer, mut)]
-    pub signer: AccountInfo<'info>,
-    // TOOD: Consider at some point enforcing user = signer
-    pub user: AccountInfo<'info>,
-    #[account(
-        mut,
-        seeds = [
-            b"metadata".as_ref(),
-            user.key().as_ref(),
-        ],
-        bump = metadata_nonce,
-    )]
-    pub metadata: Account<'info, MetadataAccount>,
-    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -326,13 +332,13 @@ pub struct CreateMintDialect<'info> {
 Accounts
 */
 
-#[account]
+#[account(zero_copy)] // in anticipation of more subscriptions
 #[derive(Default)]
 pub struct MetadataAccount {
     // TODO: Add profile
-    user: Pubkey,                             // 32
-    device_token: Option<[u8; 32]>,           // 32. TODO: Encrypt
-    subscriptions: [Option<Subscription>; 4], // 4 * space(Subscription) TODO: More subscriptions
+    user: Pubkey,                     // 32
+    device_token: DeviceToken,        // 32. TODO: Encrypt
+    subscriptions: [Subscription; 4], // 4 * space(Subscription) TODO: More subscriptions
 }
 
 #[account(zero_copy)]
@@ -356,12 +362,30 @@ pub struct MintDialectAccount {
 Data
 */
 
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+#[zero_copy]
+// space = 48 + 24 = 72
+pub struct DeviceToken {
+    pub encrypted_array: [u8; 48], // 32-byte token, 16-byte encryption overhead
+    pub nonce: [u8; 24], // https://github.com/dchest/tweetnacl-js/blob/3389b7c9f00545e516a0fdafb324b7857cf1527d/nacl-fast.js#L2074
+}
+
+impl Default for DeviceToken {
+    fn default() -> Self {
+        DeviceToken {
+            encrypted_array: [0; 48],
+            nonce: [0; 24],
+        }
+    }
+}
+
+#[zero_copy]
+#[derive(Default)]
 // space = 33
 pub struct Subscription {
     pub pubkey: Pubkey, // 32
     pub enabled: bool,  // 1
 }
+
 #[zero_copy]
 #[derive(Default)]
 // space = 34
@@ -378,7 +402,7 @@ pub struct Message {
     // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
     // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
     pub timestamp: u32,  // 4
-    pub text: [u8; 256], // 32
+    pub text: [u8; 256], // 256
 }
 
 impl Default for Message {
@@ -406,4 +430,25 @@ pub struct SendMessageEvent {
 pub struct SubscribeUserEvent {
     pub metadata: Pubkey,
     pub dialect: Pubkey,
+}
+
+/*
+Helper functions
+*/
+
+pub fn is_present(subscription: &Subscription) -> bool {
+    subscription.pubkey != Pubkey::default()
+}
+
+fn slice(input: &[u8]) -> [u8; 48] {
+    // :sob:
+    // TODO: Either use try_into a la https://stackoverflow.com/a/50080940, or retire the need to slice entirely by passing up [u8; 48] from client.
+    [
+        input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8],
+        input[9], input[10], input[11], input[12], input[13], input[14], input[15], input[16],
+        input[17], input[18], input[19], input[20], input[21], input[22], input[23], input[24],
+        input[25], input[26], input[27], input[28], input[29], input[30], input[31], input[32],
+        input[33], input[34], input[35], input[36], input[37], input[38], input[39], input[40],
+        input[41], input[42], input[43], input[44], input[45], input[46], input[47],
+    ]
 }

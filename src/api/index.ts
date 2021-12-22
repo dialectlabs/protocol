@@ -9,7 +9,11 @@ import {
   ENCRYPTION_OVERHEAD_BYTES,
 } from '../utils/ecdh-encryption';
 import { deserializeText, serializeText } from '../utils/text-serde';
-import { generateNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
+import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
+
+export const DIALECT_PUBLIC_KEY = process.env.DIALECT_PUBLIC_KEY
+  ? new anchor.web3.PublicKey(process.env.DIALECT_PUBLIC_KEY)
+  : anchor.web3.Keypair.generate().publicKey;
 
 // TODO: Switch from types to classes
 
@@ -21,6 +25,7 @@ export const MESSAGES_PER_DIALECT = 32;
 export const MAX_RAW_MESSAGE_SIZE = 256;
 export const MAX_MESSAGE_SIZE =
   MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
+export const DEVICE_TOKEN_LENGTH = 32;
 
 type Subscription = {
   pubkey: PublicKey;
@@ -100,14 +105,34 @@ export async function getMetadataProgramAddress(
 // Get with keypair, for decryption
 export async function getMetadata(
   program: anchor.Program,
-  user: PublicKey,
+  user: PublicKey | anchor.web3.Keypair,
 ): Promise<Metadata> {
-  const [publicKey] = await getMetadataProgramAddress(program, user);
+  let userPubkey: anchor.web3.PublicKey;
+  let userKeypair: anchor.web3.Keypair | null = null;
+  if (user instanceof PublicKey) {
+    userPubkey = user;
+  } else {
+    userKeypair = user;
+    userPubkey = user.publicKey;
+  }
+  const [publicKey] = await getMetadataProgramAddress(program, userPubkey);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
+
+  let deviceToken: string | null = null;
+  if (userKeypair && metadata.deviceToken) {
+    const decryptedDeviceToken = ecdhDecrypt(
+      new Uint8Array(metadata.deviceToken.encryptedArray),
+      {
+        secretKey: userKeypair.secretKey,
+        publicKey: userKeypair.publicKey.toBytes(),
+      },
+      DIALECT_PUBLIC_KEY.toBytes(),
+      new Uint8Array(metadata.deviceToken.nonce),
+    );
+    deviceToken = new TextDecoder().decode(decryptedDeviceToken);
+  }
   return {
-    deviceToken: metadata.deviceToken
-      ? new TextDecoder().decode(new Uint8Array(metadata.deviceToken))
-      : null,
+    deviceToken,
     subscriptions: metadata.subscriptions.filter((s: Subscription | null) => s),
   };
 }
@@ -142,9 +167,26 @@ export async function updateDeviceToken(
     program,
     user.publicKey,
   );
+  let encryptedDeviceToken: Uint8Array | null = null;
+  const nonce = generateRandomNonce();
+  if (deviceToken) {
+    const unpaddedDeviceToken = ecdhEncrypt(
+      new Uint8Array(Buffer.from(deviceToken)),
+      {
+        publicKey: user.publicKey.toBytes(),
+        secretKey: user.secretKey,
+      },
+      DIALECT_PUBLIC_KEY.toBytes(),
+      nonce,
+    );
+    // TODO: Retire this padding
+    const padding = new Uint8Array(new Array(16).fill(0));
+    encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
+  }
   const tx = await program.rpc.updateDeviceToken(
     new anchor.BN(metadataNonce),
-    deviceToken ? Buffer.from(deviceToken) : null,
+    encryptedDeviceToken ? Buffer.from(encryptedDeviceToken) : null,
+    nonce,
     {
       accounts: {
         user: user.publicKey,
@@ -156,7 +198,7 @@ export async function updateDeviceToken(
     },
   );
   await waitForFinality(program, tx);
-  return await getMetadata(program, user.publicKey);
+  return await getMetadata(program, user);
 }
 
 export async function subscribeUser(
@@ -173,7 +215,6 @@ export async function subscribeUser(
     program,
     user,
   );
-  console.log('metadata', metadata.toString());
   const tx = await program.rpc.subscribeUser(
     new anchor.BN(nonce),
     new anchor.BN(metadataNonce),

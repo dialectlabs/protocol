@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  DEVICE_TOKEN_LENGTH,
   DialectAccount,
   getDialect,
   getDialectForMembers,
@@ -41,7 +42,7 @@ describe('Protocol v1 test', () => {
     });
 
     it('Create user metadata object(s)', async () => {
-      const deviceToken = 'a'.repeat(32);
+      const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       for (const member of [owner, writer]) {
         const metadata = await createMetadata(program, member);
         const gottenMetadata = await getMetadata(program, member.publicKey);
@@ -87,6 +88,11 @@ describe('Protocol v1 test', () => {
           scopes: [false, true], // non-owner, read-write
         },
       ];
+    });
+
+    it('Confirm only each user (& dialect) can read encrypted device tokens', async () => {
+      // TODO: Implement
+      chai.expect(true).to.be.true;
     });
 
     it("Transfers funds to writer's account", async () => {
@@ -385,7 +391,7 @@ describe('Protocol v1 test', () => {
       await connection.confirmTransaction(airDropRequest);
     }
     if (createMeta) {
-      const deviceToken = 'a'.repeat(32);
+      const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       await createMetadata(program, user);
       await updateDeviceToken(program, user, deviceToken);
     }
