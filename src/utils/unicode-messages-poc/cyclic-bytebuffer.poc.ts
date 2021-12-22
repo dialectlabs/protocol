@@ -1,6 +1,7 @@
 import ByteBuffer from 'bytebuffer';
 
 export type BufferItem = { offset: number; buffer: ByteBuffer };
+export type Sizing = { offset: number; capacity: number };
 
 const ITEM_SEPARATOR = 0;
 
@@ -13,6 +14,15 @@ export class CyclicByteBuffer {
     this.buffer = new ByteBuffer(size).fill(0).flip();
   }
 
+  nextItemOffset(itemSize: number): number {
+    const separatorWithItemSize = 1 + itemSize;
+    if (this.buffer.offset + separatorWithItemSize > this.buffer.capacity()) {
+      return 0;
+    }
+    return this.buffer.offset + separatorWithItemSize;
+  }
+
+  // TODO: anyway limit message size to be << buffer size?
   append(item: ByteBuffer) {
     if (
       this.buffer.offset !== 0 &&
