@@ -77,7 +77,10 @@
           "type": {
             "array": [
               {
-                "array": ["bool", 2]
+                "array": [
+                  "bool",
+                  2
+                ]
               },
               2
             ]
@@ -115,11 +118,21 @@
           "type": "u8"
         },
         {
-          "name": "deviceToken",
+          "name": "encryptedDeviceTokenArray",
           "type": {
-            "option": {
-              "array": ["u8", 32]
-            }
+            "array": [
+              "u8",
+              64
+            ]
+          }
+        },
+        {
+          "name": "encryptionNonce",
+          "type": {
+            "array": [
+              "u8",
+              24
+            ]
           }
         }
       ]
@@ -201,7 +214,10 @@
         {
           "name": "text",
           "type": {
-            "array": ["u8", 256]
+            "array": [
+              "u8",
+              256
+            ]
           }
         }
       ]
@@ -291,9 +307,7 @@
           {
             "name": "deviceToken",
             "type": {
-              "option": {
-                "array": ["u8", 32]
-              }
+              "defined": "DeviceToken"
             }
           },
           {
@@ -301,11 +315,9 @@
             "type": {
               "array": [
                 {
-                  "option": {
-                    "defined": "Subscription"
-                  }
+                  "defined": "Subscription"
                 },
-                4
+                32
               ]
             }
           }
@@ -365,6 +377,32 @@
   ],
   "types": [
     {
+      "name": "DeviceToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "encryptedArray",
+            "type": {
+              "array": [
+                "u8",
+                48
+              ]
+            }
+          },
+          {
+            "name": "nonce",
+            "type": {
+              "array": [
+                "u8",
+                24
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "Subscription",
       "type": {
         "kind": "struct",
@@ -392,7 +430,10 @@
           {
             "name": "scopes",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           }
         ]
@@ -414,7 +455,10 @@
           {
             "name": "text",
             "type": {
-              "array": ["u8", 256]
+              "array": [
+                "u8",
+                256
+              ]
             }
           }
         ]
