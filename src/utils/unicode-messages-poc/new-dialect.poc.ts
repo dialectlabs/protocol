@@ -1,7 +1,7 @@
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { CyclicByteBuffer } from './cyclic-bytebuffer.poc';
 import ByteBuffer from 'bytebuffer';
-import { ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../ecdh-encryption';
+import { ecdhDecrypt, ecdhEncrypt } from '../ecdh-encryption';
 import { generateNonce } from '../nonce-generator';
 
 export interface Member {
@@ -31,9 +31,8 @@ export class Dialect {
     this.members = members;
   }
 
-  nextMessageOffset(encodedTextSize: number): number {
-    const serializedSize = 4 + 4 + encodedTextSize + ENCRYPTION_OVERHEAD_BYTES;
-    return this.buffer.nextItemOffset(serializedSize);
+  nextMessageOffset(messageSize: number): number {
+    return this.buffer.nextItemOffset(messageSize);
   }
 
   send({ owner, text }: SendMessageCommand): void {
@@ -68,7 +67,7 @@ export class Dialect {
       .map(({ buffer: serializedMessage, offset }) => {
         const ownerMemberIndex = serializedMessage.readInt();
         const encryptedText = new Uint8Array(serializedMessage.toArrayBuffer());
-        const encodedText = ecdhEncrypt(
+        const encodedText = ecdhDecrypt(
           encryptedText,
           {
             secretKey: me.secretKey,

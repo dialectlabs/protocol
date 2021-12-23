@@ -15,12 +15,21 @@ export class CyclicByteBuffer {
   }
 
   nextItemOffset(itemSize: number): number {
-    const separatorWithItemSize = 1 + itemSize;
-    if (this.buffer.offset + separatorWithItemSize > this.buffer.capacity()) {
+    if (this.isFirstAppend()) {
       return 0;
     }
-    return this.buffer.offset + separatorWithItemSize;
+    const totalItemSize = itemSize + ITEM_METADATA_OVERHEAD;
+    const remainingCapacity = this.buffer.capacity() - this.buffer.offset;
+    if (totalItemSize > remainingCapacity) {
+      return 0;
+    }
+    return this.buffer.offset;
   }
+
+  //   const nextItemOffset = this.nextItemOffset(item.capacity());
+  //   if (nextItemOffset === 0) {
+  //   this.buffer.fill(ZERO).flip();
+  // }
 
   // TODO: anyway limit message size to be << buffer size? or should add additional logic handle this...
   append(item: ByteBuffer) {
@@ -32,32 +41,19 @@ export class CyclicByteBuffer {
       .flip();
     item.flip();
     // case 0: first append called on buffer
-    const isFirstAppend = this.readOffset === -1 && this.buffer.offset === 0;
-    if (isFirstAppend) {
-      // first append <=> readOffset not set and buffer offset is 0
+    const nextItemOffset = this.nextItemOffset(item.capacity());
+    if (this.isFirstAppend()) {
       this.readOffset = this.buffer.offset;
       this.buffer.append(itemWithMetadata);
       return this;
     }
-    // case 1: item ideally fits remaining buffer capacity
-    const remainingCapacity = this.buffer.capacity() - this.buffer.offset;
-    if (itemWithMetadata.capacity() === remainingCapacity) {
-      // simply write and reset buffer offset and reset buffer offset to 0
-      this.buffer.append(itemWithMetadata);
-      return this;
-    }
-    // case 2: item fits remaining buffer capacity and read offset before write offset
-    if (
-      itemWithMetadata.capacity() <= remainingCapacity &&
-      this.buffer.offset > this.readOffset
-    ) {
-      this.buffer.append(itemWithMetadata);
-      return this;
-    }
-    // case 3: item doesn't fit remaining capacity
-    if (itemWithMetadata.capacity() > remainingCapacity) {
-      // fill buffer tail with zeros and reset buffer offset to 0
+    if (nextItemOffset === 0) {
       this.buffer.fill(ZERO).flip();
+    }
+    // case 1: this if first append cycle before buffer capacity reached
+    if (this.buffer.offset > this.readOffset) {
+      this.buffer.append(itemWithMetadata);
+      return this;
     }
     // write down current offset
     this.buffer.mark();
@@ -73,6 +69,10 @@ export class CyclicByteBuffer {
     return this;
   }
 
+  itemStart(metaOffset: number): number {
+    return ITEM_METADATA_OVERHEAD + metaOffset;
+  }
+
   items(): BufferItem[] {
     // set offset to remembered and append item
 
@@ -84,14 +84,14 @@ export class CyclicByteBuffer {
     // [..., w, ...,r, ...]
     let readOffset = this.readOffset;
     if (readOffset >= this.buffer.offset) {
-      while (readOffset + ITEM_METADATA_OVERHEAD < this.buffer.capacity()) {
+      while (this.itemStart(readOffset) < this.buffer.capacity()) {
         const itemToReadSize = this.buffer.readInt16(readOffset);
-        if (itemToReadSize === 0) {
+        if (itemToReadSize === ZERO) {
           break;
         }
         const buffer = this.buffer.copy(
-          readOffset + ITEM_METADATA_OVERHEAD,
-          readOffset + ITEM_METADATA_OVERHEAD + itemToReadSize,
+          this.itemStart(readOffset),
+          this.itemStart(readOffset) + itemToReadSize,
         );
         items.push({
           offset: readOffset,
@@ -102,14 +102,14 @@ export class CyclicByteBuffer {
       readOffset = 0;
     }
     // [r, ..., w, ...]
-    while (readOffset + ITEM_METADATA_OVERHEAD < this.buffer.offset) {
+    while (this.itemStart(readOffset) < this.buffer.offset) {
       const itemToReadSize = this.buffer.readInt16(readOffset);
-      if (itemToReadSize === 0) {
+      if (itemToReadSize === ZERO) {
         break;
       }
       const buffer = this.buffer.copy(
-        readOffset + ITEM_METADATA_OVERHEAD,
-        readOffset + ITEM_METADATA_OVERHEAD + itemToReadSize,
+        this.itemStart(readOffset),
+        this.itemStart(readOffset) + itemToReadSize,
       );
       items.push({
         offset: readOffset,
@@ -119,5 +119,9 @@ export class CyclicByteBuffer {
     }
 
     return items;
+  }
+
+  private isFirstAppend() {
+    return this.readOffset === -1 && this.buffer.offset === 0;
   }
 }

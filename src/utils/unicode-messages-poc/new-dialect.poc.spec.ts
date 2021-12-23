@@ -31,9 +31,11 @@ describe('Test cyclic buffer', async () => {
     // given
     const dialect = new Dialect(50, members);
     // when
+    const text = 'Hello, world';
+
     const sendMessageCommand: SendMessageCommand = {
       owner: owner,
-      text: 'Hello, world',
+      text: text,
     };
     dialect.send(sendMessageCommand);
     const messages = dialect.messages(owner);
