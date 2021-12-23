@@ -205,10 +205,22 @@ describe('Protocol v1 test', () => {
       await subscribeUser(program, dialect, owner.publicKey, owner);
       // owner subscribes writer
       await subscribeUser(program, dialect, writer.publicKey, owner);
-      const writerMeta = await getMetadata(program, writer.publicKey);
       const ownerMeta = await getMetadata(program, owner.publicKey);
-      console.log('writerMeta', writerMeta);
-      console.log('ownerMeta', ownerMeta);
+      const writerMeta = await getMetadata(program, writer.publicKey);
+      chai
+        .expect(
+          ownerMeta.subscriptions.filter((s) =>
+            s.pubkey.equals(dialect.publicKey),
+          ).length,
+        )
+        .to.equal(1);
+      chai
+        .expect(
+          writerMeta.subscriptions.filter((s) =>
+            s.pubkey.equals(dialect.publicKey),
+          ).length,
+        )
+        .to.equal(1);
     });
 
     //   it('Non-owners fail to close the dialect account', async () => {
@@ -220,6 +232,30 @@ describe('Protocol v1 test', () => {
     //   });
     //
     // });
+    it('Fail to subscribe a user twice to the same dialect (silent, noop)', async () => {
+      const dialect = await createDialect(program, owner, members);
+      await subscribeUser(program, dialect, writer.publicKey, owner);
+      const metadata = await getMetadata(program, writer.publicKey);
+      // subscribed once
+      chai
+        .expect(
+          metadata.subscriptions.filter((s) =>
+            s.pubkey.equals(dialect.publicKey),
+          ).length,
+        )
+        .to.equal(1);
+      chai
+        .expect(subscribeUser(program, dialect, writer.publicKey, owner))
+        .to.be.rejectedWith(Error);
+      // still subscribed just once
+      chai
+        .expect(
+          metadata.subscriptions.filter((s) =>
+            s.pubkey.equals(dialect.publicKey),
+          ).length,
+        )
+        .to.equal(1);
+    });
 
     describe('Messaging tests', () => {
       let owner: web3.Keypair;

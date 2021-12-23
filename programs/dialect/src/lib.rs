@@ -237,6 +237,12 @@ pub struct SubscribeUser<'info> {
             user.key().as_ref(),
         ],
         bump = metadata_nonce,
+        constraint = metadata
+            .load()?
+            .subscriptions
+            .iter()
+            .filter(|s| s.pubkey == dialect.key())
+            .count() < 1 // no duplicate subscriptions
     )]
     pub metadata: Loader<'info, MetadataAccount>,
     pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
