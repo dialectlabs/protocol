@@ -3,15 +3,16 @@ import ByteBuffer from 'bytebuffer';
 export type BufferItem = { offset: number; buffer: ByteBuffer };
 export type Sizing = { offset: number; capacity: number };
 
-const ITEM_SEPARATOR = 0;
+const ZERO = 0;
+const ITEM_CAPACITY_SIZE = 2;
 
 export class CyclicByteBuffer {
-  readonly buffer!: ByteBuffer;
+  private readonly buffer!: ByteBuffer;
 
-  // readonly offset: number; // TODO: will need this field in rust implementation
+  private readOffset = -1;
 
   constructor(size: number) {
-    this.buffer = new ByteBuffer(size).fill(0).flip();
+    this.buffer = new ByteBuffer(size).fill(ZERO).reset();
   }
 
   nextItemOffset(itemSize: number): number {
@@ -24,47 +25,70 @@ export class CyclicByteBuffer {
 
   // TODO: anyway limit message size to be << buffer size?
   append(item: ByteBuffer) {
-    if (
-      this.buffer.offset !== 0 &&
-      this.buffer.offset < this.buffer.capacity()
-    ) {
-      // write separator byte if buffer contains items and has space
-      this.buffer.writeByte(ITEM_SEPARATOR);
+    const sizedItem = new ByteBuffer(ITEM_CAPACITY_SIZE + item.capacity())
+      .writeShort(item.capacity())
+      .append(item)
+      .flip();
+    item.reset();
+    // boundary case 1: write till the end of buffer
+    if (this.buffer.offset + sizedItem.limit === this.buffer.capacity()) {
+      // set read offset if not set
+      if (this.readOffset === -1) {
+        this.readOffset = this.buffer.offset;
+      }
+      // simply write and reset buffer offset and reset buffer offset to 0
+      this.buffer.append(sizedItem).reset();
+      return;
     }
-    // check whether item can be appended to buffer starting from current offset
-    if (this.buffer.offset + item.limit > this.buffer.capacity()) {
-      // item doesn't fit the buffer capacity => will append to buffer start
-      this.buffer.fill(ITEM_SEPARATOR).flip(); // fill tail with zeros
+    // check item exceeds capacity
+    if (this.buffer.offset + sizedItem.limit > this.buffer.capacity()) {
+      // fill buffer tail with zeros and reset buffer offset to 0
+      this.buffer.fill(ZERO).reset();
     }
-    // simply append new message to buffer (potentially causes overlap with previous message)
-    // also mark current offset
-    this.buffer.append(item);
-    item.flip();
-    // handle case when we if we hit the end of the buffer
-    if (this.buffer.offset === this.buffer.capacity()) {
-      // hit the end of the buffer
-      this.buffer.reset();
-      return this;
+    // set read offset if not set
+    if (this.readOffset === -1) {
+      this.readOffset = this.buffer.offset;
     }
-    // buffer state may be inconsistent, because we've partially overwritten the message
-    // the part of overwritten message may be still in the buffer, need to set '0' to it
+    // handle case when it's inittial buffer fill
+    if (this.buffer.offset > this.readOffset) {
+      // read before write
+      this.buffer.append(sizedItem);
+      return;
+    }
+
+    // handle write before read
     this.buffer.mark();
     for (
-      let byte = this.buffer.readByte();
-      byte !== ITEM_SEPARATOR;
-      byte = this.buffer.readByte()
+      let itemToReadSize = this.buffer.readShort(this.readOffset);
+      this.buffer.offset + sizedItem.limit <= this.readOffset;
+      this.readOffset += itemToReadSize
     ) {
-      // lookup bytes one by one until find a item separator
+      // определяем короче сколько элеменотов надо подтереть, фактически дефайним новый рид оффсет
     }
-    // item separator found, cleanup inconsistency
-    this.buffer
-      .fill(ITEM_SEPARATOR, this.buffer.markedOffset, this.buffer.offset)
-      .reset();
+    // удаляем нах все начиная с райт оффсет по рид оффсет
+    this.buffer.fill(ZERO, this.buffer.offset, this.readOffset).reset();
+    this.buffer.append(sizedItem);
     return this;
   }
 
   items(): BufferItem[] {
-    this.buffer.mark();
+    if (this.readOffset === -1) {
+      return [];
+    }
+
+    // r ... w...
+
+    // ...w ... r...
+
+    for (
+      let itemToReadSize = this.buffer.readShort(this.readOffset);
+      this.buffer.offset % this.buffer.capacity() <= this.readOffset;
+      this.readOffset += itemToReadSize
+    ) {
+      // определяем короче сколько элеменотов надо подтереть, фактически дефайним новый рид оффсет
+    }
+
+    if (this.readOffset < this.buffer.offset) this.buffer.mark();
     const items: BufferItem[] = []; // accumulator for items
     let item = new ByteBuffer();
     let itemOffset = 0; // item offset handle
