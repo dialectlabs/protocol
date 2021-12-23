@@ -42,6 +42,7 @@ export class Dialect {
     } = this.findOtherMember(owner.publicKey);
     const encodedText = this.textEncoder.encode(text);
     const nextMessageOffset = this.nextMessageOffset(encodedText.length);
+    console.log(nextMessageOffset);
     const encryptedText = ecdhEncrypt(
       encodedText,
       {
@@ -67,6 +68,7 @@ export class Dialect {
       .map(({ buffer: serializedMessage, offset }) => {
         const ownerMemberIndex = serializedMessage.readInt();
         const encryptedText = new Uint8Array(serializedMessage.toArrayBuffer());
+        console.log(offset);
         const encodedText = ecdhDecrypt(
           encryptedText,
           {
