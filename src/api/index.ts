@@ -133,7 +133,9 @@ export async function getMetadata(
   }
   return {
     deviceToken,
-    subscriptions: metadata.subscriptions.filter((s: Subscription | null) => s),
+    subscriptions: metadata.subscriptions.filter(
+      (s: Subscription) => !s.pubkey.equals(anchor.web3.PublicKey.default),
+    ),
   };
 }
 

@@ -77,10 +77,7 @@
           "type": {
             "array": [
               {
-                "array": [
-                  "bool",
-                  2
-                ]
+                "array": ["bool", 2]
               },
               2
             ]
@@ -120,19 +117,13 @@
         {
           "name": "encryptedDeviceTokenArray",
           "type": {
-            "array": [
-              "u8",
-              64
-            ]
+            "array": ["u8", 64]
           }
         },
         {
           "name": "encryptionNonce",
           "type": {
-            "array": [
-              "u8",
-              24
-            ]
+            "array": ["u8", 24]
           }
         }
       ]
@@ -214,10 +205,7 @@
         {
           "name": "text",
           "type": {
-            "array": [
-              "u8",
-              256
-            ]
+            "array": ["u8", 256]
           }
         }
       ]
@@ -384,19 +372,13 @@
           {
             "name": "encryptedArray",
             "type": {
-              "array": [
-                "u8",
-                48
-              ]
+              "array": ["u8", 48]
             }
           },
           {
             "name": "nonce",
             "type": {
-              "array": [
-                "u8",
-                24
-              ]
+              "array": ["u8", 24]
             }
           }
         ]
@@ -430,10 +412,7 @@
           {
             "name": "scopes",
             "type": {
-              "array": [
-                "bool",
-                2
-              ]
+              "array": ["bool", 2]
             }
           }
         ]
@@ -455,10 +434,7 @@
           {
             "name": "text",
             "type": {
-              "array": [
-                "u8",
-                256
-              ]
+              "array": ["u8", 256]
             }
           }
         ]
