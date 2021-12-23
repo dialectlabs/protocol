@@ -1,10 +1,9 @@
 import ByteBuffer from 'bytebuffer';
 
 export type BufferItem = { offset: number; buffer: ByteBuffer };
-export type Sizing = { offset: number; capacity: number };
 
 const ZERO = 0;
-const ITEM_CAPACITY_SIZE = 2;
+export const ITEM_METADATA_OVERHEAD = 2; // used to store item size, uint16
 
 export class CyclicByteBuffer {
   private readonly buffer!: ByteBuffer;
@@ -23,51 +22,44 @@ export class CyclicByteBuffer {
     return this.buffer.offset + separatorWithItemSize;
   }
 
-  // TODO: anyway limit message size to be << buffer size?
+  // TODO: anyway limit message size to be << buffer size? or should add additional logic handle this...
   append(item: ByteBuffer) {
-    const sizedItem = new ByteBuffer(ITEM_CAPACITY_SIZE + item.capacity())
-      .writeShort(item.capacity())
+    const sizedItem = new ByteBuffer(ITEM_METADATA_OVERHEAD + item.capacity())
+      .writeInt16(item.capacity())
       .append(item)
       .flip();
-    item.reset();
+    item.flip();
+    // boundary case 0: first append
+    if (this.readOffset === -1 && this.buffer.offset === 0) {
+      this.readOffset = this.buffer.offset;
+      this.buffer.append(sizedItem);
+      return this;
+    }
     // boundary case 1: write till the end of buffer
-    if (this.buffer.offset + sizedItem.limit === this.buffer.capacity()) {
-      // set read offset if not set
-      if (this.readOffset === -1) {
-        this.readOffset = this.buffer.offset;
-      }
+    if (this.buffer.offset + sizedItem.capacity() === this.buffer.capacity()) {
       // simply write and reset buffer offset and reset buffer offset to 0
-      this.buffer.append(sizedItem).reset();
-      return;
+      this.buffer.append(sizedItem).flip();
+      return this;
     }
     // check item exceeds capacity
-    if (this.buffer.offset + sizedItem.limit > this.buffer.capacity()) {
+    if (this.buffer.offset + sizedItem.capacity() > this.buffer.capacity()) {
       // fill buffer tail with zeros and reset buffer offset to 0
-      this.buffer.fill(ZERO).reset();
+      this.buffer.fill(ZERO).flip();
     }
-    // set read offset if not set
-    if (this.readOffset === -1) {
-      this.readOffset = this.buffer.offset;
-    }
-    // handle case when it's inittial buffer fill
     if (this.buffer.offset > this.readOffset) {
-      // read before write
       this.buffer.append(sizedItem);
-      return;
+      return this;
     }
-
-    // handle write before read
+    // remember current offset
     this.buffer.mark();
-    for (
-      let itemToReadSize = this.buffer.readShort(this.readOffset);
-      this.buffer.offset + sizedItem.limit <= this.readOffset;
-      this.readOffset += itemToReadSize
-    ) {
-      // определяем короче сколько элеменотов надо подтереть, фактически дефайним новый рид оффсет
+    // find items to be removed by moving read offset to next item
+    while (this.buffer.offset + sizedItem.capacity() > this.readOffset) {
+      const itemToReadSize = this.buffer.readInt16(this.readOffset);
+      this.readOffset += ITEM_METADATA_OVERHEAD + itemToReadSize;
     }
-    // удаляем нах все начиная с райт оффсет по рид оффсет
-    this.buffer.fill(ZERO, this.buffer.offset, this.readOffset).reset();
-    this.buffer.append(sizedItem);
+    // remove all bytes starting from offset to new read offset
+    this.buffer.fill(ZERO, this.buffer.markedOffset, this.readOffset);
+    this.buffer.reset().append(sizedItem);
     return this;
   }
 
@@ -75,52 +67,46 @@ export class CyclicByteBuffer {
     if (this.readOffset === -1) {
       return [];
     }
-
-    // r ... w...
-
-    // ...w ... r...
-
-    for (
-      let itemToReadSize = this.buffer.readShort(this.readOffset);
-      this.buffer.offset % this.buffer.capacity() <= this.readOffset;
-      this.readOffset += itemToReadSize
-    ) {
-      // определяем короче сколько элеменотов надо подтереть, фактически дефайним новый рид оффсет
-    }
-
-    if (this.readOffset < this.buffer.offset) this.buffer.mark();
     const items: BufferItem[] = []; // accumulator for items
-    let item = new ByteBuffer();
-    let itemOffset = 0; // item offset handle
-    // read bytes one by one and parse individual items
-    for (let i = 0; i < this.buffer.limit; i++) {
-      const byte = this.buffer.readByte(i);
-      if (item.offset > 0 && byte === 0) {
-        // item non empty and we met separator => item is parsed, add it to accumulator
+
+    // [..., w, ...,r, ...]
+    let readOffset = this.readOffset;
+    if (readOffset >= this.buffer.offset) {
+      while (readOffset + ITEM_METADATA_OVERHEAD < this.buffer.capacity()) {
+        const itemToReadSize = this.buffer.readInt16(readOffset);
+        if (itemToReadSize === 0) {
+          break;
+        }
+        const buffer = this.buffer.copy(
+          readOffset + ITEM_METADATA_OVERHEAD,
+          readOffset + ITEM_METADATA_OVERHEAD + itemToReadSize,
+        );
         items.push({
-          offset: itemOffset,
-          buffer: item.flip().copy(),
+          offset: readOffset,
+          buffer,
         });
-        item = new ByteBuffer(); // initialize buffer for next item
-        continue;
+        readOffset += ITEM_METADATA_OVERHEAD + itemToReadSize;
       }
-      if (item.offset === 0 && byte !== 0) {
-        // the firs byte for item is found => remember item offset
-        itemOffset = i;
-      }
-      if (byte !== 0) {
-        // simply add byte to item buffer
-        item.writeByte(byte);
-      }
+      readOffset = 0;
     }
-    if (item.offset > 0) {
-      // buffer non empty
+
+    // [r, ..., w, ...]
+    while (readOffset + ITEM_METADATA_OVERHEAD < this.buffer.offset) {
+      const itemToReadSize = this.buffer.readInt16(readOffset);
+      if (itemToReadSize === 0) {
+        break;
+      }
+      const buffer = this.buffer.copy(
+        readOffset + ITEM_METADATA_OVERHEAD,
+        readOffset + ITEM_METADATA_OVERHEAD + itemToReadSize,
+      );
       items.push({
-        offset: itemOffset,
-        buffer: item.flip().copy(),
+        offset: readOffset,
+        buffer,
       });
+      readOffset += ITEM_METADATA_OVERHEAD + itemToReadSize;
     }
-    this.buffer.reset();
+
     return items;
   }
 }
