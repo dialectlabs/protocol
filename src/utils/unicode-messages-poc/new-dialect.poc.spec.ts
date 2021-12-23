@@ -48,4 +48,52 @@ describe('Test cyclic buffer', async () => {
     ];
     expect(messages).to.be.deep.eq(expectedMessages);
   });
+
+  it('can send and read russian message', () => {
+    // given
+    const dialect = new Dialect(50, members);
+    // when
+    const text = 'Привет, мир';
+
+    const sendMessageCommand: SendMessageCommand = {
+      owner: owner,
+      text: text,
+    };
+    dialect.send(sendMessageCommand);
+    const messages = dialect.messages(owner);
+    // then
+    const expectedMessages: Message[] = [
+      {
+        text: sendMessageCommand.text,
+        owner: owner.publicKey,
+      },
+    ];
+    expect(messages).to.be.deep.eq(expectedMessages);
+  });
+
+  it('can send and read messages', () => {
+    // given
+    const dialect = new Dialect(1024, members);
+    // when
+
+    const texts = new Array(25)
+      .fill(() => 0)
+      .map((_, idx) => `Hello мир ${idx}`);
+
+    texts.forEach((text, idx) => {
+      const sendMessageCommand: SendMessageCommand = {
+        owner,
+        text: text,
+      };
+      dialect.send(sendMessageCommand);
+      const messages = dialect.messages(owner);
+      const expectedMessages: Message[] = texts
+        .slice(0, idx + 1)
+        .map((text) => ({
+          text: text,
+          owner: owner.publicKey,
+        }));
+      expect(messages).to.be.deep.eq(expectedMessages);
+    });
+  });
 });
