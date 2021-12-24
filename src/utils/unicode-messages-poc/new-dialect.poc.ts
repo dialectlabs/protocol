@@ -52,8 +52,8 @@ export class Dialect {
       otherMemberPk.toBuffer(),
       generateNonce(nextMessageOffset),
     );
-    const serializedMessage = new ByteBuffer()
-      .writeInt(ownerMemberIndex)
+    const serializedMessage = new ByteBuffer(1 + encryptedText.length)
+      .writeByte(ownerMemberIndex)
       .append(encryptedText)
       .flip();
     this.buffer.append(serializedMessage);
@@ -66,9 +66,8 @@ export class Dialect {
     const messages: Message[] = this.buffer
       .items()
       .map(({ buffer: serializedMessage, offset }) => {
-        const ownerMemberIndex = serializedMessage.readInt();
-        const encryptedText = new Uint8Array(serializedMessage.toArrayBuffer());
-        console.log(offset);
+        const ownerMemberIndex = serializedMessage.readByte();
+        const encryptedText = new Uint8Array(serializedMessage.toBuffer(true));
         const encodedText = ecdhDecrypt(
           encryptedText,
           {

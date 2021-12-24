@@ -105,6 +105,7 @@ export class CyclicByteBuffer {
     while (this.itemStart(readOffset) < this.buffer.offset) {
       const itemToReadSize = this.buffer.readInt16(readOffset);
       if (itemToReadSize === ZERO) {
+        // TODO: handle w/o ZERO check
         break;
       }
       const buffer = this.buffer.copy(

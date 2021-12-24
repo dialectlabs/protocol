@@ -71,7 +71,7 @@ describe('Test cyclic buffer', async () => {
     expect(messages).to.be.deep.eq(expectedMessages);
   });
 
-  it('can send and read messages', () => {
+  it('can send and read multiple messages', () => {
     // given
     const dialect = new Dialect(1024, members);
     // when
@@ -94,6 +94,48 @@ describe('Test cyclic buffer', async () => {
           owner: owner.publicKey,
         }));
       expect(messages).to.be.deep.eq(expectedMessages);
+    });
+  });
+
+  it('can send and read emoji', () => {
+    // given
+    const dialect = new Dialect(50, members);
+    // when
+    const text = '😃';
+    const sendMessageCommand: SendMessageCommand = {
+      owner: owner,
+      text: text,
+    };
+    dialect.send(sendMessageCommand);
+    const messages = dialect.messages(owner);
+    // then
+    const expectedMessages: Message[] = [
+      {
+        text: sendMessageCommand.text,
+        owner: owner.publicKey,
+      },
+    ];
+    expect(messages).to.be.deep.eq(expectedMessages);
+  });
+
+  it('can send and read multiple messages w/ cyclic overwrite and decryption works', () => {
+    // given
+    const dialect = new Dialect(100, members);
+    // when
+
+    const texts = new Array(25)
+      .fill(() => 0)
+      .map((_, idx) => `Hello мир ${idx}`);
+
+    texts.forEach((text, idx) => {
+      const sendMessageCommand: SendMessageCommand = {
+        owner,
+        text: text,
+      };
+      dialect.send(sendMessageCommand);
+      const messages = dialect.messages(owner);
+      const lastMessage = messages[messages.length - 1];
+      expect(lastMessage.text).to.be.deep.eq(text);
     });
   });
 });
