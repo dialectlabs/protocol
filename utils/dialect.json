@@ -75,7 +75,7 @@
         {
           "name": "threadAccount",
           "isMut": true,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "settingsAccount",
@@ -83,12 +83,12 @@
           "isSigner": false
         },
         {
-          "name": "watcherAccount",
-          "isMut": true,
+          "name": "rent",
+          "isMut": false,
           "isSigner": false
         },
         {
-          "name": "rent",
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -96,10 +96,6 @@
       "args": [
         {
           "name": "settingsNonce",
-          "type": "u8"
-        },
-        {
-          "name": "watcherNonce",
           "type": "u8"
         }
       ]
@@ -301,6 +297,6 @@
     }
   ],
   "metadata": {
-    "address": "DyWxiroHbiGimsrQPcZJVFC7QNnMMofov1AzWr5ARzhW"
+    "address": "EGCymyunRorQzXASGva2NV2YARJ7kBT9NbGNcohqDQdE"
   }
 }

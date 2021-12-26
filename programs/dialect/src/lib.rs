@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("3eyY8Q6W1SQTuMj6bM6V8PfccjAiB4VvNikQQtD7f8Sr");
+declare_id!("EGCymyunRorQzXASGva2NV2YARJ7kBT9NbGNcohqDQdE");
 
 /*
 Entrypoints
@@ -26,7 +26,6 @@ mod dialect {
     pub fn create_thread_account(
         ctx: Context<CreateThreadAccount>,
         _settings_nonce: u8,
-        _watcher_nonce: u8,
     ) -> ProgramResult {
         // set the owner of the thread account
         let thread_account = &mut ctx.accounts.thread_account;
@@ -42,7 +41,6 @@ mod dialect {
             key: *thread_account.to_account_info().key,
         };
         ctx.accounts.settings_account.threads.push(thread);
-        ctx.accounts.watcher_account.threads.push(thread);
         Ok(())
     }
 
@@ -123,7 +121,7 @@ pub struct CreateSettingsAccount<'info> {
 
 // TODO: rename ProgramAccount to Account
 #[derive(Accounts)]
-#[instruction(settings_nonce: u8, watcher_nonce: u8)]
+#[instruction(settings_nonce: u8)]
 pub struct CreateThreadAccount<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
@@ -136,12 +134,6 @@ pub struct CreateThreadAccount<'info> {
         has_one = owner,
     )]
     pub settings_account: ProgramAccount<'info, SettingsAccount>,
-    #[account(
-        mut,
-        seeds = [b"watcher_account".as_ref()],
-        bump = watcher_nonce,
-    )]
-    pub watcher_account: ProgramAccount<'info, WatcherAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
