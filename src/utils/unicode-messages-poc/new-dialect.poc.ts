@@ -31,8 +31,8 @@ export class Dialect {
     this.members = members;
   }
 
-  nextMessageOffset(messageSize: number): number {
-    return this.buffer.nextItemOffset(messageSize);
+  nextMessageOffset(): number {
+    return this.buffer.nextItemOffset();
   }
 
   send({ owner, text }: SendMessageCommand): void {
@@ -41,7 +41,7 @@ export class Dialect {
       member: { publicKey: otherMemberPk },
     } = this.findOtherMember(owner.publicKey);
     const encodedText = this.textEncoder.encode(text);
-    const nextMessageOffset = this.nextMessageOffset(encodedText.length);
+    const nextMessageOffset = this.nextMessageOffset();
     console.log(nextMessageOffset);
     const encryptedText = ecdhEncrypt(
       encodedText,
@@ -56,7 +56,7 @@ export class Dialect {
       .writeByte(ownerMemberIndex)
       .append(encryptedText)
       .flip();
-    this.buffer.append(serializedMessage);
+    this.buffer.append(new Uint8Array(serializedMessage.toArrayBuffer()));
   }
 
   messages(me: Keypair): Message[] {
@@ -66,8 +66,11 @@ export class Dialect {
     const messages: Message[] = this.buffer
       .items()
       .map(({ buffer: serializedMessage, offset }) => {
-        const ownerMemberIndex = serializedMessage.readByte();
-        const encryptedText = new Uint8Array(serializedMessage.toBuffer(true));
+        const byteBuffer = new ByteBuffer(serializedMessage.length)
+          .append(serializedMessage)
+          .flip();
+        const ownerMemberIndex = byteBuffer.readByte();
+        const encryptedText = new Uint8Array(byteBuffer.toBuffer(true));
         const encodedText = ecdhDecrypt(
           encryptedText,
           {

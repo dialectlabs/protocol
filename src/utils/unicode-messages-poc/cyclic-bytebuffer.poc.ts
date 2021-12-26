@@ -1,128 +1,113 @@
-import ByteBuffer from 'bytebuffer';
-
-export type BufferItem = { offset: number; buffer: ByteBuffer };
+export type BufferItem = { offset: number; buffer: Uint8Array };
 
 export const ZERO = 0;
 export const ITEM_METADATA_OVERHEAD = 2; // used to store item size, uint16
 
 export class CyclicByteBuffer {
-  private readonly buffer!: ByteBuffer;
-
-  private readOffset = -1;
+  writeOffset = 0;
+  itemsCount = 0;
+  readOffset = 0;
+  private readonly buffer!: Uint8Array;
 
   constructor(size: number) {
-    this.buffer = new ByteBuffer(size).fill(ZERO).reset();
+    this.buffer = new Uint8Array(size).fill(ZERO);
   }
 
-  nextItemOffset(itemSize: number): number {
-    if (this.isFirstAppend()) {
-      return 0;
-    }
-    const totalItemSize = itemSize + ITEM_METADATA_OVERHEAD;
-    const remainingCapacity = this.buffer.capacity() - this.buffer.offset;
-    if (totalItemSize > remainingCapacity) {
-      return 0;
-    }
-    return this.buffer.offset;
+  raw(): Uint8Array {
+    return this.buffer;
   }
 
-  //   const nextItemOffset = this.nextItemOffset(item.capacity());
-  //   if (nextItemOffset === 0) {
-  //   this.buffer.fill(ZERO).flip();
-  // }
+  nextItemOffset() {
+    return this.writeOffset;
+  }
 
   // TODO: anyway limit message size to be << buffer size? or should add additional logic handle this...
-  append(item: ByteBuffer) {
-    const itemWithMetadata = new ByteBuffer(
-      ITEM_METADATA_OVERHEAD + item.capacity(),
-    )
-      .writeInt16(item.capacity())
-      .append(item)
-      .flip();
-    item.flip();
-    // case 0: first append called on buffer
-    const nextItemOffset = this.nextItemOffset(item.capacity());
-    if (this.isFirstAppend()) {
-      this.readOffset = this.buffer.offset;
-      this.buffer.append(itemWithMetadata);
-      return this;
-    }
-    if (nextItemOffset === 0) {
-      this.buffer.fill(ZERO).flip();
-    }
-    // case 1: this if first append cycle before buffer capacity reached
-    if (this.buffer.offset > this.readOffset) {
-      this.buffer.append(itemWithMetadata);
-      return this;
-    }
-    // write down current offset
-    this.buffer.mark();
-    // find items to be removed by moving read offset to next item offset
-    while (this.buffer.offset + itemWithMetadata.capacity() > this.readOffset) {
-      const itemToReadSize = this.buffer.readInt16(this.readOffset);
-      this.readOffset += ITEM_METADATA_OVERHEAD + itemToReadSize;
-    }
-    // remove all bytes starting from offset to new read offset
-    this.buffer.fill(ZERO, this.buffer.markedOffset, this.readOffset);
-    // set offset to remembered and append item
-    this.buffer.reset().append(itemWithMetadata);
-    return this;
-  }
+  append(item: Uint8Array) {
+    const itemWithMetadata = new Uint8Array([0, item.length, ...item]); // TODO: correctly write metadata as uint16
 
-  itemStart(metaOffset: number): number {
-    return ITEM_METADATA_OVERHEAD + metaOffset;
+    console.log(item.length);
+    const newWriteOffset =
+      (this.writeOffset + itemWithMetadata.length) % this.buffer.length;
+
+    while (this.getAvailableSpace() < itemWithMetadata.length) {
+      const oldestItemSize = this.read(2, this.readOffset)[1]; // TODO: correctly read metadata as uint16
+      const tailSize =
+        (this.buffer.length - this.readOffset) % this.buffer.length;
+      const oldestItemWithMetadataSize =
+        oldestItemSize + ITEM_METADATA_OVERHEAD;
+
+      const writeToTail = new Array(
+        Math.min(oldestItemWithMetadataSize, tailSize),
+      ).fill(0);
+      if (writeToTail.length > 0) {
+        this.buffer.set(writeToTail, this.readOffset);
+      }
+      const writeToHead = new Array(
+        oldestItemWithMetadataSize - writeToTail.length,
+      ).fill(0);
+      if (writeToHead.length > 0) {
+        this.buffer.set(writeToHead, 0);
+      }
+      const newReadOffset =
+        (this.readOffset + oldestItemWithMetadataSize) % this.buffer.length;
+      this.readOffset = newReadOffset;
+      this.itemsCount--;
+    }
+
+    const remainingCapacity = this.buffer.length - this.writeOffset;
+    const writeToTail = itemWithMetadata.slice(
+      0,
+      Math.min(itemWithMetadata.length, remainingCapacity),
+    );
+    this.buffer.set(writeToTail, this.writeOffset);
+
+    const writeToHead = itemWithMetadata.slice(
+      Math.min(itemWithMetadata.length, remainingCapacity),
+      itemWithMetadata.length,
+    );
+    this.buffer.set(writeToHead, 0);
+    this.writeOffset = newWriteOffset;
+    this.itemsCount++;
   }
 
   items(): BufferItem[] {
-    // set offset to remembered and append item
-
-    if (this.readOffset === -1) {
-      return [];
-    }
-    const items: BufferItem[] = []; // accumulator for items
-
-    // [..., w, ...,r, ...]
-    let readOffset = this.readOffset;
-    if (readOffset >= this.buffer.offset) {
-      while (this.itemStart(readOffset) < this.buffer.capacity()) {
-        const itemToReadSize = this.buffer.readInt16(readOffset);
-        if (itemToReadSize === ZERO) {
-          break;
-        }
-        const buffer = this.buffer.copy(
-          this.itemStart(readOffset),
-          this.itemStart(readOffset) + itemToReadSize,
-        );
-        items.push({
-          offset: readOffset,
-          buffer,
-        });
-        readOffset += ITEM_METADATA_OVERHEAD + itemToReadSize;
-      }
-      readOffset = 0;
-    }
-    // [r, ..., w, ...]
-    while (this.itemStart(readOffset) < this.buffer.offset) {
-      const itemToReadSize = this.buffer.readInt16(readOffset);
-      if (itemToReadSize === ZERO) {
-        // TODO: handle w/o ZERO check
-        break;
-      }
-      const buffer = this.buffer.copy(
-        this.itemStart(readOffset),
-        this.itemStart(readOffset) + itemToReadSize,
+    let readStart = this.readOffset;
+    let readCount = 0;
+    const acc: BufferItem[] = [];
+    while (readCount < this.itemsCount) {
+      const size = this.read(ITEM_METADATA_OVERHEAD, readStart)[1]; // TODO: correctly read metadata as uint16
+      const itemWithMetaSize = ITEM_METADATA_OVERHEAD + size;
+      const item = this.read(
+        size,
+        (readStart + ITEM_METADATA_OVERHEAD) % this.buffer.length,
       );
-      items.push({
-        offset: readOffset,
-        buffer,
+      acc.push({
+        offset: readStart,
+        buffer: item,
       });
-      readOffset += ITEM_METADATA_OVERHEAD + itemToReadSize;
+      readStart = (readStart + itemWithMetaSize) % this.buffer.length;
+      readCount++;
     }
-
-    return items;
+    return acc;
   }
 
-  private isFirstAppend() {
-    return this.readOffset === -1 && this.buffer.offset === 0;
+  private read(n: number, offset: number): Uint8Array {
+    const readFromTail = this.buffer.length - offset;
+    if (readFromTail >= n) {
+      return this.buffer.slice(offset, offset + n);
+    }
+    const tail: Uint8Array = this.buffer.slice(offset, this.buffer.length);
+    const head: Uint8Array = this.buffer.slice(0, n - tail.length);
+    return new Uint8Array([...tail, ...head]);
+  }
+
+  private getAvailableSpace() {
+    if (this.itemsCount === 0) {
+      return this.buffer.length;
+    }
+    return (
+      (this.readOffset - this.writeOffset + this.buffer.length) %
+      this.buffer.length
+    );
   }
 }

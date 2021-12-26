@@ -120,7 +120,7 @@ describe('Test cyclic buffer', async () => {
 
   it('can send and read multiple messages w/ cyclic overwrite and decryption works', () => {
     // given
-    const dialect = new Dialect(100, members);
+    const dialect = new Dialect(34, members);
     // when
 
     const texts = new Array(25)
