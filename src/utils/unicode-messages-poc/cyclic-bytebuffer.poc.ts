@@ -85,8 +85,8 @@ export class CyclicByteBuffer {
   }
 
   private read(size: number, offset: number): Uint8Array {
-    const readFromTail = this.buffer.length - offset;
-    if (readFromTail >= size) {
+    const tailSize = this.buffer.length - offset;
+    if (tailSize >= size) {
       return this.buffer.slice(offset, offset + size);
     }
     const tail: Uint8Array = this.buffer.slice(offset, this.buffer.length);
