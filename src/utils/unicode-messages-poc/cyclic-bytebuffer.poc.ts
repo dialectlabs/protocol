@@ -1,3 +1,5 @@
+import ByteBuffer from 'bytebuffer';
+
 export type BufferItem = { offset: number; buffer: Uint8Array };
 
 export const ZERO = 0;
@@ -23,8 +25,18 @@ export class CyclicByteBuffer {
 
   // TODO: anyway limit message size to be << buffer size? or should add additional logic handle this...
   append(item: Uint8Array) {
-    const itemWithMetadata = new Uint8Array([0, item.length, ...item]); // TODO: correctly write metadata as uint16
+    new ByteBuffer();
+    const metadata = this.uint16ToBytes(item.length);
+    const itemWithMetadata = new Uint8Array([...metadata, ...item]);
     this.appendInternal(itemWithMetadata);
+  }
+
+  uint16ToBytes(value: number) {
+    return new Uint8Array([(value & 0xff00) >>> 8, value & 0x00ff]);
+  }
+
+  uint16FromBytes(bytes: Uint8Array) {
+    return (bytes[0] << 8) | bytes[1];
   }
 
   items(): BufferItem[] {
@@ -32,7 +44,9 @@ export class CyclicByteBuffer {
     let itemsRead = 0;
     const acc: BufferItem[] = [];
     while (this.canRead(itemsRead)) {
-      const itemSize = this.read(ITEM_METADATA_OVERHEAD, readOffset)[1]; // TODO: correctly read metadata as uint16
+      const itemSize = this.uint16FromBytes(
+        this.read(ITEM_METADATA_OVERHEAD, readOffset),
+      );
       const item = this.read(
         itemSize,
         this.mod(readOffset + ITEM_METADATA_OVERHEAD),
@@ -74,7 +88,9 @@ export class CyclicByteBuffer {
   }
 
   private eraseOldestItem() {
-    const itemSize = ITEM_METADATA_OVERHEAD + this.read(2, this.readOffset)[1];
+    const itemSize =
+      ITEM_METADATA_OVERHEAD +
+      this.uint16FromBytes(this.read(ITEM_METADATA_OVERHEAD, this.readOffset));
     this.write(this.zeros(itemSize), this.readOffset);
     this.readOffset = this.mod(this.readOffset + itemSize);
     this.itemsCount--;
