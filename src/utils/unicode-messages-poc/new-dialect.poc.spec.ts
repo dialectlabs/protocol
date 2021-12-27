@@ -27,6 +27,16 @@ describe('Test cyclic buffer', async () => {
     ];
   });
 
+  it('can read empty', () => {
+    // given
+    const dialect = new Dialect(50, members);
+    // when
+    const messages = dialect.messages(owner);
+    // then
+    const expectedMessages: Message[] = [];
+    expect(messages).to.be.deep.eq(expectedMessages);
+  });
+
   it('can send and read message', () => {
     // given
     const dialect = new Dialect(50, members);

@@ -24,81 +24,83 @@ export class CyclicByteBuffer {
   // TODO: anyway limit message size to be << buffer size? or should add additional logic handle this...
   append(item: Uint8Array) {
     const itemWithMetadata = new Uint8Array([0, item.length, ...item]); // TODO: correctly write metadata as uint16
-
-    console.log(item.length);
-    const newWriteOffset =
-      (this.writeOffset + itemWithMetadata.length) % this.buffer.length;
-
-    while (this.getAvailableSpace() < itemWithMetadata.length) {
-      const oldestItemSize = this.read(2, this.readOffset)[1]; // TODO: correctly read metadata as uint16
-      const tailSize =
-        (this.buffer.length - this.readOffset) % this.buffer.length;
-      const oldestItemWithMetadataSize =
-        oldestItemSize + ITEM_METADATA_OVERHEAD;
-
-      const writeToTail = new Array(
-        Math.min(oldestItemWithMetadataSize, tailSize),
-      ).fill(0);
-      if (writeToTail.length > 0) {
-        this.buffer.set(writeToTail, this.readOffset);
-      }
-      const writeToHead = new Array(
-        oldestItemWithMetadataSize - writeToTail.length,
-      ).fill(0);
-      if (writeToHead.length > 0) {
-        this.buffer.set(writeToHead, 0);
-      }
-      const newReadOffset =
-        (this.readOffset + oldestItemWithMetadataSize) % this.buffer.length;
-      this.readOffset = newReadOffset;
-      this.itemsCount--;
-    }
-
-    const remainingCapacity = this.buffer.length - this.writeOffset;
-    const writeToTail = itemWithMetadata.slice(
-      0,
-      Math.min(itemWithMetadata.length, remainingCapacity),
-    );
-    this.buffer.set(writeToTail, this.writeOffset);
-
-    const writeToHead = itemWithMetadata.slice(
-      Math.min(itemWithMetadata.length, remainingCapacity),
-      itemWithMetadata.length,
-    );
-    this.buffer.set(writeToHead, 0);
-    this.writeOffset = newWriteOffset;
-    this.itemsCount++;
+    this.appendInternal(itemWithMetadata);
   }
 
   items(): BufferItem[] {
-    let readStart = this.readOffset;
-    let readCount = 0;
+    let readOffset = this.readOffset;
+    let itemsRead = 0;
     const acc: BufferItem[] = [];
-    while (readCount < this.itemsCount) {
-      const size = this.read(ITEM_METADATA_OVERHEAD, readStart)[1]; // TODO: correctly read metadata as uint16
-      const itemWithMetaSize = ITEM_METADATA_OVERHEAD + size;
+    while (this.canRead(itemsRead)) {
+      const itemSize = this.read(ITEM_METADATA_OVERHEAD, readOffset)[1]; // TODO: correctly read metadata as uint16
       const item = this.read(
-        size,
-        (readStart + ITEM_METADATA_OVERHEAD) % this.buffer.length,
+        itemSize,
+        (readOffset + ITEM_METADATA_OVERHEAD) % this.buffer.length,
       );
       acc.push({
-        offset: readStart,
+        offset: readOffset,
         buffer: item,
       });
-      readStart = (readStart + itemWithMetaSize) % this.buffer.length;
-      readCount++;
+      readOffset =
+        (readOffset + ITEM_METADATA_OVERHEAD + itemSize) % this.buffer.length;
+      itemsRead++;
     }
     return acc;
   }
 
-  private read(n: number, offset: number): Uint8Array {
+  private canRead(readCount: number) {
+    return readCount < this.itemsCount;
+  }
+
+  private appendInternal(item: Uint8Array) {
+    const newWriteOffset =
+      (this.writeOffset + item.length) % this.buffer.length;
+    while (this.noSpaceAvailableFor(item)) {
+      this.eraseOldestItem();
+    }
+    this.writeNewItem(item, newWriteOffset);
+  }
+
+  private writeNewItem(itemWithMetadata: Uint8Array, newWriteOffset: number) {
+    this.write(itemWithMetadata, this.writeOffset);
+    this.writeOffset = newWriteOffset;
+    this.itemsCount++;
+  }
+
+  private noSpaceAvailableFor(item: Uint8Array) {
+    return this.getAvailableSpace() < item.length;
+  }
+
+  private eraseOldestItem() {
+    const oldestItemSize =
+      ITEM_METADATA_OVERHEAD + this.read(2, this.readOffset)[1];
+    this.write(this.zeros(oldestItemSize), this.readOffset);
+    this.readOffset = (this.readOffset + oldestItemSize) % this.buffer.length;
+    this.itemsCount--;
+  }
+
+  private zeros(oldestItemSize: number) {
+    return new Uint8Array(new Array(oldestItemSize).fill(0));
+  }
+
+  private read(size: number, offset: number): Uint8Array {
     const readFromTail = this.buffer.length - offset;
-    if (readFromTail >= n) {
-      return this.buffer.slice(offset, offset + n);
+    if (readFromTail >= size) {
+      return this.buffer.slice(offset, offset + size);
     }
     const tail: Uint8Array = this.buffer.slice(offset, this.buffer.length);
-    const head: Uint8Array = this.buffer.slice(0, n - tail.length);
+    const head: Uint8Array = this.buffer.slice(0, size - tail.length);
     return new Uint8Array([...tail, ...head]);
+  }
+
+  private write(data: Uint8Array, offset: number) {
+    const remainingCapacity =
+      (this.buffer.length - offset) % this.buffer.length;
+    const numBytesToWriteToTail = Math.min(data.length, remainingCapacity);
+    const writeToTail = data.slice(0, numBytesToWriteToTail);
+    this.buffer.set(writeToTail, offset);
+    const writeToHead = data.slice(numBytesToWriteToTail, data.length);
+    this.buffer.set(writeToHead, 0);
   }
 
   private getAvailableSpace() {
