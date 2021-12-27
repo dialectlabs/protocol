@@ -35,17 +35,20 @@ export class CyclicByteBuffer {
       const itemSize = this.read(ITEM_METADATA_OVERHEAD, readOffset)[1]; // TODO: correctly read metadata as uint16
       const item = this.read(
         itemSize,
-        (readOffset + ITEM_METADATA_OVERHEAD) % this.buffer.length,
+        this.mod(readOffset + ITEM_METADATA_OVERHEAD),
       );
       acc.push({
         offset: readOffset,
         buffer: item,
       });
-      readOffset =
-        (readOffset + ITEM_METADATA_OVERHEAD + itemSize) % this.buffer.length;
+      readOffset = this.mod(readOffset + ITEM_METADATA_OVERHEAD + itemSize);
       itemsRead++;
     }
     return acc;
+  }
+
+  private mod(n: number) {
+    return n % this.buffer.length;
   }
 
   private canRead(readCount: number) {
@@ -53,8 +56,7 @@ export class CyclicByteBuffer {
   }
 
   private appendInternal(item: Uint8Array) {
-    const newWriteOffset =
-      (this.writeOffset + item.length) % this.buffer.length;
+    const newWriteOffset = this.mod(this.writeOffset + item.length);
     while (this.noSpaceAvailableFor(item)) {
       this.eraseOldestItem();
     }
@@ -72,10 +74,9 @@ export class CyclicByteBuffer {
   }
 
   private eraseOldestItem() {
-    const oldestItemSize =
-      ITEM_METADATA_OVERHEAD + this.read(2, this.readOffset)[1];
-    this.write(this.zeros(oldestItemSize), this.readOffset);
-    this.readOffset = (this.readOffset + oldestItemSize) % this.buffer.length;
+    const itemSize = ITEM_METADATA_OVERHEAD + this.read(2, this.readOffset)[1];
+    this.write(this.zeros(itemSize), this.readOffset);
+    this.readOffset = this.mod(this.readOffset + itemSize);
     this.itemsCount--;
   }
 
@@ -94,9 +95,8 @@ export class CyclicByteBuffer {
   }
 
   private write(data: Uint8Array, offset: number) {
-    const remainingCapacity =
-      (this.buffer.length - offset) % this.buffer.length;
-    const numBytesToWriteToTail = Math.min(data.length, remainingCapacity);
+    const freeTailBytes = this.mod(this.buffer.length - offset);
+    const numBytesToWriteToTail = Math.min(data.length, freeTailBytes);
     const writeToTail = data.slice(0, numBytesToWriteToTail);
     this.buffer.set(writeToTail, offset);
     const writeToHead = data.slice(numBytesToWriteToTail, data.length);
@@ -107,9 +107,6 @@ export class CyclicByteBuffer {
     if (this.itemsCount === 0) {
       return this.buffer.length;
     }
-    return (
-      (this.readOffset - this.writeOffset + this.buffer.length) %
-      this.buffer.length
-    );
+    return this.mod(this.readOffset - this.writeOffset + this.buffer.length);
   }
 }
