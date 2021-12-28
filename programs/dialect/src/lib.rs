@@ -108,16 +108,24 @@ pub mod dialect {
     pub fn send_message(
         ctx: Context<SendMessage>,
         _dialect_nonce: u8,
-        text: [u8; 256],
+        text: Vec<u8>,
     ) -> ProgramResult {
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_mut()?;
+        let message_buffer = &mut dialect.messages;
         let sender = &mut ctx.accounts.sender;
         let idx = dialect.next_message_idx;
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
+
+        let text_arr = &mut [0u8; 256];
+
+        for (pos, e) in text.iter().enumerate() {
+            text_arr[pos] = *e;
+        }
+
         dialect.messages[idx as usize] = Message {
             owner: *sender.key,
-            text,
+            text: *text_arr,
             timestamp,
         };
         dialect.next_message_idx = (dialect.next_message_idx + 1) % 32;
