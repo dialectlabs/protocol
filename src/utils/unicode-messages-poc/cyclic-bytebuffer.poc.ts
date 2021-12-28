@@ -1,5 +1,3 @@
-import ByteBuffer from 'bytebuffer';
-
 export type BufferItem = { offset: number; buffer: Uint8Array };
 
 export const ZERO = 0;
@@ -23,12 +21,14 @@ export class CyclicByteBuffer {
     return this.writeOffset;
   }
 
-  // TODO: anyway limit message size to be << buffer size? or should add additional logic handle this...
-  append(item: Uint8Array) {
-    new ByteBuffer();
-    const metadata = this.uint16ToBytes(item.length);
-    const itemWithMetadata = new Uint8Array([...metadata, ...item]);
-    this.appendInternal(itemWithMetadata);
+  append(itemWithoutMeta: Uint8Array) {
+    const metadata = this.uint16ToBytes(itemWithoutMeta.length);
+    const item = new Uint8Array([...metadata, ...itemWithoutMeta]);
+    const newWriteOffset = this.mod(this.writeOffset + item.length);
+    while (this.noSpaceAvailableFor(item.length)) {
+      this.eraseOldestItem();
+    }
+    this.writeNewItem(item, newWriteOffset);
   }
 
   uint16ToBytes(value: number) {
@@ -69,28 +69,18 @@ export class CyclicByteBuffer {
     return readCount < this.itemsCount;
   }
 
-  private appendInternal(item: Uint8Array) {
-    const newWriteOffset = this.mod(this.writeOffset + item.length);
-    while (this.noSpaceAvailableFor(item)) {
-      this.eraseOldestItem();
-    }
-    this.writeNewItem(item, newWriteOffset);
-  }
-
   private writeNewItem(itemWithMetadata: Uint8Array, newWriteOffset: number) {
     this.write(itemWithMetadata, this.writeOffset);
     this.writeOffset = newWriteOffset;
     this.itemsCount++;
   }
 
-  private noSpaceAvailableFor(item: Uint8Array) {
-    return this.getAvailableSpace() < item.length;
+  private noSpaceAvailableFor(itemSize: number) {
+    return this.getAvailableSpace() < itemSize;
   }
 
   private eraseOldestItem() {
-    const itemSize =
-      ITEM_METADATA_OVERHEAD +
-      this.uint16FromBytes(this.read(ITEM_METADATA_OVERHEAD, this.readOffset));
+    const itemSize = this.readItemSize();
     this.write(this.zeros(itemSize), this.readOffset);
     this.readOffset = this.mod(this.readOffset + itemSize);
     this.itemsCount--;
@@ -98,6 +88,34 @@ export class CyclicByteBuffer {
 
   private zeros(oldestItemSize: number) {
     return new Uint8Array(new Array(oldestItemSize).fill(0));
+  }
+
+  private readItemSize(): number {
+    const readOffset = this.readOffset;
+    const tailSize = this.buffer.length - readOffset;
+    if (tailSize >= ITEM_METADATA_OVERHEAD) {
+      return this.uint16FromBytes(
+        new Uint8Array([
+          this.buffer[this.readOffset],
+          this.buffer[this.readOffset + 1],
+        ]),
+      );
+    }
+    return this.uint16FromBytes(
+      new Uint8Array([this.buffer[this.readOffset], this.buffer[0]]),
+    );
+  }
+
+  // simplification for rust adoption
+  private readItemSizeBytes(): Uint8Array {
+    const tailSize = this.buffer.length - this.readOffset;
+    if (tailSize >= ITEM_METADATA_OVERHEAD) {
+      return new Uint8Array([
+        this.buffer[this.readOffset],
+        this.buffer[this.readOffset + 1],
+      ]);
+    }
+    return new Uint8Array([this.buffer[this.readOffset], this.buffer[0]]);
   }
 
   private read(size: number, offset: number): Uint8Array {
