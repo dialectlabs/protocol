@@ -32,14 +32,14 @@ export class CyclicByteBuffer {
     return this.writeOffset;
   }
 
-  append(itemWithoutMeta: Uint8Array) {
-    const metadata = this.uint16ToBytes(itemWithoutMeta.length);
-    const item = new Uint8Array([...metadata, ...itemWithoutMeta]);
-    const newWriteOffset = this.mod(this.writeOffset + item.length);
-    while (this.noSpaceAvailableFor(item.length)) {
+  append(item: Uint8Array) {
+    const metadata = this.uint16ToBytes(item.length);
+    const itemWithMetadata = new Uint8Array([...metadata, ...item]);
+    const newWriteOffset = this.mod(this.writeOffset + itemWithMetadata.length);
+    while (this.noSpaceAvailableFor(itemWithMetadata)) {
       this.eraseOldestItem();
     }
-    this.writeNewItem(item, newWriteOffset);
+    this.writeNewItem(itemWithMetadata, newWriteOffset);
   }
 
   uint16ToBytes(value: number) {
@@ -115,18 +115,6 @@ export class CyclicByteBuffer {
     return this.uint16FromBytes(
       new Uint8Array([this.buffer[this.readOffset], this.buffer[0]]),
     );
-  }
-
-  // simplification for rust adoption
-  private readItemSizeBytes(): Uint8Array {
-    const tailSize = this.buffer.length - this.readOffset;
-    if (tailSize >= ITEM_METADATA_OVERHEAD) {
-      return new Uint8Array([
-        this.buffer[this.readOffset],
-        this.buffer[this.readOffset + 1],
-      ]);
-    }
-    return new Uint8Array([this.buffer[this.readOffset], this.buffer[0]]);
   }
 
   private read(size: number, offset: number): Uint8Array {

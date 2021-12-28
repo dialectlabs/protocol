@@ -16,11 +16,6 @@ import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; /
 /*
 User metadata
 */
-
-export const MESSAGES_PER_DIALECT = 32;
-export const MAX_RAW_MESSAGE_SIZE = 256;
-export const MAX_MESSAGE_SIZE =
-  MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
 export const DEVICE_TOKEN_LENGTH = 64;
 export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
 export const DEVICE_TOKEN_PADDING_LENGTH = DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
@@ -32,9 +27,15 @@ type Subscription = {
 
 type RawDialect = {
   members: Member[];
-  messages: RawMessage[];
-  nextMessageIdx: number;
+  messages: RawCyclicByteBuffer;
   lastMessageTimestamp: number;
+};
+
+type RawCyclicByteBuffer = {
+  readOffset: number;
+  writeOffset: number;
+  itemsCount: number;
+  buffer: Uint8Array;
 };
 
 type RawMessage = {
@@ -131,7 +132,7 @@ export async function getMetadata(
 
   try {
     // assume otherParty is pubkey
-    new anchor.web3.PublicKey(otherParty?.toString() || ''); 
+    new anchor.web3.PublicKey(otherParty?.toString() || '');
   } catch {
     // otherParty is keypair or null
     otherPartyIsKeypair = otherParty && true || false;
@@ -333,24 +334,27 @@ function isPresent(message: RawMessage): boolean {
 
 function getMessages(dialect: RawDialect, user: anchor.web3.Keypair) {
   const otherMember = findOtherMember(dialect.members, user);
-  const decryptedMessages: Message[] = dialect.messages
-    .filter((m: RawMessage) => isPresent(m))
-    .map((m: RawMessage, idx) => decryptMessage(m, idx, user, otherMember));
-  const permutedAndOrderedMessages: Message[] = [];
-  for (let i = 0; i < decryptedMessages.length; i++) {
-    const idx =
-      (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
-        ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
-        : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
-    const m = decryptedMessages[idx];
-    permutedAndOrderedMessages.push(m);
-  }
-  return permutedAndOrderedMessages.map((m: Message) => {
-    return {
-      ...m,
-      timestamp: m.timestamp * 1000,
-    };
-  });
+  //
+  // const decryptedMessages: Message[] = dialect.messages
+  //   .filter((m: RawMessage) => isPresent(m))
+  //   .map((m: RawMessage, idx) => decryptMessage(m, idx, user, otherMember));
+  // const permutedAndOrderedMessages: Message[] = [];
+  // for (let i = 0; i < decryptedMessages.length; i++) {
+  //   const idx =
+  //     (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
+  //       ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
+  //       : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
+  //   const m = decryptedMessages[idx];
+  //   permutedAndOrderedMessages.push(m);
+  // }
+  // return permutedAndOrderedMessages.map((m: Message) => {
+  //   return {
+  //     ...m,
+  //     timestamp: m.timestamp * 1000,
+  //   };
+  // });
+
+  return [];
 }
 
 export async function getDialect(
@@ -361,6 +365,9 @@ export async function getDialect(
   const dialect = (await program.account.dialectAccount.fetch(
     publicKey,
   )) as RawDialect;
+
+  console.log('r');
+  console.log(dialect.messages);
   const account = await program.provider.connection.getAccountInfo(publicKey);
   const messages = user ? getMessages(dialect, user) : [];
   return {
@@ -369,6 +376,7 @@ export async function getDialect(
     // dialect,
     dialect: {
       ...dialect,
+      nextMessageIdx: 1,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
       messages,
     },
@@ -523,7 +531,7 @@ export async function sendMessage(
     dialect.members,
   );
   const otherMember = findOtherMember(dialect.members, sender);
-  const textBytes = serializeText(text, MAX_MESSAGE_SIZE);
+  const textBytes = new TextEncoder().encode(text);
   const textEncryptionNonce = generateNonce(dialect.nextMessageIdx);
   const encryptedText = ecdhEncrypt(
     textBytes,
@@ -534,6 +542,8 @@ export async function sendMessage(
     otherMember.publicKey.toBytes(),
     textEncryptionNonce,
   );
+  console.log('w');
+  console.log(encryptedText);
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
     Buffer.from(encryptedText),
