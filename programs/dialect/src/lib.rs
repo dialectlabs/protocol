@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 use solana_program::program_option::COption;
 
-declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
+declare_id!("991fMrmRY9tgB7dRarpv4iRMV5RKNSNc3os1Hb5AsteU");
 
 /*
 Entrypoints
@@ -35,7 +35,7 @@ pub mod dialect {
         // TODO: Assert owner in members
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_init()?;
-        let owner = &mut ctx.accounts.owner;
+        let _owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
 
         dialect.members = [
@@ -49,8 +49,9 @@ pub mod dialect {
             },
         ];
 
-        dialect.messages = [Message::default(); 32];
-        dialect.next_message_idx = 0;
+        dialect.messages.read_offset = 0;
+        dialect.messages.write_offset = 0;
+        dialect.messages.items_count = 0;
         dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
 
         emit!(CreateDialectEvent {
@@ -112,24 +113,11 @@ pub mod dialect {
     ) -> ProgramResult {
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_mut()?;
-        let message_buffer = &mut dialect.messages;
         let sender = &mut ctx.accounts.sender;
-        let idx = dialect.next_message_idx;
         let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
-
-        let text_arr = &mut [0u8; 256];
-
-        for (pos, e) in text.iter().enumerate() {
-            text_arr[pos] = *e;
-        }
-
-        dialect.messages[idx as usize] = Message {
-            owner: *sender.key,
-            text: *text_arr,
-            timestamp,
-        };
-        dialect.next_message_idx = (dialect.next_message_idx + 1) % 32;
         dialect.last_message_timestamp = timestamp;
+        dialect.messages.append(text);
+
         emit!(SendMessageEvent {
             dialect: dialect_loader.key(),
             sender: *sender.key,
@@ -280,8 +268,8 @@ pub struct CreateDialect<'info> {
         bump = dialect_nonce,
         payer = owner,
         // NB: max space for PDA = 10240
-        // space = discriminator + 2 * Member + 32 * Message
-        space = 8 + 68 + 9344 + 1 + 4
+        // space = discriminator + dialect account size
+        space = 8 + 68 + 4 + (2 + 2 + 2 + 8192)
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -355,14 +343,98 @@ pub struct MetadataAccount {
     subscriptions: [Subscription; 32], // 32 * space(Subscription) TODO: More subscriptions
 }
 
+const MESSAGE_BUFFER_LENGTH: usize = 8192;
+const ITEM_METADATA_OVERHEAD: u16 = 2;
+
 #[account(zero_copy)]
-#[derive(Default)]
-// TODO: Address 4kb stack frame limit with zero copy https://docs.solana.com/developing/on-chain-programs/overview#stack
+// space = 8 + 68 + (2 + 2 + 2 + 8192) + 4
 pub struct DialectAccount {
     pub members: [Member; 2],        // 2 * Member = 68
-    pub messages: [Message; 32],     // 32 * Message = 2176 (will be 9344 with message length 256)
-    pub next_message_idx: u8,        // 1 -- index of next message (not the latest)
+    pub messages: CyclicByteBuffer,  // 2 + 2 + 2 + 8192
     pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
+}
+
+#[zero_copy]
+// space = 2 + 2 + 2 + 8192
+pub struct CyclicByteBuffer {
+    pub read_offset: u16,   // 2
+    pub write_offset: u16,  // 2
+    pub items_count: u16,   // 2
+    pub buffer: [u8; 8192], // 8192
+}
+
+impl CyclicByteBuffer {
+    fn append(&mut self, item: Vec<u8>) {
+        let item_with_metadata = &mut self.u16_to_bytes(item.len() as u16).to_vec();
+        item_with_metadata.extend(item);
+
+        let new_write_offset: u16 = self.mod_(self.write_offset + item_with_metadata.len() as u16);
+        while self.no_space_available_for(item_with_metadata.len() as u16) {
+            self.erase_oldest_item()
+        }
+        self.write_new_item(item_with_metadata, new_write_offset);
+    }
+
+    fn mod_(&mut self, value: u16) -> u16 {
+        return value % MESSAGE_BUFFER_LENGTH as u16;
+    }
+
+    fn no_space_available_for(&mut self, item_size: u16) -> bool {
+        return self.get_available_space() < item_size;
+    }
+
+    fn get_available_space(&mut self) -> u16 {
+        if self.items_count == 0 {
+            return MESSAGE_BUFFER_LENGTH as u16;
+        }
+        return self.mod_(MESSAGE_BUFFER_LENGTH as u16 + self.read_offset - self.write_offset);
+    }
+
+    fn erase_oldest_item(&mut self) {
+        let item_size = ITEM_METADATA_OVERHEAD + self.read_item_size();
+        let zeros = &mut vec![0u8; item_size as usize];
+        self.write(zeros, self.read_offset);
+        self.read_offset = self.mod_(self.read_offset + item_size);
+        self.items_count -= 1;
+    }
+
+    fn read_item_size(&mut self) -> u16 {
+        let read_offset = self.read_offset;
+        let tail_size = MESSAGE_BUFFER_LENGTH as u16 - read_offset;
+        if tail_size >= ITEM_METADATA_OVERHEAD {
+            return self.u16_from_bytes([
+                self.buffer[read_offset as usize],
+                self.buffer[read_offset as usize + 1],
+            ]);
+        }
+        return self.u16_from_bytes([self.buffer[read_offset as usize], self.buffer[0]]);
+    }
+
+    fn u16_to_bytes(&mut self, value: u16) -> [u8; 2] {
+        let b1 = ((value >> 8) & 0xff) as u8;
+        let b2 = (value & 0xff) as u8;
+        return [b1, b2];
+    }
+
+    fn u16_from_bytes(&mut self, bytes: [u8; 2]) -> u16 {
+        return ((bytes[0] as u16) << 8) | bytes[1] as u16;
+    }
+
+    fn write_new_item(&mut self, item: &mut Vec<u8>, new_write_offset: u16) {
+        self.write(item, self.write_offset);
+        self.write_offset = new_write_offset;
+        self.items_count += 1;
+    }
+
+    fn write(&mut self, item: &mut Vec<u8>, offset: u16) {
+        for (idx, e) in item.iter().enumerate() {
+            let pos = self.mod_(offset + idx as u16);
+            self.buffer[pos as usize] = *e;
+        }
+    }
+    fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
+        return self.buffer;
+    }
 }
 
 #[account]
@@ -470,3 +542,104 @@ fn slice(input: &[u8]) -> [u8; 80] {
         input[73], input[74], input[75], input[76], input[77], input[78], input[79],
     ]
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use crate::CyclicByteBuffer;
+//
+//     #[test]
+//     fn correctly_does_first_append_when_size_lt_buffer_size() {
+//         // given
+//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//             read_offset: 0,
+//             write_offset: 0,
+//             items_count: 0,
+//             buffer: [0; 5],
+//         };
+//         let item = vec![1u8, 2u8];
+//         // when
+//         buffer.append(item);
+//         // then
+//         assert_eq!(buffer.write_offset, 4);
+//         assert_eq!(buffer.read_offset, 0);
+//         assert_eq!(buffer.raw(), [0, 2, 1, 2, 0]);
+//     }
+//
+//     #[test]
+//     fn correctly_does_first_append_when_size_eq_buffer_size() {
+//         // given
+//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//             read_offset: 0,
+//             write_offset: 0,
+//             items_count: 0,
+//             buffer: [0; 5],
+//         };
+//         let item = vec![1u8, 2u8, 3u8];
+//         // when
+//         buffer.append(item);
+//         // then
+//         assert_eq!(buffer.write_offset, 0);
+//         assert_eq!(buffer.read_offset, 0);
+//         assert_eq!(buffer.raw(), [0, 3, 1, 2, 3]);
+//     }
+//
+//     #[test]
+//     fn correctly_does_first_append_and_overwrite_when_size_eq_buffer_size() {
+//         // given
+//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//             read_offset: 0,
+//             write_offset: 0,
+//             items_count: 0,
+//             buffer: [0; 5],
+//         };
+//         let item1 = vec![1u8, 2u8, 3u8];
+//         let item2 = vec![4u8, 5u8, 6u8];
+//         // when
+//         buffer.append(item1);
+//         buffer.append(item2);
+//         // then
+//         assert_eq!(buffer.write_offset, 0);
+//         assert_eq!(buffer.read_offset, 0);
+//         assert_eq!(buffer.raw(), [0, 3, 4, 5, 6]);
+//     }
+//
+//     #[test]
+//     fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
+//         // given
+//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//             read_offset: 0,
+//             write_offset: 0,
+//             items_count: 0,
+//             buffer: [0; 5],
+//         };
+//         let item1 = vec![1u8, 2u8];
+//         let item2 = vec![3u8, 4u8];
+//         // when
+//         buffer.append(item1);
+//         buffer.append(item2);
+//         // then
+//         assert_eq!(buffer.write_offset, 3);
+//         assert_eq!(buffer.read_offset, 4);
+//         assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
+//     }
+//
+//     #[test]
+//     fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
+//         // given
+//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//             read_offset: 0,
+//             write_offset: 0,
+//             items_count: 0,
+//             buffer: [0; 5],
+//         };
+//         let item1 = vec![1u8, 2u8];
+//         let item2 = vec![3u8, 4u8];
+//         // when
+//         buffer.append(item1);
+//         buffer.append(item2);
+//         // then
+//         assert_eq!(buffer.write_offset, 3);
+//         assert_eq!(buffer.read_offset, 4);
+//         assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
+//     }
+// }
