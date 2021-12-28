@@ -397,6 +397,25 @@ describe('Protocol v1 test', () => {
           .to.be.eq(message.timestamp);
       });
 
+      it('Can send and receive unicode', async () => {
+        // given
+        const dialect = await getDialectForMembers(program, members, writer);
+        const text = '🇺🇸 Hello world! Привет, мир! 🇷🇺';
+        // when
+        await sendMessage(program, dialect, writer, text);
+        // then
+        const senderDialect = await getDialectForMembers(
+          program,
+          dialect.dialect.members,
+          writer,
+        );
+        const message = senderDialect.dialect.messages[0];
+        chai.expect(message.text).to.be.eq(text);
+        chai
+          .expect(senderDialect.dialect.lastMessageTimestamp)
+          .to.be.eq(message.timestamp);
+      });
+
       it("Non-member can't read (decrypt) any of the messages", async () => {
         // given
         const senderDialect = await getDialectForMembers(
