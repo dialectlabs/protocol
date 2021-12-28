@@ -4,7 +4,7 @@ import { CyclicByteBuffer } from './cyclic-bytebuffer.poc';
 describe('Test cyclic buffer', async () => {
   it('correctly does first append when size < buffer size', () => {
     // given
-    const buffer = new CyclicByteBuffer(5);
+    const buffer = CyclicByteBuffer.empty(5);
     // when
     const item = new Uint8Array([1, 2]);
     buffer.append(item);
@@ -16,7 +16,7 @@ describe('Test cyclic buffer', async () => {
 
   it('correctly does first append when item size === buffer size', () => {
     // given
-    const buffer = new CyclicByteBuffer(5);
+    const buffer = CyclicByteBuffer.empty(5);
     // when
     const item = new Uint8Array([1, 2, 3]);
     buffer.append(item);
@@ -26,23 +26,23 @@ describe('Test cyclic buffer', async () => {
     expect(buffer.raw()).to.be.deep.eq(new Uint8Array([0, 3, 1, 2, 3]));
   });
 
-  it('correctly does first append + overwrite when size < buffer size', () => {
+  it('correctly does first append + overwrite when size eq buffer size', () => {
     // given
-    const buffer = new CyclicByteBuffer(5);
+    const buffer = CyclicByteBuffer.empty(5);
     // when
     const item1 = new Uint8Array([1, 2, 3]);
-    const item2 = new Uint8Array([3, 4, 5]);
+    const item2 = new Uint8Array([4, 5, 6]);
     buffer.append(item1);
     buffer.append(item2);
     // then
     expect(buffer.writeOffset).to.be.eq(0);
     expect(buffer.readOffset).to.be.eq(0);
-    expect(buffer.raw()).to.be.deep.eq(new Uint8Array([0, 3, 3, 4, 5]));
+    expect(buffer.raw()).to.be.deep.eq(new Uint8Array([0, 3, 4, 5, 6]));
   });
 
-  it('correctly does first append + overwrite when size < buffer size [2]', () => {
+  it('correctly does first append + overwrite when size lt buffer size', () => {
     // given
-    const buffer = new CyclicByteBuffer(5);
+    const buffer = CyclicByteBuffer.empty(5);
     // when
     const item1 = new Uint8Array([1, 2]);
     const item2 = new Uint8Array([3, 4]);
@@ -55,9 +55,9 @@ describe('Test cyclic buffer', async () => {
     expect(buffer.raw()).to.be.deep.eq(new Uint8Array([2, 3, 4, 0, 0]));
   });
 
-  it('read offset increment with modular', () => {
+  it('read offset increment with item spanning tail and head', () => {
     // given
-    const buffer = new CyclicByteBuffer(7);
+    const buffer = CyclicByteBuffer.empty(7);
     // when
     const item1 = new Uint8Array([1, 2]);
     const item2 = new Uint8Array([3, 4, 5]);
@@ -72,7 +72,7 @@ describe('Test cyclic buffer', async () => {
 
   it('read offset increment with modular', () => {
     // given
-    const buffer = new CyclicByteBuffer(7);
+    const buffer = CyclicByteBuffer.empty(7);
     // when
     const item1 = new Uint8Array([1, 2]);
     const item2 = new Uint8Array([3, 4, 5]);
@@ -90,7 +90,7 @@ describe('Test cyclic buffer', async () => {
 
   it('read offset increment with modular', () => {
     // given
-    const buffer = new CyclicByteBuffer(10);
+    const buffer = CyclicByteBuffer.empty(10);
     // when
     const item1 = new Uint8Array([1]);
     const item2 = new Uint8Array([2]);
@@ -113,7 +113,7 @@ describe('Test cyclic buffer', async () => {
 
   it('read offset increment with modular', () => {
     // given
-    const buffer = new CyclicByteBuffer(7);
+    const buffer = CyclicByteBuffer.empty(7);
     // when
     const item1 = new Uint8Array([1, 2]);
     const item2 = new Uint8Array([3]);
@@ -131,7 +131,7 @@ describe('Test cyclic buffer', async () => {
 
   it('correctly does first append when size < buffer size', () => {
     // given
-    const buffer = new CyclicByteBuffer(6);
+    const buffer = CyclicByteBuffer.empty(6);
     // when
     const item1 = new Uint8Array([1, 2, 3]);
     const item2 = new Uint8Array([4, 5, 6]);

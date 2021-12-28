@@ -1,16 +1,27 @@
 export type BufferItem = { offset: number; buffer: Uint8Array };
 
-export const ZERO = 0;
 export const ITEM_METADATA_OVERHEAD = 2; // used to store item size, uint16
 
 export class CyclicByteBuffer {
-  writeOffset = 0;
-  itemsCount = 0;
-  readOffset = 0;
+  readOffset!: number;
+  writeOffset!: number;
+  itemsCount!: number;
   private readonly buffer!: Uint8Array;
 
-  constructor(size: number) {
-    this.buffer = new Uint8Array(size).fill(ZERO);
+  constructor(
+    readOffset: number,
+    writeOffset: number,
+    itemsCount: number,
+    buffer: Uint8Array,
+  ) {
+    this.readOffset = readOffset;
+    this.writeOffset = writeOffset;
+    this.itemsCount = itemsCount;
+    this.buffer = buffer;
+  }
+
+  static empty(size: number): CyclicByteBuffer {
+    return new CyclicByteBuffer(0, 0, 0, new Uint8Array(size).fill(0));
   }
 
   raw(): Uint8Array {
