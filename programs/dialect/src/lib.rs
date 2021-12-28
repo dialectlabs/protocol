@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 use solana_program::program_option::COption;
 
-declare_id!("991fMrmRY9tgB7dRarpv4iRMV5RKNSNc3os1Hb5AsteU");
+declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 
 /*
 Entrypoints
@@ -479,26 +479,6 @@ pub struct Member {
     pub public_key: Pubkey, // 32
     // [Admin, Write]. [false, false] implies read-only
     pub scopes: [bool; 2], // 2
-}
-
-#[zero_copy]
-// space = 292
-pub struct Message {
-    pub owner: Pubkey, // 32
-    // max(u32) -> Sunday, February 7, 2106 6:28:15 AM
-    // max(u64) -> Sunday, July 21, 2554 11:34:33 PM
-    pub timestamp: u32,  // 4
-    pub text: [u8; 256], // 256
-}
-
-impl Default for Message {
-    fn default() -> Self {
-        Self {
-            owner: Pubkey::default(),
-            text: [0; 256],
-            timestamp: 0,
-        }
-    }
 }
 
 #[event]
