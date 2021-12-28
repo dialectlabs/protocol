@@ -338,17 +338,8 @@
           {
             "name": "messages",
             "type": {
-              "array": [
-                {
-                  "defined": "Message"
-                },
-                32
-              ]
+              "defined": "CyclicByteBuffer"
             }
-          },
-          {
-            "name": "nextMessageIdx",
-            "type": "u8"
           },
           {
             "name": "lastMessageTimestamp",
@@ -371,6 +362,35 @@
     }
   ],
   "types": [
+    {
+      "name": "CyclicByteBuffer",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "readOffset",
+            "type": "u16"
+          },
+          {
+            "name": "writeOffset",
+            "type": "u16"
+          },
+          {
+            "name": "itemsCount",
+            "type": "u16"
+          },
+          {
+            "name": "buffer",
+            "type": {
+              "array": [
+                "u8",
+                8192
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "DeviceToken",
       "type": {
