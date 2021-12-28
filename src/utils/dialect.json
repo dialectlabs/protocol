@@ -213,12 +213,7 @@
         },
         {
           "name": "text",
-          "type": {
-            "array": [
-              "u8",
-              256
-            ]
-          }
+          "type": "bytes"
         }
       ]
     },

@@ -534,17 +534,21 @@ export async function sendMessage(
     otherMember.publicKey.toBytes(),
     textEncryptionNonce,
   );
-  await program.rpc.sendMessage(new anchor.BN(nonce), encryptedText, {
-    accounts: {
-      dialect: dialectPublicKey,
-      sender: sender.publicKey,
-      member0: dialect.members[0].publicKey,
-      member1: dialect.members[1].publicKey,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      systemProgram: anchor.web3.SystemProgram.programId,
+  await program.rpc.sendMessage(
+    new anchor.BN(nonce),
+    Buffer.from(encryptedText),
+    {
+      accounts: {
+        dialect: dialectPublicKey,
+        sender: sender.publicKey,
+        member0: dialect.members[0].publicKey,
+        member1: dialect.members[1].publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [sender],
     },
-    signers: [sender],
-  });
+  );
   const d = await getDialect(program, publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
