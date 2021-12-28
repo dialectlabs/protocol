@@ -27,7 +27,7 @@ export class Dialect {
   textDecoder: TextDecoder = new TextDecoder();
 
   constructor(size: number, members: [Member, Member]) {
-    this.buffer = new CyclicByteBuffer(size);
+    this.buffer = CyclicByteBuffer.empty(size);
     this.members = members;
   }
 

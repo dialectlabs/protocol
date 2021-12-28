@@ -453,31 +453,6 @@
           }
         ]
       }
-    },
-    {
-      "name": "Message",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "owner",
-            "type": "publicKey"
-          },
-          {
-            "name": "timestamp",
-            "type": "u32"
-          },
-          {
-            "name": "text",
-            "type": {
-              "array": [
-                "u8",
-                256
-              ]
-            }
-          }
-        ]
-      }
     }
   ],
   "events": [

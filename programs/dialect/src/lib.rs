@@ -48,11 +48,11 @@ pub mod dialect {
                 scopes: scopes[1],
             },
         ];
-
+        let now = Clock::get()?.unix_timestamp as u32;
         dialect.messages.read_offset = 0;
         dialect.messages.write_offset = 0;
         dialect.messages.items_count = 0;
-        dialect.last_message_timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
+        dialect.last_message_timestamp = now;
 
         emit!(CreateDialectEvent {
             dialect: dialect_loader.key(),
@@ -114,9 +114,7 @@ pub mod dialect {
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_mut()?;
         let sender = &mut ctx.accounts.sender;
-        let timestamp = Clock::get()?.unix_timestamp as u32; // TODO: Do this properly or use i64
-        dialect.last_message_timestamp = timestamp;
-        dialect.messages.append(text);
+        dialect.append(text, sender);
 
         emit!(SendMessageEvent {
             dialect: dialect_loader.key(),
@@ -351,7 +349,24 @@ const ITEM_METADATA_OVERHEAD: u16 = 2;
 pub struct DialectAccount {
     pub members: [Member; 2],        // 2 * Member = 68
     pub messages: CyclicByteBuffer,  // 2 + 2 + 2 + 8192
-    pub last_message_timestamp: u32, // 4 -- timestamp of the last message sent, for sorting dialects
+    pub last_message_timestamp: u32, // 4, UTC seconds, max value = Sunday, February 7, 2106 6:28:15 AM
+}
+
+impl DialectAccount {
+    fn append(&mut self, text: Vec<u8>, sender: &mut AccountInfo) {
+        let now = Clock::get().unwrap().unix_timestamp as u32;
+        self.last_message_timestamp = now;
+        let sender_member_idx = self
+            .members
+            .iter()
+            .position(|m| m.public_key == *sender.key)
+            .unwrap() as u8;
+        let mut serialized_message = Vec::new();
+        serialized_message.extend(sender_member_idx.to_be_bytes());
+        serialized_message.extend(now.to_be_bytes());
+        serialized_message.extend(text);
+        self.messages.append(serialized_message)
+    }
 }
 
 #[zero_copy]
@@ -365,7 +380,9 @@ pub struct CyclicByteBuffer {
 
 impl CyclicByteBuffer {
     fn append(&mut self, item: Vec<u8>) {
-        let item_with_metadata = &mut self.u16_to_bytes(item.len() as u16).to_vec();
+        let item_with_metadata = &mut Vec::new();
+        let item_len = (item.len() as u16).to_be_bytes();
+        item_with_metadata.extend(item_len);
         item_with_metadata.extend(item);
 
         let new_write_offset: u16 = self.mod_(self.write_offset + item_with_metadata.len() as u16);
@@ -402,22 +419,12 @@ impl CyclicByteBuffer {
         let read_offset = self.read_offset;
         let tail_size = MESSAGE_BUFFER_LENGTH as u16 - read_offset;
         if tail_size >= ITEM_METADATA_OVERHEAD {
-            return self.u16_from_bytes([
+            u16::from_be_bytes([
                 self.buffer[read_offset as usize],
                 self.buffer[read_offset as usize + 1],
             ]);
         }
-        return self.u16_from_bytes([self.buffer[read_offset as usize], self.buffer[0]]);
-    }
-
-    fn u16_to_bytes(&mut self, value: u16) -> [u8; 2] {
-        let b1 = ((value >> 8) & 0xff) as u8;
-        let b2 = (value & 0xff) as u8;
-        return [b1, b2];
-    }
-
-    fn u16_from_bytes(&mut self, bytes: [u8; 2]) -> u16 {
-        return ((bytes[0] as u16) << 8) | bytes[1] as u16;
+        return u16::from_be_bytes([self.buffer[read_offset as usize], self.buffer[0]]);
     }
 
     fn write_new_item(&mut self, item: &mut Vec<u8>, new_write_offset: u16) {
@@ -432,9 +439,9 @@ impl CyclicByteBuffer {
             self.buffer[pos as usize] = *e;
         }
     }
-    fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
-        return self.buffer;
-    }
+    // fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
+    //     return self.buffer;
+    // }
 }
 
 #[account]
@@ -530,7 +537,7 @@ fn slice(input: &[u8]) -> [u8; 80] {
 //     #[test]
 //     fn correctly_does_first_append_when_size_lt_buffer_size() {
 //         // given
-//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
 //             read_offset: 0,
 //             write_offset: 0,
 //             items_count: 0,
@@ -548,7 +555,7 @@ fn slice(input: &[u8]) -> [u8; 80] {
 //     #[test]
 //     fn correctly_does_first_append_when_size_eq_buffer_size() {
 //         // given
-//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
 //             read_offset: 0,
 //             write_offset: 0,
 //             items_count: 0,
@@ -566,7 +573,7 @@ fn slice(input: &[u8]) -> [u8; 80] {
 //     #[test]
 //     fn correctly_does_first_append_and_overwrite_when_size_eq_buffer_size() {
 //         // given
-//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
 //             read_offset: 0,
 //             write_offset: 0,
 //             items_count: 0,
@@ -586,7 +593,7 @@ fn slice(input: &[u8]) -> [u8; 80] {
 //     #[test]
 //     fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
 //         // given
-//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
+//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
 //             read_offset: 0,
 //             write_offset: 0,
 //             items_count: 0,
@@ -603,23 +610,4 @@ fn slice(input: &[u8]) -> [u8; 80] {
 //         assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
 //     }
 //
-//     #[test]
-//     fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
-//         // given
-//         let mut buffer: CyclicByteBuffer<5> = CyclicByteBuffer {
-//             read_offset: 0,
-//             write_offset: 0,
-//             items_count: 0,
-//             buffer: [0; 5],
-//         };
-//         let item1 = vec![1u8, 2u8];
-//         let item2 = vec![3u8, 4u8];
-//         // when
-//         buffer.append(item1);
-//         buffer.append(item2);
-//         // then
-//         assert_eq!(buffer.write_offset, 3);
-//         assert_eq!(buffer.read_offset, 4);
-//         assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
-//     }
 // }
