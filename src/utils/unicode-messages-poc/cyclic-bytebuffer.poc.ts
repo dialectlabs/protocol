@@ -86,12 +86,12 @@ export class CyclicByteBuffer {
     this.itemsCount++;
   }
 
-  private noSpaceAvailableFor(itemSize: number) {
-    return this.getAvailableSpace() < itemSize;
+  private noSpaceAvailableFor(item: Uint8Array) {
+    return this.getAvailableSpace() < item.length;
   }
 
   private eraseOldestItem() {
-    const itemSize = this.readItemSize();
+    const itemSize = ITEM_METADATA_OVERHEAD + this.readItemSize();
     this.write(this.zeros(itemSize), this.readOffset);
     this.readOffset = this.mod(this.readOffset + itemSize);
     this.itemsCount--;
@@ -140,12 +140,10 @@ export class CyclicByteBuffer {
   }
 
   private write(data: Uint8Array, offset: number) {
-    const freeTailBytes = this.mod(this.buffer.length - offset);
-    const numBytesToWriteToTail = Math.min(data.length, freeTailBytes);
-    const writeToTail = data.slice(0, numBytesToWriteToTail);
-    this.buffer.set(writeToTail, offset);
-    const writeToHead = data.slice(numBytesToWriteToTail, data.length);
-    this.buffer.set(writeToHead, 0);
+    data.forEach((value, idx) => {
+      const pos = this.mod(offset + idx);
+      this.buffer[pos] = value;
+    });
   }
 
   private getAvailableSpace() {
