@@ -345,6 +345,7 @@ const MESSAGE_BUFFER_LENGTH: usize = 8192;
 const ITEM_METADATA_OVERHEAD: u16 = 2;
 
 #[account(zero_copy)]
+// NB: max space for PDA = 10240
 // space = 8 + 68 + (2 + 2 + 2 + 8192) + 4
 pub struct DialectAccount {
     pub members: [Member; 2],        // 2 * Member = 68
