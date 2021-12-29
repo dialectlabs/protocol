@@ -419,7 +419,7 @@ impl CyclicByteBuffer {
         let read_offset = self.read_offset;
         let tail_size = MESSAGE_BUFFER_LENGTH as u16 - read_offset;
         if tail_size >= ITEM_METADATA_OVERHEAD {
-            u16::from_be_bytes([
+            return u16::from_be_bytes([
                 self.buffer[read_offset as usize],
                 self.buffer[read_offset as usize + 1],
             ]);
@@ -439,9 +439,9 @@ impl CyclicByteBuffer {
             self.buffer[pos as usize] = *e;
         }
     }
-    // fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
-    //     return self.buffer;
-    // }
+    fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
+        return self.buffer;
+    }
 }
 
 #[account]
@@ -530,84 +530,109 @@ fn slice(input: &[u8]) -> [u8; 80] {
     ]
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::CyclicByteBuffer;
-//
-//     #[test]
-//     fn correctly_does_first_append_when_size_lt_buffer_size() {
-//         // given
-//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
-//             read_offset: 0,
-//             write_offset: 0,
-//             items_count: 0,
-//             buffer: [0; 5],
-//         };
-//         let item = vec![1u8, 2u8];
-//         // when
-//         buffer.append(item);
-//         // then
-//         assert_eq!(buffer.write_offset, 4);
-//         assert_eq!(buffer.read_offset, 0);
-//         assert_eq!(buffer.raw(), [0, 2, 1, 2, 0]);
-//     }
-//
-//     #[test]
-//     fn correctly_does_first_append_when_size_eq_buffer_size() {
-//         // given
-//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
-//             read_offset: 0,
-//             write_offset: 0,
-//             items_count: 0,
-//             buffer: [0; 5],
-//         };
-//         let item = vec![1u8, 2u8, 3u8];
-//         // when
-//         buffer.append(item);
-//         // then
-//         assert_eq!(buffer.write_offset, 0);
-//         assert_eq!(buffer.read_offset, 0);
-//         assert_eq!(buffer.raw(), [0, 3, 1, 2, 3]);
-//     }
-//
-//     #[test]
-//     fn correctly_does_first_append_and_overwrite_when_size_eq_buffer_size() {
-//         // given
-//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
-//             read_offset: 0,
-//             write_offset: 0,
-//             items_count: 0,
-//             buffer: [0; 5],
-//         };
-//         let item1 = vec![1u8, 2u8, 3u8];
-//         let item2 = vec![4u8, 5u8, 6u8];
-//         // when
-//         buffer.append(item1);
-//         buffer.append(item2);
-//         // then
-//         assert_eq!(buffer.write_offset, 0);
-//         assert_eq!(buffer.read_offset, 0);
-//         assert_eq!(buffer.raw(), [0, 3, 4, 5, 6]);
-//     }
-//
-//     #[test]
-//     fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
-//         // given
-//         let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
-//             read_offset: 0,
-//             write_offset: 0,
-//             items_count: 0,
-//             buffer: [0; 5],
-//         };
-//         let item1 = vec![1u8, 2u8];
-//         let item2 = vec![3u8, 4u8];
-//         // when
-//         buffer.append(item1);
-//         buffer.append(item2);
-//         // then
-//         assert_eq!(buffer.write_offset, 3);
-//         assert_eq!(buffer.read_offset, 4);
-//         assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
-//     }
-//
-// }
+#[cfg(test)]
+mod tests {
+    use crate::CyclicByteBuffer;
+
+    // #[test]
+    // fn correctly_does_first_append_when_size_lt_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item = vec![1u8, 2u8];
+    //     // when
+    //     buffer.append(item);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 4);
+    //     assert_eq!(buffer.read_offset, 0);
+    //     assert_eq!(buffer.raw(), [0, 2, 1, 2, 0]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_when_size_eq_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item = vec![1u8, 2u8, 3u8];
+    //     // when
+    //     buffer.append(item);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 0);
+    //     assert_eq!(buffer.read_offset, 0);
+    //     assert_eq!(buffer.raw(), [0, 3, 1, 2, 3]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_and_overwrite_when_size_eq_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item1 = vec![1u8, 2u8, 3u8];
+    //     let item2 = vec![4u8, 5u8, 6u8];
+    //     // when
+    //     buffer.append(item1);
+    //     buffer.append(item2);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 0);
+    //     assert_eq!(buffer.read_offset, 0);
+    //     assert_eq!(buffer.raw(), [0, 3, 4, 5, 6]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item1 = vec![1u8, 2u8];
+    //     let item2 = vec![3u8, 4u8];
+    //     // when
+    //     buffer.append(item1);
+    //     buffer.append(item2);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 3);
+    //     assert_eq!(buffer.read_offset, 4);
+    //     assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 7],
+    //     };
+    //     let item1 = vec![1u8, 2u8];
+    //     let item2 = vec![3u8, 4u8, 5u8];
+    //     let item3 = vec![6u8, 7u8];
+    //     // when
+    //     buffer.append(item1);
+    //     // [0, 2, 1, 2, 0, 0, 0]
+    //     assert_eq!(buffer.read_offset, 0);
+    //     buffer.append(item2);
+    //     // [4, 5, 0, 0, 0, 3, 3]
+    //     assert_eq!(buffer.read_offset, 4);
+    //     buffer.append(item3);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 6);
+    //     assert_eq!(buffer.read_offset, 2);
+    //     assert_eq!(buffer.raw(), [0, 0, 0, 2, 6, 7, 0]);
+    // }
+}
