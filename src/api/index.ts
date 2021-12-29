@@ -42,12 +42,6 @@ type RawCyclicByteBuffer = {
   buffer: Uint8Array;
 };
 
-type RawMessage = {
-  owner: PublicKey;
-  text: Uint8Array;
-  timestamp: number;
-};
-
 export type Metadata = {
   deviceToken: string | null;
   subscriptions: Subscription[];
@@ -347,7 +341,7 @@ function getMessages(
         timestamp: timestamp,
       };
     });
-  return allMessages;
+  return allMessages.reverse();
 }
 
 export async function getDialect(
