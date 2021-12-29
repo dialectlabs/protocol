@@ -470,6 +470,7 @@ describe('Protocol v1 test', () => {
       );
       const message = senderDialect.dialect.messages[0];
       chai.expect(message.text).to.be.eq(text);
+      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
       chai
         .expect(senderDialect.dialect.lastMessageTimestamp)
         .to.be.eq(message.timestamp);
@@ -493,6 +494,7 @@ describe('Protocol v1 test', () => {
       );
       const message = receiverDialect.dialect.messages[0];
       chai.expect(message.text).to.be.eq(text);
+      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
       chai
         .expect(receiverDialect.dialect.lastMessageTimestamp)
         .to.be.eq(message.timestamp);
