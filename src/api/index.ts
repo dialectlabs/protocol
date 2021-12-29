@@ -11,9 +11,17 @@ import {
 import { deserializeText, serializeText } from '../utils/text-serde';
 import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
 
-export const DIALECT_PUBLIC_KEY = process.env.DIALECT_PUBLIC_KEY
-  ? new anchor.web3.PublicKey(process.env.DIALECT_PUBLIC_KEY)
-  : anchor.web3.Keypair.generate().publicKey;
+export const DIALECT_KEYPAIR: anchor.web3.Keypair | null = process.env
+  .DIALECT_PRIVATE_KEY // if a dialect private key envvar is available, we use it
+  ? anchor.web3.Keypair.fromSecretKey(
+      new Uint8Array(JSON.parse(process.env.DIALECT_PRIVATE_KEY)),
+    )
+  : process.env.DIALECT_PUBLIC_KEY // else, if a dialect public key envvar is available, prioritize that & don't set a private key value at all (e.g. for client use)
+  ? null
+  : anchor.web3.Keypair.generate(); // otherwise, generate a keypair for on-the-fly use, e.g. tests, local development
+export const DIALECT_PUBLIC_KEY =
+  DIALECT_KEYPAIR?.publicKey ||
+  new anchor.web3.PublicKey(process.env.DIALECT_PUBLIC_KEY as string); // we know that if the keypair is not set, there is a public key
 
 // TODO: Switch from types to classes
 
@@ -106,27 +114,35 @@ export async function getMetadataProgramAddress(
 export async function getMetadata(
   program: anchor.Program,
   user: PublicKey | anchor.web3.Keypair,
+  keypair?: anchor.web3.Keypair | null,
 ): Promise<Metadata> {
+  // TODO: Refactor
   let userPubkey: anchor.web3.PublicKey;
-  let userKeypair: anchor.web3.Keypair | null = null;
-  if (user instanceof PublicKey) {
-    userPubkey = user;
-  } else {
-    userKeypair = user;
-    userPubkey = user.publicKey;
+  let keypairToUse: anchor.web3.Keypair | null = null;
+  let userIsKeypair = false;
+  try {
+    userPubkey = new anchor.web3.PublicKey(user.toString());
+  } catch {
+    userIsKeypair = true;
+    keypairToUse = user as Keypair; // we know it's a keypair
+    userPubkey = keypairToUse.publicKey;
+  }
+  // if keypair is passed, prioritize that
+  if (keypair) {
+    keypairToUse = keypair;
   }
   const [publicKey] = await getMetadataProgramAddress(program, userPubkey);
   const metadata = await program.account.metadataAccount.fetch(publicKey);
 
   let deviceToken: string | null = null;
-  if (userKeypair && metadata.deviceToken) {
+  if (keypairToUse && metadata.deviceToken) {
     const decryptedDeviceToken = ecdhDecrypt(
       new Uint8Array(metadata.deviceToken.encryptedArray),
       {
-        secretKey: userKeypair.secretKey,
-        publicKey: userKeypair.publicKey.toBytes(),
+        secretKey: keypairToUse.secretKey,
+        publicKey: keypairToUse.publicKey.toBytes(),
       },
-      DIALECT_PUBLIC_KEY.toBytes(),
+      userIsKeypair ? DIALECT_PUBLIC_KEY.toBytes() : userPubkey.toBytes(),
       new Uint8Array(metadata.deviceToken.nonce),
     );
     deviceToken = new TextDecoder().decode(decryptedDeviceToken);
