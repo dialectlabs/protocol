@@ -190,3 +190,20 @@ DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/index.ts
 ```
 
 It is fine to omit the DIALECT_PUBLIC_KEY environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the notification service, you'll need to set it to the public key corresponding to the private key in the notification service.
+
+## A note about nonce
+https://pynacl.readthedocs.io/en/v0.2.1/secret/
+
+### Nonce
+The 24 bytes nonce (Number used once) given to encrypt() and decrypt() must ***NEVER*** be reused for a particular key.
+Reusing the nonce means an attacker will have enough information to recover your secret key and encrypt or decrypt arbitrary messages.
+A nonce is not considered secret and may be freely transmitted or stored in plaintext alongside the ciphertext.
+
+A nonce does not need to be random, nor does the method of generating them need to be secret.
+A nonce could simply be a counter incremented with each message encrypted.
+
+Both the sender and the receiver should record every nonce both that they’ve used and they’ve received from the other.
+They should reject any message which reuses a nonce and they should make absolutely sure never to reuse a nonce.
+It is not enough to simply use a random value and hope that it’s not being reused (simply generating random values would open up the system to a Birthday Attack).
+
+One good method of generating nonces is for each person to pick a unique prefix, for example b"p1" and b"p2". When each person generates a nonce they prefix it, so instead of nacl.utils.random(24) you’d do b"p1" + nacl.utils.random(22). This prefix serves as a guarantee that no two messages from different people will inadvertently overlap nonces while in transit. They should still record every nonce they’ve personally used and every nonce they’ve received to prevent reuse or replays.
