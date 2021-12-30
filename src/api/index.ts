@@ -10,19 +10,6 @@ import {
 } from '../utils/ecdh-encryption';
 import { deserializeText, serializeText } from '../utils/text-serde';
 import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
-import { Key } from 'swr';
-
-export const DIALECT_KEYPAIR: anchor.web3.Keypair | null = process.env
-  .DIALECT_PRIVATE_KEY // if a dialect private key envvar is available, we use it
-  ? anchor.web3.Keypair.fromSecretKey(
-      new Uint8Array(JSON.parse(process.env.DIALECT_PRIVATE_KEY)),
-    )
-  : process.env.DIALECT_PUBLIC_KEY // else, if a dialect public key envvar is available, prioritize that & don't set a private key value at all (e.g. for client use)
-  ? null
-  : anchor.web3.Keypair.generate(); // otherwise, generate a keypair for on-the-fly use, e.g. tests, local development
-export const DIALECT_PUBLIC_KEY =
-  DIALECT_KEYPAIR?.publicKey ||
-  new anchor.web3.PublicKey(process.env.DIALECT_PUBLIC_KEY as string); // we know that if the keypair is not set, there is a public key
 
 // TODO: Switch from types to classes
 
