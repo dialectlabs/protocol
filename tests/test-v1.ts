@@ -643,6 +643,62 @@ describe('Protocol v1 test', () => {
       }
     });
 
+    it('All writers can send a message', async () => {
+      // given
+      const writer1 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      const writer2 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      members = [
+        {
+          publicKey: writer1.publicKey,
+          scopes: [true, true], // owner, read-only
+        },
+        {
+          publicKey: writer2.publicKey,
+          scopes: [false, true], // non-owner, read-write
+        },
+      ];
+      await createDialect(program, writer1, members);
+      // when
+      let writer1Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer1,
+      );
+      const writer1Text = generateRandomText(256);
+      await sendMessage(program, writer1Dialect, writer1, writer1Text);
+      let writer2Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer2,
+      );
+      const writer2Text = generateRandomText(256);
+      await sendMessage(program, writer2Dialect, writer2, writer2Text);
+
+      writer1Dialect = await getDialectForMembers(program, members, writer1);
+      writer2Dialect = await getDialectForMembers(program, members, writer2);
+
+      // then check writer1 dialect state
+      const message1Writer1 = writer1Dialect.dialect.messages[1];
+      const message2Writer1 = writer1Dialect.dialect.messages[0];
+      chai.expect(message1Writer1.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer1.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.publicKey);
+      // then check writer2 dialect state
+      const message1Writer2 = writer2Dialect.dialect.messages[1];
+      const message2Writer2 = writer2Dialect.dialect.messages[0];
+      chai.expect(message1Writer2.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer2.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
+    });
+
     // it('All writers can send a message', async () => {
     //   chai.expect(true).to.be.true;
     // });
