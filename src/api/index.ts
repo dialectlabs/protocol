@@ -10,6 +10,7 @@ import {
 } from '../utils/ecdh-encryption';
 import { deserializeText, serializeText } from '../utils/text-serde';
 import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
+import { Key } from 'swr';
 
 export const DIALECT_KEYPAIR: anchor.web3.Keypair | null = process.env
   .DIALECT_PRIVATE_KEY // if a dialect private key envvar is available, we use it
@@ -110,39 +111,66 @@ export async function getMetadataProgramAddress(
   );
 }
 
-// Get with keypair, for decryption
 export async function getMetadata(
   program: anchor.Program,
   user: PublicKey | anchor.web3.Keypair,
-  keypair?: anchor.web3.Keypair | null,
+  otherParty?: PublicKey | anchor.web3.Keypair | null,
 ): Promise<Metadata> {
-  // TODO: Refactor
-  let userPubkey: anchor.web3.PublicKey;
-  let keypairToUse: anchor.web3.Keypair | null = null;
+  /*
+  6 scenarios:
+
+  0. User is keypair, otherParty is null -- Cannot decrypt
+  1. User is public key, otherParty is null -- Cannot decrypt
+  2. User is public key, otherParty is public key -- Cannot decrypt
+  3. User is public key, otherParty is keypair -- Can decrypt
+  4. User is keypair, otherParty is public key -- Can decrypt
+  5. User is keypair, otherParty is keypair -- Can decrypt
+  */
+  let shouldDecrypt = false;
   let userIsKeypair = false;
+  let otherPartyIsKeypair = false;
+  let pubkeyToUse: anchor.web3.PublicKey | null = null;
+  let keypairToUse: anchor.web3.Keypair | null = null;
+
   try {
-    userPubkey = new anchor.web3.PublicKey(user.toString());
+    // assume user is pubkey
+    new anchor.web3.PublicKey(user.toString());
   } catch {
+    // user is keypair
     userIsKeypair = true;
-    keypairToUse = user as Keypair; // we know it's a keypair
-    userPubkey = keypairToUse.publicKey;
   }
-  // if keypair is passed, prioritize that
-  if (keypair) {
-    keypairToUse = keypair;
+
+  try {
+    // assume otherParty is pubkey
+    new anchor.web3.PublicKey(otherParty?.toString() || ''); 
+  } catch {
+    // otherParty is keypair or null
+    otherPartyIsKeypair = otherParty && true || false;
   }
-  const [publicKey] = await getMetadataProgramAddress(program, userPubkey);
-  const metadata = await program.account.metadataAccount.fetch(publicKey);
+
+  if (otherParty && (userIsKeypair || otherPartyIsKeypair)) { // cases 3 - 5
+    shouldDecrypt = true;
+  }
+
+  if (shouldDecrypt) { // we know we have a keypair, now we just prioritize which we use
+    keypairToUse = (userIsKeypair ? user : otherParty) as anchor.web3.Keypair;
+    // if both keypairs, use user keypair & other party public key
+    pubkeyToUse = userIsKeypair && otherPartyIsKeypair ? ((otherParty as Keypair).publicKey) // both keypairs, prioritize user keypair
+      : userIsKeypair ? otherParty as PublicKey  // user is keypair, other party is pubkey
+      : user as PublicKey; // user is pubkey, other party is keypair
+  }
+  const [metadataAddress] = await getMetadataProgramAddress(program, userIsKeypair ? (user as Keypair).publicKey : user as PublicKey);
+  const metadata = await program.account.metadataAccount.fetch(metadataAddress);
 
   let deviceToken: string | null = null;
-  if (keypairToUse && metadata.deviceToken) {
+  if (shouldDecrypt && metadata.deviceToken) {
     const decryptedDeviceToken = ecdhDecrypt(
       new Uint8Array(metadata.deviceToken.encryptedArray),
       {
-        secretKey: keypairToUse.secretKey,
-        publicKey: keypairToUse.publicKey.toBytes(),
+        secretKey: (keypairToUse as Keypair).secretKey,
+        publicKey: (keypairToUse as Keypair).publicKey.toBytes(),
       },
-      userIsKeypair ? DIALECT_PUBLIC_KEY.toBytes() : userPubkey.toBytes(),
+      (pubkeyToUse as PublicKey).toBytes(),
       new Uint8Array(metadata.deviceToken.nonce),
     );
     deviceToken = new TextDecoder().decode(decryptedDeviceToken);
@@ -179,6 +207,7 @@ export async function createMetadata(
 export async function updateDeviceToken(
   program: anchor.Program,
   user: Keypair,
+  otherPartyPubkey: PublicKey,
   deviceToken: string | null,
 ): Promise<Metadata> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
@@ -194,7 +223,7 @@ export async function updateDeviceToken(
         publicKey: user.publicKey.toBytes(),
         secretKey: user.secretKey,
       },
-      DIALECT_PUBLIC_KEY.toBytes(),
+      otherPartyPubkey.toBytes(),
       nonce,
     );
     // TODO: Retire this padding
@@ -216,7 +245,7 @@ export async function updateDeviceToken(
     },
   );
   await waitForFinality(program, tx);
-  return await getMetadata(program, user);
+  return await getMetadata(program, user, otherPartyPubkey);
 }
 
 export async function subscribeUser(

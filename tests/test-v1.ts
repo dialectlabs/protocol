@@ -20,6 +20,8 @@ import {
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
 
+const dialectKeypair = anchor.web3.Keypair.generate();
+
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 
@@ -52,6 +54,7 @@ describe('Protocol v1 test', () => {
         const updatedMetadata = await updateDeviceToken(
           program,
           member,
+          dialectKeypair.publicKey,
           deviceToken,
         );
         expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
@@ -442,7 +445,7 @@ describe('Protocol v1 test', () => {
     if (createMeta) {
       const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       await createMetadata(program, user);
-      await updateDeviceToken(program, user, deviceToken);
+      await updateDeviceToken(program, user, dialectKeypair.publicKey, deviceToken);
     }
     return user;
   }

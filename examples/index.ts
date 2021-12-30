@@ -22,6 +22,8 @@ const local = new web3.Connection(
   'recent',
 );
 
+const dialectKeypair = web3.Keypair.generate();
+
 const setup = async (
   n: number,
 ): Promise<[anchor.Program, web3.Keypair[], Member[]]> => {
@@ -96,7 +98,7 @@ const subscribeUsers = async (
     keypairs.map(async (keypair, idx) => {
       await subscribeUser(program, dialect, keypair.publicKey, keypair);
       metadatas.push(
-        await updateDeviceToken(program, keypair, `${idx}`.repeat(32)),
+        await updateDeviceToken(program, keypair, dialectKeypair.publicKey, `${idx}`.repeat(32)),
       );
     }),
   );
