@@ -21,6 +21,7 @@ import {
 import { waitForFinality } from '../src/utils';
 import { ITEM_METADATA_OVERHEAD } from '../src/utils/unicode-messages-poc/cyclic-bytebuffer.poc';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
+import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
 import { sleep } from '../src/utils';
 
@@ -449,6 +450,7 @@ describe('Protocol v1 test', () => {
       const messageSerializationOverhead =
         ITEM_METADATA_OVERHEAD +
         ENCRYPTION_OVERHEAD_BYTES +
+        NONCE_SIZE_BYTES +
         timestampSize +
         ownerMemberIdxSize;
       const targetTextSize =
@@ -463,8 +465,8 @@ describe('Protocol v1 test', () => {
         const dialect = await getDialectForMembers(program, members, writer);
         console.log(
           `Sending message ${messageCounter}/${texts.length}
-  len = ${text.length}
-  idx: ${dialect.dialect.nextMessageIdx}`,
+    len = ${text.length}
+    idx: ${dialect.dialect.nextMessageIdx}`,
         );
         await sendMessage(program, dialect, writer, text);
         const sliceStart =
@@ -494,8 +496,8 @@ describe('Protocol v1 test', () => {
         const dialect = await getDialectForMembers(program, members, writer);
         console.log(
           `Sending message ${messageCounter}/${texts.length}
-  len = ${text.length}
-  idx: ${dialect.dialect.nextMessageIdx}`,
+    len = ${text.length}
+    idx: ${dialect.dialect.nextMessageIdx}`,
         );
         // when
         await sendMessage(program, dialect, writer, text);
@@ -514,16 +516,16 @@ describe('Protocol v1 test', () => {
      - Chinese and Japanese among others are encoded using 3 bytes
      - Emoji are encoded using 4 bytes
     A note about message length limit and summary:
-     - len >= 838 hits max transaction size limit = 1232 bytes https://docs.solana.com/ru/proposals/transactions-v2
-     - => best case: 838 symbols msg (ascii only)
-     - => worst case: 209 symbols (e.g. emoji only)
+     - len >= 814 hits max transaction size limit = 1232 bytes https://docs.solana.com/ru/proposals/transactions-v2
+     - => best case: 813 symbols per msg (ascii only)
+     - => worst case: 203 symbols (e.g. emoji only)
      - => average case depends on character set, see details below:
      ---- ASCII: ±800 characters
-     ---- Roman, Greek, Cyrillic, Coptic, Armenian, Hebrew, Arabic: ± 400 characters
-     ---- Chinese and japanese: ± 280 characters
-     ---- Emoji: ± 209 characters*/
-    it('Message text limit of 837 bytes can be sent/received', async () => {
-      const maxMessageSizeBytes = 837;
+     ---- Roman, Greek, Cyrillic, Coptic, Armenian, Hebrew, Arabic: ± 406 characters
+     ---- Chinese and japanese: ± 270 characters
+     ---- Emoji: ± 203 characters*/
+    it('Message text limit of 813 bytes can be sent/received', async () => {
+      const maxMessageSizeBytes = 813;
       const texts = Array(30)
         .fill(0)
         .map(() => generateRandomText(maxMessageSizeBytes));
@@ -547,7 +549,7 @@ describe('Protocol v1 test', () => {
       }
     });
 
-    it('All writers can send a message', async () => {
+    it('2 writers can send a messages and read them when dialect state is linearized before sending msg', async () => {
       // given
       const writer1 = await createUser({
         requestAirdrop: true,
@@ -580,7 +582,64 @@ describe('Protocol v1 test', () => {
         program,
         members,
         writer2,
+      ); // ensures dialect state linearization
+      const writer2Text = generateRandomText(256);
+      await sendMessage(program, writer2Dialect, writer2, writer2Text);
+
+      writer1Dialect = await getDialectForMembers(program, members, writer1);
+      writer2Dialect = await getDialectForMembers(program, members, writer2);
+
+      // then check writer1 dialect state
+      const message1Writer1 = writer1Dialect.dialect.messages[1];
+      const message2Writer1 = writer1Dialect.dialect.messages[0];
+      chai.expect(message1Writer1.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer1.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.publicKey);
+      // then check writer2 dialect state
+      const message1Writer2 = writer2Dialect.dialect.messages[1];
+      const message2Writer2 = writer2Dialect.dialect.messages[0];
+      chai.expect(message1Writer2.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer2.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
+    });
+
+    // This test was failing before changing nonce generation algorithm
+    it('2 writers can send a messages and read them when dialect state is not linearized before sending msg', async () => {
+      // given
+      const writer1 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      const writer2 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      members = [
+        {
+          publicKey: writer1.publicKey,
+          scopes: [true, true], // owner, read-only
+        },
+        {
+          publicKey: writer2.publicKey,
+          scopes: [false, true], // non-owner, read-write
+        },
+      ];
+      await createDialect(program, writer1, members);
+      // when
+      let writer1Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer1,
       );
+      let writer2Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer2,
+      ); // ensures no dialect state linearization
+      const writer1Text = generateRandomText(256);
+      await sendMessage(program, writer1Dialect, writer1, writer1Text);
       const writer2Text = generateRandomText(256);
       await sendMessage(program, writer2Dialect, writer2, writer2Text);
 

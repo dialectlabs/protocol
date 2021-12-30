@@ -4,7 +4,7 @@ import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { deviceTokenIsPresent, waitForFinality, Wallet_ } from '../utils';
 import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
-import { generateNonce, generateRandomNonce } from '../utils/nonce-generator';
+import { generateNonce, generateRandomNonce, generateRandomNonceWithPrefix, NONCE_SIZE_BYTES } from '../utils/nonce-generator';
 import { CyclicByteBuffer } from '../utils/unicode-messages-poc/cyclic-bytebuffer.poc';
 import ByteBuffer from 'bytebuffer';
 import { deserializeText, serializeText } from '../utils/text-serde';
@@ -286,10 +286,16 @@ export async function getDialectProgramAddress(
   );
 }
 
-function findOtherMember(allMembers: Member[], me: anchor.web3.Keypair) {
-  const otherMember = allMembers.find(
-    (it) => !it.publicKey.equals(me.publicKey),
-  );
+function findMemberIdx(allMembers: Member[], member: anchor.web3.PublicKey) {
+  const memberIdx = allMembers.findIndex((it) => it.publicKey.equals(member));
+  if (memberIdx === -1) {
+    throw new Error('Expected to have other member');
+  }
+  return memberIdx;
+}
+
+function findOtherMember(allMembers: Member[], member: anchor.web3.PublicKey) {
+  const otherMember = allMembers.find((it) => !it.publicKey.equals(member));
   if (!otherMember) {
     throw new Error('Expected to have other member');
   }
@@ -306,31 +312,32 @@ function getMessages(
     rawMessagesBuffer.itemsCount,
     rawMessagesBuffer.buffer,
   );
-  const allMessages: Message[] = messagesBuffer
-    .items()
-    .map(({ buffer, offset }) => {
-      const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
-      const ownerMemberIndex = byteBuffer.readByte();
-      const timestamp = byteBuffer.readUint32() * 1000;
-      const encryptedText = new Uint8Array(byteBuffer.toBuffer(true));
-      const messageOwner = members[ownerMemberIndex];
-      const otherMember = findOtherMember(members, user);
-      const encodedText = ecdhDecrypt(
-        encryptedText,
-        {
-          secretKey: user.secretKey,
-          publicKey: user.publicKey.toBytes(),
-        },
-        otherMember.publicKey.toBuffer(),
-        generateNonce(offset),
-      );
-      const text = new TextDecoder().decode(encodedText);
-      return {
-        owner: messageOwner.publicKey,
-        text,
-        timestamp: timestamp,
-      };
-    });
+  const allMessages: Message[] = messagesBuffer.items().map(({ buffer }) => {
+    const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
+    const ownerMemberIndex = byteBuffer.readByte();
+    const timestamp = byteBuffer.readUint32() * 1000;
+    const encryptionNonce = new Uint8Array(
+      byteBuffer.readBytes(NONCE_SIZE_BYTES).toArrayBuffer(true),
+    );
+    const encryptedText = new Uint8Array(byteBuffer.toBuffer(true));
+    const messageOwner = members[ownerMemberIndex];
+    const otherMember = findOtherMember(members, user.publicKey);
+    const encodedText = ecdhDecrypt(
+      encryptedText,
+      {
+        secretKey: user.secretKey,
+        publicKey: user.publicKey.toBytes(),
+      },
+      otherMember.publicKey.toBuffer(),
+      encryptionNonce,
+    );
+    const text = new TextDecoder().decode(encodedText);
+    return {
+      owner: messageOwner.publicKey,
+      text,
+      timestamp: timestamp,
+    };
+  });
   return allMessages.reverse();
 }
 
@@ -503,9 +510,10 @@ export async function sendMessage(
     program,
     dialect.members,
   );
-  const otherMember = findOtherMember(dialect.members, sender);
+  const otherMember = findOtherMember(dialect.members, sender.publicKey);
+  const senderMemberIdx = findMemberIdx(dialect.members, sender.publicKey);
   const textBytes = new TextEncoder().encode(text);
-  const textEncryptionNonce = generateNonce(dialect.nextMessageIdx);
+  const encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
   const encryptedText = ecdhEncrypt(
     textBytes,
     {
@@ -513,11 +521,15 @@ export async function sendMessage(
       publicKey: sender.publicKey.toBytes(),
     },
     otherMember.publicKey.toBytes(),
-    textEncryptionNonce,
+    encryptionNonce,
   );
+  const nonceWithEncryptedText = new Uint8Array([
+    ...encryptionNonce,
+    ...encryptedText,
+  ]);
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
-    Buffer.from(encryptedText),
+    Buffer.from(nonceWithEncryptedText),
     {
       accounts: {
         dialect: dialectPublicKey,
