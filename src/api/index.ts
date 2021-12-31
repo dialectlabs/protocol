@@ -337,6 +337,26 @@ export async function getDialect(
   } as DialectAccount;
 }
 
+export async function getDialects(
+  program: anchor.Program,
+  user: anchor.web3.Keypair,
+): Promise<DialectAccount[]> {
+  const metadata = await getMetadata(program, user.publicKey);
+  const enabledSubscriptions = metadata.subscriptions.filter(
+    (it) => it.enabled,
+  );
+  return Promise.all(
+    enabledSubscriptions.map(async ({ pubkey }) =>
+      getDialect(program, pubkey, user),
+    ),
+  ).then((dialects) =>
+    dialects.sort(
+      ({ dialect: d1 }, { dialect: d2 }) =>
+        d2.lastMessageTimestamp - d1.lastMessageTimestamp,
+    ),
+  );
+}
+
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[],
