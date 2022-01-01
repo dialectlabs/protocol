@@ -2,7 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
-import { waitForFinality, Wallet_ } from '../utils';
+import { deviceTokenIsPresent, waitForFinality, Wallet_ } from '../utils';
 import {
   ecdhDecrypt,
   ecdhEncrypt,
@@ -150,7 +150,7 @@ export async function getMetadata(
   const metadata = await program.account.metadataAccount.fetch(metadataAddress);
 
   let deviceToken: string | null = null;
-  if (shouldDecrypt && metadata.deviceToken) {
+  if (shouldDecrypt && deviceTokenIsPresent(metadata.deviceToken)) {
     const decryptedDeviceToken = ecdhDecrypt(
       new Uint8Array(metadata.deviceToken.encryptedArray),
       {

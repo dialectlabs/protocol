@@ -100,7 +100,7 @@ pub mod dialect {
                 dialect: dialect.key()
             });
         } else {
-            msg!("User already subscribed to 4 dialects");
+            msg!("User already subscribed to 32 dialects");
         }
         Ok(())
     }

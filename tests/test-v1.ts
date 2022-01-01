@@ -21,7 +21,7 @@ import {
   updateDeviceToken,
 } from '../src/api';
 import { waitForFinality } from '../src/utils';
-import { sleep } from '../lib/es';
+import { sleep } from '../src/utils';
 
 const dialectKeypair = anchor.web3.Keypair.generate();
 
