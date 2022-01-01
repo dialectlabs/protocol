@@ -21,7 +21,9 @@ export const MESSAGES_PER_DIALECT = 32;
 export const MAX_RAW_MESSAGE_SIZE = 256;
 export const MAX_MESSAGE_SIZE =
   MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
-export const DEVICE_TOKEN_LENGTH = 32;
+export const DEVICE_TOKEN_LENGTH = 64;
+export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
+export const DEVICE_TOKEN_PADDING_LENGTH = DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
 
 type Subscription = {
   pubkey: PublicKey;
@@ -151,16 +153,20 @@ export async function getMetadata(
 
   let deviceToken: string | null = null;
   if (shouldDecrypt && deviceTokenIsPresent(metadata.deviceToken)) {
-    const decryptedDeviceToken = ecdhDecrypt(
-      new Uint8Array(metadata.deviceToken.encryptedArray),
-      {
-        secretKey: (keypairToUse as Keypair).secretKey,
-        publicKey: (keypairToUse as Keypair).publicKey.toBytes(),
-      },
-      (pubkeyToUse as PublicKey).toBytes(),
-      new Uint8Array(metadata.deviceToken.nonce),
-    );
-    deviceToken = new TextDecoder().decode(decryptedDeviceToken);
+    try {
+      const decryptedDeviceToken = ecdhDecrypt(
+        new Uint8Array(metadata.deviceToken.encryptedArray),
+        {
+          secretKey: (keypairToUse as Keypair).secretKey,
+          publicKey: (keypairToUse as Keypair).publicKey.toBytes(),
+        },
+        (pubkeyToUse as PublicKey).toBytes(),
+        new Uint8Array(metadata.deviceToken.nonce),
+      );
+      deviceToken = new TextDecoder().decode(decryptedDeviceToken);
+    } catch (e) {
+      console.log('FAILED TO DECRYPT DEVICE TOKEN', metadata.deviceToken, e);
+    }
   }
   return {
     deviceToken,
