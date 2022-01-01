@@ -220,7 +220,7 @@ export async function updateDeviceToken(
       nonce,
     );
     // TODO: Retire this padding
-    const padding = new Uint8Array(new Array(16).fill(0));
+    const padding = new Uint8Array(new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0));
     encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
   }
   const tx = await program.rpc.updateDeviceToken(
