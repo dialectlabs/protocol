@@ -4,6 +4,7 @@ import { Keypair } from '@solana/web3.js';
 import {
   createDialect,
   createMetadata,
+  DEVICE_TOKEN_LENGTH,
   DialectAccount,
   getDialectForMembers,
   idl,
@@ -21,6 +22,8 @@ const local = new web3.Connection(
   programs['localnet'].clusterAddress,
   'recent',
 );
+
+const dialectPublicKey = process.env.DIALECT_PUBLIC_KEY ? new web3.PublicKey(process.env.DIALECT_PUBLIC_KEY) : (web3.Keypair.generate()).publicKey;
 
 const setup = async (
   n: number,
@@ -96,7 +99,7 @@ const subscribeUsers = async (
     keypairs.map(async (keypair, idx) => {
       await subscribeUser(program, dialect, keypair.publicKey, keypair);
       metadatas.push(
-        await updateDeviceToken(program, keypair, `${idx}`.repeat(32)),
+        await updateDeviceToken(program, keypair, dialectPublicKey, `${idx}`.repeat(DEVICE_TOKEN_LENGTH)),
       );
     }),
   );
