@@ -505,6 +505,21 @@
           "index": false
         }
       ]
+    },
+    {
+      "name": "CreateMetadataEvent",
+      "fields": [
+        {
+          "name": "metadata",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
     }
   ],
   "metadata": {
