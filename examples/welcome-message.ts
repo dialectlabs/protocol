@@ -81,33 +81,40 @@ const fundKeypairs = async (
 
 const index = async (): Promise<void> => {
   const { program, dialectKeyPair, userKeyPair } = await setup();
-
+  const members: Member[] = [
+    {
+      publicKey: dialectKeyPair.publicKey,
+      scopes: [true, true],
+    },
+    {
+      publicKey: userKeyPair.publicKey,
+      scopes: [false, false],
+    },
+  ];
   program.addEventListener('CreateMetadataEvent', async (event, slot) => {
     console.log('CreateMetadataEvent', event, slot);
-    const user = event.user as anchor.web3.PublicKey;
-    const members: Member[] = [
-      {
-        publicKey: dialectKeyPair.publicKey,
-        scopes: [true, true],
-      },
-      {
-        publicKey: user,
-        scopes: [false, false],
-      },
-    ];
-    let dialect = await createDialect(program, dialectKeyPair, members);
+    if (process.env.WELCOME_MESSAGE_ENABLED !== 'true') {
+      return;
+    }
+    const dialect = await createDialect(program, dialectKeyPair, members);
     await subscribeUser(
       program,
       dialect,
       userKeyPair.publicKey,
       dialectKeyPair,
     );
-    await sendMessage(program, dialect, dialectKeyPair, 'Hello from dialect!');
-
-    dialect = await getDialectForMembers(program, members, userKeyPair);
-    console.log(dialect.dialect.messages);
+    await sendMessage(
+      program,
+      dialect,
+      dialectKeyPair,
+      'Hello from on-new-user.ts example',
+    );
   });
 
+  program.addEventListener('SendMessageEvent', async (event, slot) => {
+    const dialect = await getDialectForMembers(program, members, userKeyPair);
+    console.log(dialect.dialect.messages);
+  });
   await createMetadata(program, userKeyPair);
 };
 
