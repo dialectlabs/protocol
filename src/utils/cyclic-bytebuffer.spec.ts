@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { CyclicByteBuffer } from './cyclic-bytebuffer.poc';
+import { CyclicByteBuffer } from './cyclic-bytebuffer';
 
 describe('Test cyclic buffer', async () => {
   it('correctly does first append when size < buffer size', () => {

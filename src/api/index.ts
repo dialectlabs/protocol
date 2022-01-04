@@ -3,11 +3,18 @@ import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { deviceTokenIsPresent, waitForFinality, Wallet_ } from '../utils';
-import { ecdhDecrypt, ecdhEncrypt, ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
-import { generateNonce, generateRandomNonce, generateRandomNonceWithPrefix, NONCE_SIZE_BYTES } from '../utils/nonce-generator';
-import { CyclicByteBuffer } from '../utils/unicode-messages-poc/cyclic-bytebuffer.poc';
+import {
+  ecdhDecrypt,
+  ecdhEncrypt,
+  ENCRYPTION_OVERHEAD_BYTES,
+} from '../utils/ecdh-encryption';
+import {
+  generateRandomNonce,
+  generateRandomNonceWithPrefix,
+  NONCE_SIZE_BYTES,
+} from '../utils/nonce-generator';
+import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
-import { deserializeText, serializeText } from '../utils/text-serde';
 
 // TODO: Switch from types to classes
 
@@ -16,7 +23,8 @@ User metadata
 */
 export const DEVICE_TOKEN_LENGTH = 64;
 export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
-export const DEVICE_TOKEN_PADDING_LENGTH = DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
+export const DEVICE_TOKEN_PADDING_LENGTH =
+  DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
 
 const ACCOUNT_DESCRIPTOR_SIZE = 8;
 const DIALECT_ACCOUNT_MEMBER_SIZE = 34;
@@ -137,21 +145,29 @@ export async function getMetadata(
     new anchor.web3.PublicKey(otherParty?.toString() || '');
   } catch {
     // otherParty is keypair or null
-    otherPartyIsKeypair = otherParty && true || false;
+    otherPartyIsKeypair = (otherParty && true) || false;
   }
 
-  if (otherParty && (userIsKeypair || otherPartyIsKeypair)) { // cases 3 - 5
+  if (otherParty && (userIsKeypair || otherPartyIsKeypair)) {
+    // cases 3 - 5
     shouldDecrypt = true;
   }
 
-  if (shouldDecrypt) { // we know we have a keypair, now we just prioritize which we use
+  if (shouldDecrypt) {
+    // we know we have a keypair, now we just prioritize which we use
     keypairToUse = (userIsKeypair ? user : otherParty) as anchor.web3.Keypair;
     // if both keypairs, use user keypair & other party public key
-    pubkeyToUse = userIsKeypair && otherPartyIsKeypair ? ((otherParty as Keypair).publicKey) // both keypairs, prioritize user keypair
-      : userIsKeypair ? otherParty as PublicKey  // user is keypair, other party is pubkey
-      : user as PublicKey; // user is pubkey, other party is keypair
+    pubkeyToUse =
+      userIsKeypair && otherPartyIsKeypair
+        ? (otherParty as Keypair).publicKey // both keypairs, prioritize user keypair
+        : userIsKeypair
+        ? (otherParty as PublicKey) // user is keypair, other party is pubkey
+        : (user as PublicKey); // user is pubkey, other party is keypair
   }
-  const [metadataAddress] = await getMetadataProgramAddress(program, userIsKeypair ? (user as Keypair).publicKey : user as PublicKey);
+  const [metadataAddress] = await getMetadataProgramAddress(
+    program,
+    userIsKeypair ? (user as Keypair).publicKey : (user as PublicKey),
+  );
   const metadata = await program.account.metadataAccount.fetch(metadataAddress);
 
   let deviceToken: string | null = null;
@@ -223,7 +239,9 @@ export async function updateDeviceToken(
       nonce,
     );
     // TODO: Retire this padding
-    const padding = new Uint8Array(new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0));
+    const padding = new Uint8Array(
+      new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0),
+    );
     encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
   }
   const tx = await program.rpc.updateDeviceToken(
