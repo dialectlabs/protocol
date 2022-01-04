@@ -30,6 +30,7 @@ pub mod dialect {
     pub fn create_dialect(
         ctx: Context<CreateDialect>,
         _dialect_nonce: u8,
+        encrypted: bool,
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
         // TODO: Assert owner in members
@@ -53,6 +54,7 @@ pub mod dialect {
         dialect.messages.write_offset = 0;
         dialect.messages.items_count = 0;
         dialect.last_message_timestamp = now;
+        dialect.encrypted = encrypted;
 
         emit!(CreateDialectEvent {
             dialect: dialect_loader.key(),
@@ -267,7 +269,7 @@ pub struct CreateDialect<'info> {
         payer = owner,
         // NB: max space for PDA = 10240
         // space = discriminator + dialect account size
-        space = 8 + 68 + 4 + (2 + 2 + 2 + 8192)
+        space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -346,11 +348,12 @@ const ITEM_METADATA_OVERHEAD: u16 = 2;
 
 #[account(zero_copy)]
 // NB: max space for PDA = 10240
-// space = 8 + 68 + (2 + 2 + 2 + 8192) + 4
+// space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
 pub struct DialectAccount {
     pub members: [Member; 2],        // 2 * Member = 68
     pub messages: CyclicByteBuffer,  // 2 + 2 + 2 + 8192
     pub last_message_timestamp: u32, // 4, UTC seconds, max value = Sunday, February 7, 2106 6:28:15 AM
+    pub encrypted: bool,             // 1
 }
 
 impl DialectAccount {
