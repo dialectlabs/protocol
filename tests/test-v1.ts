@@ -18,12 +18,11 @@ import {
   subscribeUser,
   updateDeviceToken,
 } from '../src/api';
-import { waitForFinality } from '../src/utils';
-import { ITEM_METADATA_OVERHEAD } from '../src/utils/unicode-messages-poc/cyclic-bytebuffer.poc';
+import { sleep, waitForFinality } from '../src/utils';
+import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
-import { sleep } from '../src/utils';
 
 const dialectKeypair = anchor.web3.Keypair.generate();
 
@@ -695,7 +694,12 @@ describe('Protocol v1 test', () => {
     if (createMeta) {
       const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       await createMetadata(program, user);
-      await updateDeviceToken(program, user, dialectKeypair.publicKey, deviceToken);
+      await updateDeviceToken(
+        program,
+        user,
+        dialectKeypair.publicKey,
+        deviceToken,
+      );
     }
     return user;
   }
