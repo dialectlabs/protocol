@@ -173,8 +173,24 @@ describe('Protocol v1 test', () => {
         .to.eventually.be.rejectedWith(Error);
     });
 
-    it('Create a dialect for 2 members, with owner and write scopes, respectively', async () => {
-      await createDialect(program, owner, members);
+    it('Create encrypted dialect for 2 members, with owner and write scopes, respectively', async () => {
+      const dialectAccount = await createDialect(program, owner, members, true);
+      expect(dialectAccount.dialect.encrypted).to.be.true;
+    });
+
+    it('Create unencrypted dialect for 2 members, with owner and write scopes, respectively', async () => {
+      const dialectAccount = await createDialect(
+        program,
+        owner,
+        members,
+        false,
+      );
+      expect(dialectAccount.dialect.encrypted).to.be.false;
+    });
+
+    it('Creates encrypted dialect by default', async () => {
+      const dialectAccount = await createDialect(program, owner, members);
+      expect(dialectAccount.dialect.encrypted).to.be.true;
     });
 
     it('Fail to create a second dialect for the same members', async () => {

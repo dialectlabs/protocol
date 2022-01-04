@@ -35,6 +35,7 @@ type RawDialect = {
   members: Member[];
   messages: RawCyclicByteBuffer;
   lastMessageTimestamp: number;
+  encrypted: boolean;
 };
 
 type RawCyclicByteBuffer = {
@@ -59,6 +60,7 @@ export type Dialect = {
   messages: Message[];
   nextMessageIdx: number;
   lastMessageTimestamp: number;
+  encrypted: boolean;
 };
 
 type Message = {
@@ -373,6 +375,7 @@ export async function getDialect(
     ...account,
     publicKey: publicKey,
     dialect: {
+      encrypted: dialect.encrypted,
       members: dialect.members,
       nextMessageIdx: dialect.messages.writeOffset,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
@@ -417,6 +420,7 @@ export async function createDialect(
   program: anchor.Program,
   owner: anchor.web3.Keypair,
   members: Member[],
+  encrypted = true,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
@@ -432,6 +436,7 @@ export async function createDialect(
   );
   const tx = await program.rpc.createDialect(
     new anchor.BN(nonce),
+    encrypted,
     sortedMembers.map((m) => m.scopes),
     {
       accounts: {
