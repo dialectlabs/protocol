@@ -1,5 +1,5 @@
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { CyclicByteBuffer } from '../cyclic-bytebuffer.poc';
+import { CyclicByteBuffer } from '../cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
 import { ecdhDecrypt, ecdhEncrypt } from '../ecdh-encryption';
 import { generateNonce } from '../nonce-generator';
