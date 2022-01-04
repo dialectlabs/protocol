@@ -1,13 +1,11 @@
 import * as anchor from '@project-serum/anchor';
 import * as web3 from '@solana/web3.js';
-import { Keypair } from '@solana/web3.js';
 import {
   createDialect,
   createMetadata,
   getDialectForMembers,
   idl,
   Member,
-  Metadata,
   programs,
   sendMessage,
   subscribeUser,
@@ -20,12 +18,28 @@ const local = new web3.Connection(
   'recent',
 );
 
-const setup = async (
-  n: number,
-): Promise<[anchor.Program, web3.Keypair[], Member[]]> => {
-  // create keypairs & wallet
-  const keypairs = createKeypairs(n);
-  const wallet = Wallet_.embedded(keypairs[0].secretKey);
+export type SetupResult = {
+  program: anchor.Program;
+  dialectKeyPair: web3.Keypair;
+  userKeyPair: web3.Keypair;
+};
+
+const setup = async (): Promise<SetupResult> => {
+  let dialectPrivateKey;
+  if (process.env.DIALECT_PRIVATE_KEY) {
+    console.log(
+      'DIALECT_PRIVATE_KEY is set using env var, will use this private key',
+    );
+    dialectPrivateKey = new Uint8Array(
+      JSON.parse(process.env.DIALECT_PRIVATE_KEY as string),
+    );
+  } else {
+    dialectPrivateKey = web3.Keypair.generate().secretKey;
+  }
+  const dialectKeyPair = web3.Keypair.fromSecretKey(dialectPrivateKey);
+  const userKeyPair = web3.Keypair.generate();
+
+  const wallet = Wallet_.embedded(dialectPrivateKey);
 
   // configure anchor
   anchor.setProvider(
@@ -37,21 +51,13 @@ const setup = async (
   );
 
   // fund keypairs
+  const keypairs = [dialectKeyPair, userKeyPair];
   await fundKeypairs(program, keypairs);
-
-  const members = keypairs.map(
-    (kp: web3.Keypair) =>
-      ({
-        publicKey: kp.publicKey,
-        scopes: [true, true],
-      } as Member),
-  );
-
-  return [program, keypairs, members];
-};
-
-const createKeypairs = (n: number): web3.Keypair[] => {
-  return new Array(n).fill(0).map((_) => web3.Keypair.generate());
+  return {
+    program,
+    dialectKeyPair,
+    userKeyPair,
+  };
 };
 
 const fundKeypairs = async (
@@ -73,59 +79,36 @@ const fundKeypairs = async (
   );
 };
 
-const createMetadatas = async (
-  program: anchor.Program,
-  keypairs: Keypair[],
-): Promise<Metadata[]> => {
-  const metadatas = await Promise.all(
-    keypairs.map(async (keypair) => {
-      return await createMetadata(program, keypair);
-    }),
-  );
-  return metadatas;
-};
-
 const index = async (): Promise<void> => {
-  const [program, keypairs] = await setup(1);
-  const dialectServiceAccount = web3.Keypair.generate();
-  const dialectMember: Member = {
-    publicKey: dialectServiceAccount.publicKey,
-    scopes: [true, true],
-  };
-  await fundKeypairs(program, [dialectServiceAccount]);
+  const { program, dialectKeyPair, userKeyPair } = await setup();
 
   program.addEventListener('CreateMetadataEvent', async (event, slot) => {
     console.log('CreateMetadataEvent', event, slot);
     const user = event.user as anchor.web3.PublicKey;
-    const member: Member = {
-      publicKey: user,
-      scopes: [true, false],
-    };
-    const m2uMembers = [dialectMember, member];
-    let dialect = await createDialect(
-      program,
-      dialectServiceAccount,
-      m2uMembers,
-    );
-
+    const members: Member[] = [
+      {
+        publicKey: dialectKeyPair.publicKey,
+        scopes: [true, true],
+      },
+      {
+        publicKey: user,
+        scopes: [false, false],
+      },
+    ];
+    let dialect = await createDialect(program, dialectKeyPair, members);
     await subscribeUser(
       program,
       dialect,
-      member.publicKey,
-      dialectServiceAccount,
+      userKeyPair.publicKey,
+      dialectKeyPair,
     );
-    await sendMessage(
-      program,
-      dialect,
-      dialectServiceAccount,
-      'Hello from dialect!',
-    );
+    await sendMessage(program, dialect, dialectKeyPair, 'Hello from dialect!');
 
-    dialect = await getDialectForMembers(program, m2uMembers, keypairs[0]);
+    dialect = await getDialectForMembers(program, members, userKeyPair);
     console.log(dialect.dialect.messages);
   });
 
-  await createMetadatas(program, keypairs);
+  await createMetadata(program, userKeyPair);
 };
 
 index();
