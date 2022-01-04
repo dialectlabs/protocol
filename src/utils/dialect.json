@@ -73,6 +73,10 @@
           "type": "u8"
         },
         {
+          "name": "encrypted",
+          "type": "bool"
+        },
+        {
           "name": "scopes",
           "type": {
             "array": [
@@ -344,6 +348,10 @@
           {
             "name": "lastMessageTimestamp",
             "type": "u32"
+          },
+          {
+            "name": "encrypted",
+            "type": "bool"
           }
         ]
       }
