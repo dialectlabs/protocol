@@ -323,16 +323,16 @@ function getMessages(
     rawMessagesBuffer.itemsCount,
     rawMessagesBuffer.buffer,
   );
+  const textSerde = TextSerdeFactory.create(user, {
+    encrypted,
+    members,
+  });
   const allMessages: Message[] = messagesBuffer.items().map(({ buffer }) => {
     const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
     const ownerMemberIndex = byteBuffer.readByte();
     const messageOwner = members[ownerMemberIndex];
     const timestamp = byteBuffer.readUint32() * 1000;
     const serializedText = new Uint8Array(byteBuffer.toBuffer(true));
-    const textSerde = TextSerdeFactory.create(user, {
-      encrypted,
-      members,
-    });
     const text = textSerde.deserialize(serializedText);
     return {
       owner: messageOwner.publicKey,
