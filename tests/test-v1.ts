@@ -21,8 +21,7 @@ import {
   subscribeUser,
   updateDeviceToken,
 } from '../src/api';
-import { waitForFinality } from '../src/utils';
-import { sleep } from '../src/utils';
+import { sleep, waitForFinality } from '../src/utils';
 
 const dialectKeypair = anchor.web3.Keypair.generate();
 
@@ -603,7 +602,12 @@ describe('Protocol v1 test', () => {
     if (createMeta) {
       const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       await createMetadata(program, user);
-      await updateDeviceToken(program, user, dialectKeypair.publicKey, deviceToken);
+      await updateDeviceToken(
+        program,
+        user,
+        dialectKeypair.publicKey,
+        deviceToken,
+      );
     }
     return user;
   }
