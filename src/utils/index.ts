@@ -3,7 +3,7 @@ import { Keypair, PublicKey, Transaction } from '@solana/web3.js';
 
 import { EmbeddedWallet } from './Wallet';
 import * as idl_ from './dialect.json';
-import * as programs_ from './programs.json';
+import * as programs_ from './programs';
 import { ecdhDecrypt, ecdhEncrypt } from './ecdh-encryption';
 
 export const idl = idl_;

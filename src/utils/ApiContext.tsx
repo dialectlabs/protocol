@@ -4,7 +4,7 @@ import * as anchor from '@project-serum/anchor';
 import { ProviderPropsType as PropsType } from './';
 import useWallet from './WalletContext';
 import idl from './dialect.json';
-import programs from './programs.json';
+import programs from './programs';
 
 type ValueType = {
   connection: Connection | null | undefined;
