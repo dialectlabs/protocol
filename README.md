@@ -2,6 +2,8 @@
 
 ## local development
 
+Please make sure you are always using the latest stable rust version by running: rustup update
+
 ### building for local usage
 
 "local usage" means installation of this package through "file://..."
