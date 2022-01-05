@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 use solana_program::program_option::COption;
+use std::array;
 
 declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 
@@ -363,8 +364,8 @@ impl DialectAccount {
             .position(|m| m.public_key == *sender.key)
             .unwrap() as u8;
         let mut serialized_message = Vec::new();
-        serialized_message.extend(sender_member_idx.to_be_bytes());
-        serialized_message.extend(now.to_be_bytes());
+        serialized_message.extend(array::IntoIter::new(sender_member_idx.to_be_bytes()));
+        serialized_message.extend(array::IntoIter::new(now.to_be_bytes()));
         serialized_message.extend(text);
         self.messages.append(serialized_message)
     }
@@ -383,7 +384,7 @@ impl CyclicByteBuffer {
     fn append(&mut self, item: Vec<u8>) {
         let item_with_metadata = &mut Vec::new();
         let item_len = (item.len() as u16).to_be_bytes();
-        item_with_metadata.extend(item_len);
+        item_with_metadata.extend(array::IntoIter::new(item_len));
         item_with_metadata.extend(item);
 
         let new_write_offset: u16 = self.mod_(self.write_offset + item_with_metadata.len() as u16);
