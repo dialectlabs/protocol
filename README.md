@@ -183,7 +183,6 @@ q fix
 
 ## examples
 
-### messaging 
 Run the example with:
 
 ```bash
