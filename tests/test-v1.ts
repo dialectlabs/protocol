@@ -421,8 +421,6 @@ describe('Protocol v1 test', () => {
     });
   });
 
-  });
-
   describe('Messaging tests', () => {
     let owner: web3.Keypair;
     let writer: web3.Keypair;

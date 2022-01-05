@@ -28,10 +28,6 @@ export class CyclicByteBuffer {
     return this.buffer;
   }
 
-  nextItemOffset() {
-    return this.writeOffset;
-  }
-
   append(item: Uint8Array) {
     const metadata = this.uint16ToBytes(item.length);
     const itemWithMetadata = new Uint8Array([...metadata, ...item]);
