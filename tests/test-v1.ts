@@ -8,6 +8,7 @@ import {
   createMetadata,
   DEVICE_TOKEN_LENGTH,
   DialectAccount,
+  findDialects,
   getDialect,
   getDialectForMembers,
   getDialectProgramAddress,
@@ -323,6 +324,99 @@ describe('Protocol v1 test', () => {
           ).length,
         )
         .to.equal(1);
+    });
+  });
+
+  describe('Find dialects', () => {
+    it('Can find all dialects filtering by user public key', async () => {
+      // given
+      const [user1, user2, user3] = await Promise.all([
+        createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        }),
+        createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        }),
+        createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        }),
+      ]);
+      const [user1User2Dialect, user1User3Dialect, user2User3Dialect] =
+        await Promise.all([
+          createDialect(program, user1, [
+            {
+              publicKey: user1.publicKey,
+              scopes: [true, true],
+            },
+            {
+              publicKey: user2.publicKey,
+              scopes: [false, true],
+            },
+          ]),
+          createDialect(program, user1, [
+            {
+              publicKey: user1.publicKey,
+              scopes: [true, true],
+            },
+            {
+              publicKey: user3.publicKey,
+              scopes: [false, true],
+            },
+          ]),
+          createDialect(program, user2, [
+            {
+              publicKey: user2.publicKey,
+              scopes: [true, true],
+            },
+            {
+              publicKey: user3.publicKey,
+              scopes: [false, true],
+            },
+          ]),
+        ]);
+      // when
+      const [
+        user1Dialects,
+        user2Dialects,
+        user3Dialects,
+        nonExistingUserDialects,
+      ] = await Promise.all([
+        findDialects(program, {
+          userPk: user1.publicKey,
+        }),
+        findDialects(program, {
+          userPk: user2.publicKey,
+        }),
+        findDialects(program, {
+          userPk: user3.publicKey,
+        }),
+        findDialects(program, {
+          userPk: anchor.web3.Keypair.generate().publicKey,
+        }),
+      ]);
+      // then
+      expect(
+        user1Dialects.map((it) => it.publicKey),
+      ).to.deep.contain.all.members([
+        user1User2Dialect.publicKey,
+        user1User3Dialect.publicKey,
+      ]);
+      expect(
+        user2Dialects.map((it) => it.publicKey),
+      ).to.deep.contain.all.members([
+        user1User2Dialect.publicKey,
+        user2User3Dialect.publicKey,
+      ]);
+      expect(
+        user3Dialects.map((it) => it.publicKey),
+      ).to.deep.contain.all.members([
+        user2User3Dialect.publicKey,
+        user1User3Dialect.publicKey,
+      ]);
+      expect(nonExistingUserDialects.length).to.be.eq(0);
     });
   });
 

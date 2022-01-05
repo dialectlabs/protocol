@@ -25,6 +25,12 @@ export const DEVICE_TOKEN_LENGTH = 64;
 export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
 export const DEVICE_TOKEN_PADDING_LENGTH = DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
 
+const ACCOUNT_DESCRIPTOR_SIZE = 8;
+const DIALECT_ACCOUNT_MEMBER_SIZE = 34;
+const DIALECT_ACCOUNT_MEMBER0_OFFSET = ACCOUNT_DESCRIPTOR_SIZE;
+const DIALECT_ACCOUNT_MEMBER1_OFFSET =
+  DIALECT_ACCOUNT_MEMBER0_OFFSET + DIALECT_ACCOUNT_MEMBER_SIZE;
+
 type Subscription = {
   pubkey: PublicKey;
   enabled: boolean;
@@ -64,6 +70,10 @@ type Message = {
   owner: PublicKey;
   text: string;
   timestamp: number;
+};
+
+export type FindDialectQuery = {
+  userPk?: anchor.web3.PublicKey;
 };
 
 export async function accountInfoGet(
@@ -405,6 +415,31 @@ export async function getDialectForMembers(
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
   return await getDialect(program, publicKey, user);
+}
+
+export async function findDialects(
+  program: anchor.Program,
+  { userPk }: FindDialectQuery,
+): Promise<DialectAccount[]> {
+  const memberFilters = userPk
+    ? [
+        {
+          memcmp: {
+            offset: DIALECT_ACCOUNT_MEMBER0_OFFSET,
+            bytes: userPk.toBase58(),
+          },
+        },
+        {
+          memcmp: {
+            offset: DIALECT_ACCOUNT_MEMBER1_OFFSET,
+            bytes: userPk.toBase58(),
+          },
+        },
+      ]
+    : [];
+  return Promise.all(
+    memberFilters.map((it) => program.account.dialectAccount.all([it])),
+  ).then((it) => it.flat().map((a) => a as unknown as DialectAccount));
 }
 
 export async function createDialect(
