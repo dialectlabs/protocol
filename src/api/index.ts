@@ -66,6 +66,10 @@ type Message = {
   timestamp: number;
 };
 
+export type FindDialectQuery = {
+  userPk?: anchor.web3.PublicKey;
+};
+
 export async function accountInfoGet(
   connection: Connection,
   publicKey: PublicKey,
@@ -405,6 +409,31 @@ export async function getDialectForMembers(
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
   return await getDialect(program, publicKey, user);
+}
+
+export async function findDialects(
+  program: anchor.Program,
+  { userPk }: FindDialectQuery,
+): Promise<DialectAccount[]> {
+  const memberFilters = userPk
+    ? [
+        {
+          memcmp: {
+            offset: DIALECT_ACCOUNT_MEMBER0_OFFSET,
+            bytes: userPk.toBase58(),
+          },
+        },
+        {
+          memcmp: {
+            offset: DIALECT_ACCOUNT_MEMBER1_OFFSET,
+            bytes: userPk.toBase58(),
+          },
+        },
+      ]
+    : [];
+  return Promise.all(
+    memberFilters.map((it) => program.account.dialectAccount.all([it])),
+  ).then((it) => it.flat().map((a) => a as unknown as DialectAccount));
 }
 
 export async function createDialect(
