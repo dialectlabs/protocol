@@ -191,25 +191,3 @@ DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/index.ts
 ```
 
 It is fine to omit the DIALECT_PUBLIC_KEY environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the notification service, you'll need to set it to the public key corresponding to the private key in the notification service.
-
-### welcome message 
-
-Run the example:
-
-```bash
-DIALECT_PRIVATE_KEY=<dialect-public-key> \
-  WELCOME_MESSAGE_ENABLED=true \
-  ts-node examples/welcome-message.ts
-```
-It is fine to omit the DIALECT_PRIVATE_KEY environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the notification service, you'll need to set it to the public key corresponding to the private key in the notification service.
-
-Running the example with notification service:
-
-1. Start notification service
-2. Set WELCOME_MESSAGE_ENABLED=false and run the example
-
-```bash
-DIALECT_PRIVATE_KEY=$(cat ${your_path}/notification-service-dev-local-key.json) \
-  WELCOME_MESSAGE_ENABLED=false \
-  ts-node examples/welcome-message.ts
-```
