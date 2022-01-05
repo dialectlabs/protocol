@@ -17,10 +17,17 @@ pub mod dialect {
     */
 
     pub fn create_metadata(ctx: Context<CreateMetadata>, _metadata_nonce: u8) -> ProgramResult {
-        let metadata = &mut ctx.accounts.metadata.load_init()?;
+        let metadata_loader = &ctx.accounts.metadata;
+        let metadata = &mut metadata_loader.load_init()?;
         metadata.user = ctx.accounts.user.key();
         metadata.device_token = DeviceToken::default();
         metadata.subscriptions = [Subscription::default(); 32];
+
+        emit!(CreateMetadataEvent {
+            metadata: metadata_loader.key(),
+            user: ctx.accounts.user.key()
+        });
+
         Ok(())
     }
 
@@ -505,6 +512,12 @@ pub struct SendMessageEvent {
 pub struct SubscribeUserEvent {
     pub metadata: Pubkey,
     pub dialect: Pubkey,
+}
+
+#[event]
+pub struct CreateMetadataEvent {
+    pub metadata: Pubkey,
+    pub user: Pubkey,
 }
 
 /*

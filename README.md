@@ -185,7 +185,7 @@ q fix
 
 ## examples
 
-Run the examples with:
+Run the example with:
 
 ```bash
 DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/index.ts
