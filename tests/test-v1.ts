@@ -14,14 +14,16 @@ import {
   getDialectProgramAddress,
   getDialects,
   getMetadata,
-  MAX_MESSAGE_SIZE,
   Member,
-  MESSAGES_PER_DIALECT,
   sendMessage,
   subscribeUser,
   updateDeviceToken,
 } from '../src/api';
 import { sleep, waitForFinality } from '../src/utils';
+import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
+import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
+import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
+import { randomInt } from 'crypto';
 
 const dialectKeypair = anchor.web3.Keypair.generate();
 
@@ -455,7 +457,51 @@ describe('Protocol v1 test', () => {
     it('Message sender can send msg and then read the message text and time', async () => {
       // given
       const dialect = await getDialectForMembers(program, members, writer);
-      const text = generateRandomText(MAX_MESSAGE_SIZE);
+      const text = generateRandomText(256);
+      // when
+      await sendMessage(program, dialect, writer, text);
+      // then
+      const senderDialect = await getDialectForMembers(
+        program,
+        dialect.dialect.members,
+        writer,
+      );
+      const message = senderDialect.dialect.messages[0];
+      chai.expect(message.text).to.be.eq(text);
+      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
+      chai
+        .expect(senderDialect.dialect.lastMessageTimestamp)
+        .to.be.eq(message.timestamp);
+    });
+
+    it('Message receiver can read the message text and time sent by sender', async () => {
+      // given
+      const senderDialect = await getDialectForMembers(
+        program,
+        members,
+        writer,
+      );
+      const text = generateRandomText(256);
+      // when
+      await sendMessage(program, senderDialect, writer, text);
+      // then
+      const receiverDialect = await getDialectForMembers(
+        program,
+        dialect.dialect.members,
+        owner,
+      );
+      const message = receiverDialect.dialect.messages[0];
+      chai.expect(message.text).to.be.eq(text);
+      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
+      chai
+        .expect(receiverDialect.dialect.lastMessageTimestamp)
+        .to.be.eq(message.timestamp);
+    });
+
+    it('Can send and receive unicode', async () => {
+      // given
+      const dialect = await getDialectForMembers(program, members, writer);
+      const text = 'Hello world! Привет, мир! 你好世界! 😂 😍 ❤️ 👍 ✓ 🔥';
       // when
       await sendMessage(program, dialect, writer, text);
       // then
@@ -471,63 +517,6 @@ describe('Protocol v1 test', () => {
         .to.be.eq(message.timestamp);
     });
 
-    it('Message sender can send and then read the correct next message idx', async () => {
-      // given
-      const dialect = await getDialectForMembers(program, members, writer);
-      const text = generateRandomText(MAX_MESSAGE_SIZE);
-      // when
-      await sendMessage(program, dialect, writer, text);
-      // then
-      const senderDialect = await getDialectForMembers(
-        program,
-        dialect.dialect.members,
-        writer,
-      );
-      chai.expect(senderDialect.dialect.nextMessageIdx).to.be.eq(1);
-    });
-
-    it('Message receiver can read the message text and time sent by sender', async () => {
-      // given
-      const senderDialect = await getDialectForMembers(
-        program,
-        members,
-        writer,
-      );
-      const text = generateRandomText(MAX_MESSAGE_SIZE);
-      // when
-      await sendMessage(program, senderDialect, writer, text);
-      // then
-      const receiverDialect = await getDialectForMembers(
-        program,
-        dialect.dialect.members,
-        owner,
-      );
-      const message = receiverDialect.dialect.messages[0];
-      chai.expect(message.text).to.be.eq(text);
-      chai
-        .expect(receiverDialect.dialect.lastMessageTimestamp)
-        .to.be.eq(message.timestamp);
-    });
-
-    it('Message receiver can read the correct next message idx after receiving message', async () => {
-      // given
-      const senderDialect = await getDialectForMembers(
-        program,
-        members,
-        writer,
-      );
-      const text = generateRandomText(MAX_MESSAGE_SIZE);
-      // when
-      await sendMessage(program, senderDialect, writer, text);
-      // then
-      const receiverDialect = await getDialectForMembers(
-        program,
-        dialect.dialect.members,
-        owner,
-      );
-      chai.expect(receiverDialect.dialect.nextMessageIdx).to.be.eq(1);
-    });
-
     it("Non-member can't read (decrypt) any of the messages", async () => {
       // given
       const senderDialect = await getDialectForMembers(
@@ -535,7 +524,7 @@ describe('Protocol v1 test', () => {
         members,
         writer,
       );
-      const text = generateRandomText(MAX_MESSAGE_SIZE);
+      const text = generateRandomText(256);
       await sendMessage(program, senderDialect, writer, text);
       // when / then
       expect(getDialectForMembers(program, dialect.dialect.members, nonmember))
@@ -543,30 +532,227 @@ describe('Protocol v1 test', () => {
     });
 
     it('New messages overwrite old, retrieved messages are in order.', async () => {
-      const numMessages = MESSAGES_PER_DIALECT * 2;
+      // emulate ideal message alignment withing buffer
+      const rawBufferSize = 8192;
+      const messagesPerDialect = 16;
+      const numMessages = messagesPerDialect * 2;
+      const salt = 3;
+      const targetRawMessageSize = rawBufferSize / messagesPerDialect - salt;
+      const timestampSize = 4;
+      const ownerMemberIdxSize = 1;
+      const messageSerializationOverhead =
+        ITEM_METADATA_OVERHEAD +
+        ENCRYPTION_OVERHEAD_BYTES +
+        NONCE_SIZE_BYTES +
+        timestampSize +
+        ownerMemberIdxSize;
+      const targetTextSize =
+        targetRawMessageSize - messageSerializationOverhead;
       const texts = Array(numMessages)
         .fill(0)
-        .map(() => generateRandomText(MAX_MESSAGE_SIZE));
+        .map(() => generateRandomText(targetTextSize));
       for (let messageIdx = 0; messageIdx < numMessages; messageIdx++) {
         // verify last last N messages look correct
         const messageCounter = messageIdx + 1;
-        console.log(`Message ${messageCounter}/${numMessages}`);
+        const text = texts[messageIdx];
         const dialect = await getDialectForMembers(program, members, writer);
-        await sendMessage(program, dialect, writer, texts[messageIdx]);
+        console.log(
+          `Sending message ${messageCounter}/${texts.length}
+    len = ${text.length}
+    idx: ${dialect.dialect.nextMessageIdx}`,
+        );
+        await sendMessage(program, dialect, writer, text);
         const sliceStart =
-          messageCounter <= MESSAGES_PER_DIALECT
+          messageCounter <= messagesPerDialect
             ? 0
-            : messageCounter - MESSAGES_PER_DIALECT;
+            : messageCounter - messagesPerDialect;
         const expectedMessagesCount = Math.min(
           messageCounter,
-          MESSAGES_PER_DIALECT,
+          messagesPerDialect,
         );
         const sliceEnd = sliceStart + expectedMessagesCount;
         const expectedMessages = texts.slice(sliceStart, sliceEnd).reverse();
         const d = await getDialect(program, dialect.publicKey, writer);
         const actualMessages = d.dialect.messages.map((m) => m.text);
+        console.log(`  msgs count after send: ${actualMessages.length}\n`);
         expect(actualMessages).to.be.deep.eq(expectedMessages);
       }
+    });
+
+    it('Send/receive random size messages.', async () => {
+      const texts = Array(32)
+        .fill(0)
+        .map(() => generateRandomText(randomInt(256, 512)));
+      for (let messageIdx = 0; messageIdx < texts.length; messageIdx++) {
+        const text = texts[messageIdx];
+        const messageCounter = messageIdx + 1;
+        const dialect = await getDialectForMembers(program, members, writer);
+        console.log(
+          `Sending message ${messageCounter}/${texts.length}
+    len = ${text.length}
+    idx: ${dialect.dialect.nextMessageIdx}`,
+        );
+        // when
+        await sendMessage(program, dialect, writer, text);
+        const d = await getDialect(program, dialect.publicKey, writer);
+        const actualMessages = d.dialect.messages;
+        const lastMessage = actualMessages[0];
+        console.log(`  msgs count after send: ${actualMessages.length}\n`);
+        // then
+        expect(lastMessage.text).to.be.deep.eq(text);
+      }
+    });
+
+    /* UTF-8 encoding summary:
+     - ASCII characters are encoded using 1 byte
+     - Roman, Greek, Cyrillic, Coptic, Armenian, Hebrew, Arabic characters are encoded using 2 bytes
+     - Chinese and Japanese among others are encoded using 3 bytes
+     - Emoji are encoded using 4 bytes
+    A note about message length limit and summary:
+     - len >= 814 hits max transaction size limit = 1232 bytes https://docs.solana.com/ru/proposals/transactions-v2
+     - => best case: 813 symbols per msg (ascii only)
+     - => worst case: 203 symbols (e.g. emoji only)
+     - => average case depends on character set, see details below:
+     ---- ASCII: ±800 characters
+     ---- Roman, Greek, Cyrillic, Coptic, Armenian, Hebrew, Arabic: ± 406 characters
+     ---- Chinese and japanese: ± 270 characters
+     ---- Emoji: ± 203 characters*/
+    it('Message text limit of 813 bytes can be sent/received', async () => {
+      const maxMessageSizeBytes = 813;
+      const texts = Array(30)
+        .fill(0)
+        .map(() => generateRandomText(maxMessageSizeBytes));
+      for (let messageIdx = 0; messageIdx < texts.length; messageIdx++) {
+        const text = texts[messageIdx];
+        const messageCounter = messageIdx + 1;
+        const dialect = await getDialectForMembers(program, members, writer);
+        console.log(
+          `Sending message ${messageCounter}/${texts.length}
+  len = ${text.length}
+  idx: ${dialect.dialect.nextMessageIdx}`,
+        );
+        // when
+        await sendMessage(program, dialect, writer, text);
+        const d = await getDialect(program, dialect.publicKey, writer);
+        const actualMessages = d.dialect.messages;
+        const lastMessage = actualMessages[0];
+        console.log(`  msgs count after send: ${actualMessages.length}\n`);
+        // then
+        expect(lastMessage.text).to.be.deep.eq(text);
+      }
+    });
+
+    it('2 writers can send a messages and read them when dialect state is linearized before sending msg', async () => {
+      // given
+      const writer1 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      const writer2 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      members = [
+        {
+          publicKey: writer1.publicKey,
+          scopes: [true, true], // owner, read-only
+        },
+        {
+          publicKey: writer2.publicKey,
+          scopes: [false, true], // non-owner, read-write
+        },
+      ];
+      await createDialect(program, writer1, members);
+      // when
+      let writer1Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer1,
+      );
+      const writer1Text = generateRandomText(256);
+      await sendMessage(program, writer1Dialect, writer1, writer1Text);
+      let writer2Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer2,
+      ); // ensures dialect state linearization
+      const writer2Text = generateRandomText(256);
+      await sendMessage(program, writer2Dialect, writer2, writer2Text);
+
+      writer1Dialect = await getDialectForMembers(program, members, writer1);
+      writer2Dialect = await getDialectForMembers(program, members, writer2);
+
+      // then check writer1 dialect state
+      const message1Writer1 = writer1Dialect.dialect.messages[1];
+      const message2Writer1 = writer1Dialect.dialect.messages[0];
+      chai.expect(message1Writer1.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer1.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.publicKey);
+      // then check writer2 dialect state
+      const message1Writer2 = writer2Dialect.dialect.messages[1];
+      const message2Writer2 = writer2Dialect.dialect.messages[0];
+      chai.expect(message1Writer2.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer2.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
+    });
+
+    // This test was failing before changing nonce generation algorithm
+    it('2 writers can send a messages and read them when dialect state is not linearized before sending msg', async () => {
+      // given
+      const writer1 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      const writer2 = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      members = [
+        {
+          publicKey: writer1.publicKey,
+          scopes: [true, true], // owner, read-only
+        },
+        {
+          publicKey: writer2.publicKey,
+          scopes: [false, true], // non-owner, read-write
+        },
+      ];
+      await createDialect(program, writer1, members);
+      // when
+      let writer1Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer1,
+      );
+      let writer2Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer2,
+      ); // ensures no dialect state linearization
+      const writer1Text = generateRandomText(256);
+      await sendMessage(program, writer1Dialect, writer1, writer1Text);
+      const writer2Text = generateRandomText(256);
+      await sendMessage(program, writer2Dialect, writer2, writer2Text);
+
+      writer1Dialect = await getDialectForMembers(program, members, writer1);
+      writer2Dialect = await getDialectForMembers(program, members, writer2);
+
+      // then check writer1 dialect state
+      const message1Writer1 = writer1Dialect.dialect.messages[1];
+      const message2Writer1 = writer1Dialect.dialect.messages[0];
+      chai.expect(message1Writer1.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer1.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.publicKey);
+      // then check writer2 dialect state
+      const message1Writer2 = writer2Dialect.dialect.messages[1];
+      const message2Writer2 = writer2Dialect.dialect.messages[0];
+      chai.expect(message1Writer2.text).to.be.eq(writer1Text);
+      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message2Writer2.text).to.be.eq(writer2Text);
+      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
     });
 
     // it('All writers can send a message', async () => {
@@ -618,19 +804,14 @@ interface CreateUserOptions {
   createMeta: boolean;
 }
 
-function generateRandomText(maxLength: number) {
+function generateRandomText(length: number) {
   let result = '';
-  const targetLen = randomIntFromInterval(maxLength / 2, maxLength);
   const characters =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < targetLen; i++) {
+  for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
-}
-
-function randomIntFromInterval(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 async function createDialectAndSubscribeAllMembers(

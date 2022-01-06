@@ -8,22 +8,23 @@ import {
   ecdhEncrypt,
   ENCRYPTION_OVERHEAD_BYTES,
 } from '../utils/ecdh-encryption';
-import { deserializeText, serializeText } from '../utils/text-serde';
-import { generateNonce, generateRandomNonce } from '../utils/nonce-generator'; // TODO: Switch from types to classes
+import {
+  generateRandomNonce,
+  generateRandomNonceWithPrefix,
+  NONCE_SIZE_BYTES,
+} from '../utils/nonce-generator';
+import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
+import ByteBuffer from 'bytebuffer';
 
 // TODO: Switch from types to classes
 
 /*
 User metadata
 */
-
-export const MESSAGES_PER_DIALECT = 32;
-export const MAX_RAW_MESSAGE_SIZE = 256;
-export const MAX_MESSAGE_SIZE =
-  MAX_RAW_MESSAGE_SIZE - ENCRYPTION_OVERHEAD_BYTES;
 export const DEVICE_TOKEN_LENGTH = 64;
 export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
-export const DEVICE_TOKEN_PADDING_LENGTH = DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
+export const DEVICE_TOKEN_PADDING_LENGTH =
+  DEVICE_TOKEN_PAYLOAD_LENGTH - DEVICE_TOKEN_LENGTH - ENCRYPTION_OVERHEAD_BYTES;
 
 const ACCOUNT_DESCRIPTOR_SIZE = 8;
 const DIALECT_ACCOUNT_MEMBER_SIZE = 34;
@@ -38,15 +39,15 @@ type Subscription = {
 
 type RawDialect = {
   members: Member[];
-  messages: RawMessage[];
-  nextMessageIdx: number;
+  messages: RawCyclicByteBuffer;
   lastMessageTimestamp: number;
 };
 
-type RawMessage = {
-  owner: PublicKey;
-  text: number[];
-  timestamp: number;
+type RawCyclicByteBuffer = {
+  readOffset: number;
+  writeOffset: number;
+  itemsCount: number;
+  buffer: Uint8Array;
 };
 
 export type Metadata = {
@@ -141,24 +142,32 @@ export async function getMetadata(
 
   try {
     // assume otherParty is pubkey
-    new anchor.web3.PublicKey(otherParty?.toString() || ''); 
+    new anchor.web3.PublicKey(otherParty?.toString() || '');
   } catch {
     // otherParty is keypair or null
-    otherPartyIsKeypair = otherParty && true || false;
+    otherPartyIsKeypair = (otherParty && true) || false;
   }
 
-  if (otherParty && (userIsKeypair || otherPartyIsKeypair)) { // cases 3 - 5
+  if (otherParty && (userIsKeypair || otherPartyIsKeypair)) {
+    // cases 3 - 5
     shouldDecrypt = true;
   }
 
-  if (shouldDecrypt) { // we know we have a keypair, now we just prioritize which we use
+  if (shouldDecrypt) {
+    // we know we have a keypair, now we just prioritize which we use
     keypairToUse = (userIsKeypair ? user : otherParty) as anchor.web3.Keypair;
     // if both keypairs, use user keypair & other party public key
-    pubkeyToUse = userIsKeypair && otherPartyIsKeypair ? ((otherParty as Keypair).publicKey) // both keypairs, prioritize user keypair
-      : userIsKeypair ? otherParty as PublicKey  // user is keypair, other party is pubkey
-      : user as PublicKey; // user is pubkey, other party is keypair
+    pubkeyToUse =
+      userIsKeypair && otherPartyIsKeypair
+        ? (otherParty as Keypair).publicKey // both keypairs, prioritize user keypair
+        : userIsKeypair
+        ? (otherParty as PublicKey) // user is keypair, other party is pubkey
+        : (user as PublicKey); // user is pubkey, other party is keypair
   }
-  const [metadataAddress] = await getMetadataProgramAddress(program, userIsKeypair ? (user as Keypair).publicKey : user as PublicKey);
+  const [metadataAddress] = await getMetadataProgramAddress(
+    program,
+    userIsKeypair ? (user as Keypair).publicKey : (user as PublicKey),
+  );
   const metadata = await program.account.metadataAccount.fetch(metadataAddress);
 
   let deviceToken: string | null = null;
@@ -230,7 +239,9 @@ export async function updateDeviceToken(
       nonce,
     );
     // TODO: Retire this padding
-    const padding = new Uint8Array(new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0));
+    const padding = new Uint8Array(
+      new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0),
+    );
     encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
   }
   const tx = await program.rpc.updateDeviceToken(
@@ -303,64 +314,59 @@ export async function getDialectProgramAddress(
   );
 }
 
-function findOtherMember(allMembers: Member[], me: anchor.web3.Keypair) {
-  const otherMember = allMembers.find(
-    (it) => !it.publicKey.equals(me.publicKey),
-  );
+function findMemberIdx(allMembers: Member[], member: anchor.web3.PublicKey) {
+  const memberIdx = allMembers.findIndex((it) => it.publicKey.equals(member));
+  if (memberIdx === -1) {
+    throw new Error('Expected to have other member');
+  }
+  return memberIdx;
+}
+
+function findOtherMember(allMembers: Member[], member: anchor.web3.PublicKey) {
+  const otherMember = allMembers.find((it) => !it.publicKey.equals(member));
   if (!otherMember) {
     throw new Error('Expected to have other member');
   }
   return otherMember;
 }
 
-function decryptMessage(
-  message: RawMessage,
-  messageIdx: number,
+function getMessages(
+  { messages: rawMessagesBuffer, members }: RawDialect,
   user: anchor.web3.Keypair,
-  otherMember: Member,
-): Message {
-  const encryptedText = new Uint8Array(message.text);
-  const messageNonce = generateNonce(messageIdx);
-  const decryptedText = ecdhDecrypt(
-    encryptedText,
-    {
-      secretKey: user.secretKey,
-      publicKey: user.publicKey.toBytes(),
-    },
-    otherMember.publicKey.toBytes(),
-    messageNonce,
+) {
+  const messagesBuffer = new CyclicByteBuffer(
+    rawMessagesBuffer.readOffset,
+    rawMessagesBuffer.writeOffset,
+    rawMessagesBuffer.itemsCount,
+    rawMessagesBuffer.buffer,
   );
-  const text = deserializeText(decryptedText);
-  return {
-    ...message,
-    text,
-  };
-}
-
-function isPresent(message: RawMessage): boolean {
-  return message.timestamp !== 0;
-}
-
-function getMessages(dialect: RawDialect, user: anchor.web3.Keypair) {
-  const otherMember = findOtherMember(dialect.members, user);
-  const decryptedMessages: Message[] = dialect.messages
-    .filter((m: RawMessage) => isPresent(m))
-    .map((m: RawMessage, idx) => decryptMessage(m, idx, user, otherMember));
-  const permutedAndOrderedMessages: Message[] = [];
-  for (let i = 0; i < decryptedMessages.length; i++) {
-    const idx =
-      (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT >= 0
-        ? (dialect.nextMessageIdx - 1 - i) % MESSAGES_PER_DIALECT
-        : MESSAGES_PER_DIALECT + (dialect.nextMessageIdx - 1 - i); // lol is this right
-    const m = decryptedMessages[idx];
-    permutedAndOrderedMessages.push(m);
-  }
-  return permutedAndOrderedMessages.map((m: Message) => {
+  const allMessages: Message[] = messagesBuffer.items().map(({ buffer }) => {
+    const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
+    const ownerMemberIndex = byteBuffer.readByte();
+    const timestamp = byteBuffer.readUint32() * 1000;
+    const encryptionNonce = new Uint8Array(
+      byteBuffer.readBytes(NONCE_SIZE_BYTES).toArrayBuffer(true),
+    );
+    const encryptedText = new Uint8Array(byteBuffer.toBuffer(true));
+    const messageOwner = members[ownerMemberIndex];
+    const otherMember = findOtherMember(members, user.publicKey);
+    const encodedText = ecdhDecrypt(
+      encryptedText,
+      {
+        secretKey: user.secretKey,
+        publicKey: user.publicKey.toBytes(),
+      },
+      otherMember.publicKey.toBuffer(),
+      encryptionNonce,
+    );
+    const text = new TextDecoder().decode(encodedText);
     return {
-      ...m,
-      timestamp: m.timestamp * 1000,
+      owner: messageOwner.publicKey,
+      text,
+      timestamp: timestamp,
     };
   });
+  return allMessages.reverse();
 }
 
 export async function getDialect(
@@ -376,9 +382,9 @@ export async function getDialect(
   return {
     ...account,
     publicKey: publicKey,
-    // dialect,
     dialect: {
-      ...dialect,
+      members: dialect.members,
+      nextMessageIdx: dialect.messages.writeOffset,
       lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
       messages,
     },
@@ -557,9 +563,10 @@ export async function sendMessage(
     program,
     dialect.members,
   );
-  const otherMember = findOtherMember(dialect.members, sender);
-  const textBytes = serializeText(text, MAX_MESSAGE_SIZE);
-  const textEncryptionNonce = generateNonce(dialect.nextMessageIdx);
+  const otherMember = findOtherMember(dialect.members, sender.publicKey);
+  const senderMemberIdx = findMemberIdx(dialect.members, sender.publicKey);
+  const textBytes = new TextEncoder().encode(text);
+  const encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
   const encryptedText = ecdhEncrypt(
     textBytes,
     {
@@ -567,19 +574,27 @@ export async function sendMessage(
       publicKey: sender.publicKey.toBytes(),
     },
     otherMember.publicKey.toBytes(),
-    textEncryptionNonce,
+    encryptionNonce,
   );
-  await program.rpc.sendMessage(new anchor.BN(nonce), encryptedText, {
-    accounts: {
-      dialect: dialectPublicKey,
-      sender: sender.publicKey,
-      member0: dialect.members[0].publicKey,
-      member1: dialect.members[1].publicKey,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      systemProgram: anchor.web3.SystemProgram.programId,
+  const nonceWithEncryptedText = new Uint8Array([
+    ...encryptionNonce,
+    ...encryptedText,
+  ]);
+  await program.rpc.sendMessage(
+    new anchor.BN(nonce),
+    Buffer.from(nonceWithEncryptedText),
+    {
+      accounts: {
+        dialect: dialectPublicKey,
+        sender: sender.publicKey,
+        member0: dialect.members[0].publicKey,
+        member1: dialect.members[1].publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [sender],
     },
-    signers: [sender],
-  });
+  );
   const d = await getDialect(program, publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
