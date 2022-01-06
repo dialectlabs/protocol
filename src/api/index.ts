@@ -53,7 +53,7 @@ export type Metadata = {
   subscriptions: Subscription[];
 };
 
-export type DialectAccount = anchor.web3.AccountInfo<Buffer> & {
+export type DialectAccount = {
   dialect: Dialect;
   publicKey: PublicKey;
 };
@@ -343,26 +343,31 @@ function getMessages(
   return allMessages.reverse();
 }
 
+function parseRawDialect(rawDialect: RawDialect, user?: anchor.web3.Keypair) {
+  const messages = user ? getMessages(rawDialect, user) : [];
+  return {
+    encrypted: rawDialect.encrypted,
+    members: rawDialect.members,
+    nextMessageIdx: rawDialect.messages.writeOffset,
+    lastMessageTimestamp: rawDialect.lastMessageTimestamp * 1000,
+    messages,
+  };
+}
+
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
   user?: anchor.web3.Keypair,
 ): Promise<DialectAccount> {
-  const dialect = (await program.account.dialectAccount.fetch(
+  const rawDialect = (await program.account.dialectAccount.fetch(
     publicKey,
   )) as RawDialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  const messages = user ? getMessages(dialect, user) : [];
+  const dialect = parseRawDialect(rawDialect, user);
   return {
     ...account,
     publicKey: publicKey,
-    dialect: {
-      encrypted: dialect.encrypted,
-      members: dialect.members,
-      nextMessageIdx: dialect.messages.writeOffset,
-      lastMessageTimestamp: dialect.lastMessageTimestamp * 1000,
-      messages,
-    },
+    dialect,
   } as DialectAccount;
 }
 
@@ -420,7 +425,16 @@ export async function findDialects(
     : [];
   return Promise.all(
     memberFilters.map((it) => program.account.dialectAccount.all([it])),
-  ).then((it) => it.flat().map((a) => a as unknown as DialectAccount));
+  ).then((it) =>
+    it.flat().map((a) => {
+      const rawDialect = a.account as RawDialect;
+      const dialectAccount: DialectAccount = {
+        publicKey: a.publicKey,
+        dialect: parseRawDialect(rawDialect),
+      };
+      return dialectAccount;
+    }),
+  );
 }
 
 export async function createDialect(
