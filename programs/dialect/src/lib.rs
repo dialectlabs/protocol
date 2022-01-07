@@ -503,6 +503,7 @@ pub struct Member {
 #[event]
 pub struct CreateDialectEvent {
     pub dialect: Pubkey,
+    pub members: [Pubkey; 2], // TODO: use struct Member
 }
 
 #[event]
