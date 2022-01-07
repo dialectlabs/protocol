@@ -162,6 +162,9 @@ export async function getMetadata(
         : userIsKeypair
         ? (otherParty as PublicKey) // user is keypair, other party is pubkey
         : (user as PublicKey); // user is pubkey, other party is keypair
+        console.log('Attempting to decrypt user metadata...');
+        console.log('  keypairToUse:', keypairToUse.publicKey.toString());
+        console.log('  pubkeyToUse:', pubkeyToUse.toString());
   }
   const [metadataAddress] = await getMetadataProgramAddress(
     program,
@@ -182,8 +185,9 @@ export async function getMetadata(
         new Uint8Array(metadata.deviceToken.nonce),
       );
       deviceToken = new TextDecoder().decode(decryptedDeviceToken);
+      console.log('Successfully decrypted userMetadata', deviceToken);
     } catch (e) {
-      console.log('FAILED TO DECRYPT DEVICE TOKEN', metadata.deviceToken, e);
+      console.log('FAILED TO DECRYPT DEVICE TOKEN',  metadata.deviceToken, e);
     }
   }
   return {

@@ -471,6 +471,16 @@
           "name": "dialect",
           "type": "publicKey",
           "index": false
+        },
+        {
+          "name": "members",
+          "type": {
+            "array": [
+              "publicKey",
+              2
+            ]
+          },
+          "index": false
         }
       ]
     },
