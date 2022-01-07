@@ -66,6 +66,7 @@ pub mod dialect {
 
         emit!(CreateDialectEvent {
             dialect: dialect_loader.key(),
+            members: [*members[0].key, *members[1].key],
         });
 
         Ok(())
