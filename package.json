@@ -1,12 +1,14 @@
 {
-  "name": "@dialect/web3",
-  "version": "0.0.1",
+  "name": "@dialectlabs/web3",
+  "version": "0.1.0",
   "description": "",
-  "private": true,
   "module": "./lib/es/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/dialectlabs/protocol"
+  },
+  "publicConfig": {
+    "registry": "https://npm.pkg.github.com/dialectlabs"
   },
   "main": "./lib/es/index.js",
   "types": "./lib/es/types.d.ts",
