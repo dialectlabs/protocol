@@ -1,84 +1,134 @@
 use anchor_lang::prelude::*;
+use std::array;
 
-declare_id!("EGCymyunRorQzXASGva2NV2YARJ7kBT9NbGNcohqDQdE");
+declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 
 /*
 Entrypoints
 */
 #[program]
-mod dialect {
+pub mod dialect {
     use super::*;
-    pub fn create_watcher_account(
-        _ctx: Context<CreateWatcherAccount>,
-        _watcher_nonce: u8,
-    ) -> ProgramResult {
+
+    /*
+    User metadata
+    */
+
+    pub fn create_metadata(ctx: Context<CreateMetadata>, _metadata_nonce: u8) -> ProgramResult {
+        let metadata_loader = &ctx.accounts.metadata;
+        let metadata = &mut metadata_loader.load_init()?;
+        metadata.user = ctx.accounts.user.key();
+        metadata.device_token = DeviceToken::default();
+        metadata.subscriptions = [Subscription::default(); 32];
+
+        emit!(CreateMetadataEvent {
+            metadata: metadata_loader.key(),
+            user: ctx.accounts.user.key()
+        });
+
         Ok(())
     }
 
-    pub fn create_user_settings_account(
-        ctx: Context<CreateSettingsAccount>,
-        _settings_nonce: u8,
-    ) -> ProgramResult {
-        ctx.accounts.settings_account.owner = *ctx.accounts.owner.key;
-        Ok(())
-    }
+    /*
+    Dialects
+    */
 
-    pub fn create_thread_account(
-        ctx: Context<CreateThreadAccount>,
-        _settings_nonce: u8,
-    ) -> ProgramResult {
-        // set the owner of the thread account
-        let thread_account = &mut ctx.accounts.thread_account;
-        thread_account.owner = *ctx.accounts.owner.key;
-        // add the owner to the members
-        thread_account.members = vec![Member {
-            key: *ctx.accounts.owner.key,
-        }];
-        // iniialize message_idx
-        thread_account.message_idx = 0;
-        // add the thread to the owner's settings.threads
-        let thread = ThreadRef {
-            key: *thread_account.to_account_info().key,
-        };
-        ctx.accounts.settings_account.threads.push(thread);
-        Ok(())
-    }
-
-    pub fn add_user_to_thread(ctx: Context<AddUserToThread>, _settings_nonce: u8) -> ProgramResult {
-        // add the thread to user settings.threads
-        let invitee_settings_account = &mut ctx.accounts.invitee_settings_account;
-        let threads = &mut invitee_settings_account.threads;
-        let mut new_threads = vec![ThreadRef {
-            key: *ctx.accounts.thread_account.to_account_info().key,
-        }];
-        threads.append(&mut new_threads);
-        // add the user to thread.members
-        let members = &mut ctx.accounts.thread_account.members;
-        let mut new_members = vec![Member {
-            key: *ctx.accounts.invitee.key,
-        }];
-        members.append(&mut new_members);
-        Ok(())
-    }
-
-    pub fn add_message_to_thread(
-        ctx: Context<AddMessageToThread>,
-        _message_nonce: u8,
-        text: String,
-        timestamp: i64,
+    pub fn create_dialect(
+        ctx: Context<CreateDialect>,
+        _dialect_nonce: u8,
         encrypted: bool,
+        scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
-        // TODO: Verify that sender is a member of the thread
-        // increment thread.message_idx
-        let thread_account = &mut ctx.accounts.thread_account;
-        thread_account.message_idx += 1;
-        // set the message data
-        let message_account = &mut ctx.accounts.message_account;
-        message_account.owner = *ctx.accounts.sender.key;
-        message_account.text = text;
-        message_account.idx = thread_account.message_idx;
-        message_account.timestamp = timestamp;
-        message_account.encrypted = encrypted;
+        // TODO: Assert owner in members
+        let dialect_loader = &ctx.accounts.dialect;
+        let mut dialect = dialect_loader.load_init()?;
+        let _owner = &mut ctx.accounts.owner;
+        let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
+
+        dialect.members = [
+            Member {
+                public_key: *members[0].key,
+                scopes: scopes[0],
+            },
+            Member {
+                public_key: *members[1].key,
+                scopes: scopes[1],
+            },
+        ];
+        let now = Clock::get()?.unix_timestamp as u32;
+        dialect.messages.read_offset = 0;
+        dialect.messages.write_offset = 0;
+        dialect.messages.items_count = 0;
+        dialect.last_message_timestamp = now;
+        dialect.encrypted = encrypted;
+
+        emit!(CreateDialectEvent {
+            dialect: dialect_loader.key(),
+            members: [*members[0].key, *members[1].key],
+        });
+
+        Ok(())
+    }
+
+    pub fn update_device_token(
+        ctx: Context<UpdateDeviceToken>,
+        _dialect_nonce: u8,
+        encrypted_device_token_array: [u8; 128], // TODO: Reduce this to 65 in payload
+        encryption_nonce: [u8; 24],
+    ) -> ProgramResult {
+        // TODO: Confirm unsetting works
+        let metadata = &mut ctx.accounts.metadata.load_mut()?;
+        let arr = slice(&encrypted_device_token_array);
+        metadata.device_token = DeviceToken {
+            encrypted_array: arr,
+            nonce: encryption_nonce,
+        };
+        Ok(())
+    }
+
+    pub fn subscribe_user(
+        ctx: Context<SubscribeUser>,
+        _dialect_nonce: u8,
+        _metadata_nonce: u8,
+    ) -> ProgramResult {
+        let dialect = &mut ctx.accounts.dialect;
+        let metadata_loader = &mut ctx.accounts.metadata;
+        let metadata = &mut metadata_loader.load_mut()?;
+        let num_subscriptions = metadata
+            .subscriptions
+            .iter()
+            .filter(|s| is_present(s))
+            .count();
+        // TODO: handle max subscriptions
+        if num_subscriptions < 32 {
+            metadata.subscriptions[num_subscriptions] = Subscription {
+                pubkey: dialect.key(),
+                enabled: true,
+            };
+            emit!(SubscribeUserEvent {
+                metadata: metadata_loader.key(),
+                dialect: dialect.key()
+            });
+        } else {
+            msg!("User already subscribed to 32 dialects");
+        }
+        Ok(())
+    }
+
+    pub fn send_message(
+        ctx: Context<SendMessage>,
+        _dialect_nonce: u8,
+        text: Vec<u8>,
+    ) -> ProgramResult {
+        let dialect_loader = &ctx.accounts.dialect;
+        let mut dialect = dialect_loader.load_mut()?;
+        let sender = &mut ctx.accounts.sender;
+        dialect.append(text, sender);
+
+        emit!(SendMessageEvent {
+            dialect: dialect_loader.key(),
+            sender: *sender.key,
+        });
         Ok(())
     }
 }
@@ -86,93 +136,123 @@ mod dialect {
 /*
 Contexts
 */
-#[derive(Accounts)]
-#[instruction(watcher_nonce: u8)]
-pub struct CreateWatcherAccount<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    pub rent: Sysvar<'info, Rent>,
-    #[account(init,
-        seeds = [b"watcher_account".as_ref()],
-        bump = watcher_nonce,
-        payer = owner,
-        space = 512,
-    )]
-    pub watcher_account: ProgramAccount<'info, WatcherAccount>,
-    pub system_program: AccountInfo<'info>,
-}
 
 #[derive(Accounts)]
-#[instruction(settings_nonce: u8)]
-pub struct CreateSettingsAccount<'info> {
+#[instruction(metadata_nonce: u8)]
+pub struct CreateMetadata<'info> {
     #[account(signer, mut)]
-    pub owner: AccountInfo<'info>,
-    #[account(
-        init,
-        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
-        bump = settings_nonce,
-        payer = owner,
-        space = 512,
-    )]
-    pub settings_account: ProgramAccount<'info, SettingsAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-// TODO: rename ProgramAccount to Account
-#[derive(Accounts)]
-#[instruction(settings_nonce: u8)]
-pub struct CreateThreadAccount<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    #[account(init, payer = owner, space = 512)]
-    pub thread_account: ProgramAccount<'info, ThreadAccount>,
-    #[account(
-        mut,
-        seeds = [owner.key.as_ref(), b"settings_account".as_ref()],
-        bump = settings_nonce,
-        has_one = owner,
-    )]
-    pub settings_account: ProgramAccount<'info, SettingsAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(settings_nonce: u8)]
-pub struct AddUserToThread<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    pub invitee: AccountInfo<'info>,
-    #[account(mut, has_one = owner)] // only the owner can add users
-    pub thread_account: ProgramAccount<'info, ThreadAccount>,
-    #[account(
-        mut,
-        seeds = [invitee.key.as_ref(), b"settings_account".as_ref()],
-        bump = settings_nonce,
-    )]
-    pub invitee_settings_account: ProgramAccount<'info, SettingsAccount>,
-}
-
-#[derive(Accounts)]
-#[instruction(message_nonce: u8)]
-pub struct AddMessageToThread<'info> {
-    #[account(signer)]
-    pub sender: AccountInfo<'info>,
+    pub user: AccountInfo<'info>,
     #[account(
         init,
         seeds = [
-            thread_account.to_account_info().key.as_ref(),
-            b"message_account".as_ref(),
-            (thread_account.message_idx + 1).to_string().as_bytes(), // u32 as &[u8]
+            b"metadata".as_ref(),
+            user.key.as_ref(),
         ],
-        bump = message_nonce,
-        payer = sender,
-        space = 1024,
+        bump = metadata_nonce,
+        payer = user,
+        // discriminator (8) + user + device_token + 32 x (subscription) = 1201
+        space = 8 + 32 + 104 + (32 * 33),
     )]
-    pub message_account: ProgramAccount<'info, MessageAccount>,
-    #[account(mut)]
-    pub thread_account: ProgramAccount<'info, ThreadAccount>,
+    pub metadata: Loader<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(metadata_nonce: u8)]
+pub struct UpdateDeviceToken<'info> {
+    #[account(signer, mut)]
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key.as_ref(),
+        ],
+        has_one = user, // TODO: Confirm if seeds solves this
+        bump = metadata_nonce,
+    )]
+    pub metadata: Loader<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
+pub struct SubscribeUser<'info> {
+    #[account(signer, mut)]
+    pub signer: AccountInfo<'info>,
+    // TOOD: Consider at some point enforcing user = signer
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key().as_ref(),
+        ],
+        bump = metadata_nonce,
+        constraint = metadata
+            .load()?
+            .subscriptions
+            .iter()
+            .filter(|s| s.pubkey == dialect.key())
+            .count() < 1 // no duplicate subscriptions
+    )]
+    pub metadata: Loader<'info, MetadataAccount>,
+    pub dialect: AccountInfo<'info>, // we only need the pubkey, so AccountInfo is fine. TODO: is this a security risk?
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8)]
+pub struct CreateDialect<'info> {
+    #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
+    // We dupe the owner in one of the members, since the members must be sorted
+    pub owner: AccountInfo<'info>,
+    pub member0: AccountInfo<'info>,
+    // // TOOD: Set limit, or use remaining accounts for members
+    pub member1: AccountInfo<'info>,
+    // TODO: Support more users
+    #[account(
+        init,
+        // TODO: Assert that owner is a member with admin privileges
+        seeds = [
+            b"dialect".as_ref(),
+            member0.key().as_ref(),
+            member1.key().as_ref(),
+        ],
+        constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less, // n.b. asserts !eq as well
+        bump = dialect_nonce,
+        payer = owner,
+        // NB: max space for PDA = 10240
+        // space = discriminator + dialect account size
+        space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
+    )]
+    pub dialect: Loader<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8)]
+pub struct SendMessage<'info> {
+    #[account(
+        signer,
+        mut,
+        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
+    )]
+    pub sender: AccountInfo<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"dialect".as_ref(),
+            dialect.load()?.members[0].public_key.as_ref(),
+            dialect.load()?.members[1].public_key.as_ref(),
+        ],
+        bump = dialect_nonce,
+    )]
+    pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -180,49 +260,310 @@ pub struct AddMessageToThread<'info> {
 /*
 Accounts
 */
-/**
- * An account to notify the watcher about what threads exist.
- */
-#[account]
+
+#[account(zero_copy)] // in anticipation of more subscriptions
 #[derive(Default)]
-pub struct WatcherAccount {
-    pub threads: Vec<ThreadRef>,
+pub struct MetadataAccount {
+    // TODO: Add profile
+    user: Pubkey,                      // 32
+    device_token: DeviceToken,         // 104
+    subscriptions: [Subscription; 32], // 32 * space(Subscription) TODO: More subscriptions
 }
 
-#[account]
-#[derive(Default)]
-pub struct SettingsAccount {
-    pub owner: Pubkey,
-    pub threads: Vec<ThreadRef>,
+const MESSAGE_BUFFER_LENGTH: usize = 8192;
+const ITEM_METADATA_OVERHEAD: u16 = 2;
+
+#[account(zero_copy)]
+// NB: max space for PDA = 10240
+// space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
+pub struct DialectAccount {
+    pub members: [Member; 2],        // 2 * Member = 68
+    pub messages: CyclicByteBuffer,  // 2 + 2 + 2 + 8192
+    pub last_message_timestamp: u32, // 4, UTC seconds, max value = Sunday, February 7, 2106 6:28:15 AM
+    pub encrypted: bool,             // 1
 }
 
-#[account]
-#[derive(Default)]
-pub struct ThreadAccount {
-    pub owner: Pubkey,
-    pub members: Vec<Member>,
-    pub message_idx: u32, // ~140 years @ 1 message / sec
+impl DialectAccount {
+    fn append(&mut self, text: Vec<u8>, sender: &mut AccountInfo) {
+        let now = Clock::get().unwrap().unix_timestamp as u32;
+        self.last_message_timestamp = now;
+        let sender_member_idx = self
+            .members
+            .iter()
+            .position(|m| m.public_key == *sender.key)
+            .unwrap() as u8;
+        let mut serialized_message = Vec::new();
+        serialized_message.extend(array::IntoIter::new(sender_member_idx.to_be_bytes()));
+        serialized_message.extend(array::IntoIter::new(now.to_be_bytes()));
+        serialized_message.extend(text);
+        self.messages.append(serialized_message)
+    }
 }
 
-#[account]
-#[derive(Default)]
-pub struct MessageAccount {
-    pub owner: Pubkey,  // sender
-    pub text: String,   // TODO: use [u8; 280]
-    pub idx: u32,       // not sure we need this
-    pub timestamp: i64, // safe from 2038 bug?
-    pub encrypted: bool,
+#[zero_copy]
+// space = 2 + 2 + 2 + 8192
+pub struct CyclicByteBuffer {
+    pub read_offset: u16,   // 2
+    pub write_offset: u16,  // 2
+    pub items_count: u16,   // 2
+    pub buffer: [u8; 8192], // 8192
+}
+
+impl CyclicByteBuffer {
+    fn append(&mut self, item: Vec<u8>) {
+        let item_with_metadata = &mut Vec::new();
+        let item_len = (item.len() as u16).to_be_bytes();
+        item_with_metadata.extend(array::IntoIter::new(item_len));
+        item_with_metadata.extend(item);
+
+        let new_write_offset: u16 = self.mod_(self.write_offset + item_with_metadata.len() as u16);
+        while self.no_space_available_for(item_with_metadata.len() as u16) {
+            self.erase_oldest_item()
+        }
+        self.write_new_item(item_with_metadata, new_write_offset);
+    }
+
+    fn mod_(&mut self, value: u16) -> u16 {
+        return value % MESSAGE_BUFFER_LENGTH as u16;
+    }
+
+    fn no_space_available_for(&mut self, item_size: u16) -> bool {
+        return self.get_available_space() < item_size;
+    }
+
+    fn get_available_space(&mut self) -> u16 {
+        if self.items_count == 0 {
+            return MESSAGE_BUFFER_LENGTH as u16;
+        }
+        return self.mod_(MESSAGE_BUFFER_LENGTH as u16 + self.read_offset - self.write_offset);
+    }
+
+    fn erase_oldest_item(&mut self) {
+        let item_size = ITEM_METADATA_OVERHEAD + self.read_item_size();
+        let zeros = &mut vec![0u8; item_size as usize];
+        self.write(zeros, self.read_offset);
+        self.read_offset = self.mod_(self.read_offset + item_size);
+        self.items_count -= 1;
+    }
+
+    fn read_item_size(&mut self) -> u16 {
+        let read_offset = self.read_offset;
+        let tail_size = MESSAGE_BUFFER_LENGTH as u16 - read_offset;
+        if tail_size >= ITEM_METADATA_OVERHEAD {
+            return u16::from_be_bytes([
+                self.buffer[read_offset as usize],
+                self.buffer[read_offset as usize + 1],
+            ]);
+        }
+        return u16::from_be_bytes([self.buffer[read_offset as usize], self.buffer[0]]);
+    }
+
+    fn write_new_item(&mut self, item: &mut Vec<u8>, new_write_offset: u16) {
+        self.write(item, self.write_offset);
+        self.write_offset = new_write_offset;
+        self.items_count += 1;
+    }
+
+    fn write(&mut self, item: &mut Vec<u8>, offset: u16) {
+        for (idx, e) in item.iter().enumerate() {
+            let pos = self.mod_(offset + idx as u16);
+            self.buffer[pos as usize] = *e;
+        }
+    }
+    fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
+        return self.buffer;
+    }
 }
 
 /*
 Data
 */
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
-pub struct ThreadRef {
-    pub key: Pubkey,
+
+#[zero_copy]
+// space = 81 + 24 = 105
+pub struct DeviceToken {
+    pub encrypted_array: [u8; 80], // 64-byte token, 16-byte encryption overhead
+    pub nonce: [u8; 24], // https://github.com/dchest/tweetnacl-js/blob/3389b7c9f00545e516a0fdafb324b7857cf1527d/nacl-fast.js#L2074
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Default, Clone, Copy)]
+impl Default for DeviceToken {
+    fn default() -> Self {
+        DeviceToken {
+            encrypted_array: [0; 80],
+            nonce: [0; 24],
+        }
+    }
+}
+
+#[zero_copy]
+#[derive(Default)]
+// space = 33
+pub struct Subscription {
+    pub pubkey: Pubkey, // 32
+    pub enabled: bool,  // 1
+}
+
+#[zero_copy]
+#[derive(Default)]
+// space = 34
 pub struct Member {
-    pub key: Pubkey,
+    pub public_key: Pubkey, // 32
+    // [Admin, Write]. [false, false] implies read-only
+    pub scopes: [bool; 2], // 2
+}
+
+#[event]
+pub struct CreateDialectEvent {
+    pub dialect: Pubkey,
+    pub members: [Pubkey; 2], // TODO: use struct Member
+}
+
+#[event]
+pub struct SendMessageEvent {
+    pub dialect: Pubkey,
+    pub sender: Pubkey,
+}
+
+#[event]
+pub struct SubscribeUserEvent {
+    pub metadata: Pubkey,
+    pub dialect: Pubkey,
+}
+
+#[event]
+pub struct CreateMetadataEvent {
+    pub metadata: Pubkey,
+    pub user: Pubkey,
+}
+
+/*
+Helper functions
+*/
+
+pub fn is_present(subscription: &Subscription) -> bool {
+    subscription.pubkey != Pubkey::default()
+}
+
+fn slice(input: &[u8]) -> [u8; 80] {
+    // :sob:
+    // TODO: Either use try_into a la https://stackoverflow.com/a/50080940, or retire the need to slice entirely by passing up [u8; 81] from client.
+    [
+        input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8],
+        input[9], input[10], input[11], input[12], input[13], input[14], input[15], input[16],
+        input[17], input[18], input[19], input[20], input[21], input[22], input[23], input[24],
+        input[25], input[26], input[27], input[28], input[29], input[30], input[31], input[32],
+        input[33], input[34], input[35], input[36], input[37], input[38], input[39], input[40],
+        input[41], input[42], input[43], input[44], input[45], input[46], input[47], input[48],
+        input[49], input[50], input[51], input[52], input[53], input[54], input[55], input[56],
+        input[57], input[58], input[59], input[60], input[61], input[62], input[63], input[64],
+        input[65], input[66], input[67], input[68], input[69], input[70], input[71], input[72],
+        input[73], input[74], input[75], input[76], input[77], input[78], input[79],
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::CyclicByteBuffer;
+
+    // #[test]
+    // fn correctly_does_first_append_when_size_lt_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item = vec![1u8, 2u8];
+    //     // when
+    //     buffer.append(item);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 4);
+    //     assert_eq!(buffer.read_offset, 0);
+    //     assert_eq!(buffer.raw(), [0, 2, 1, 2, 0]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_when_size_eq_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item = vec![1u8, 2u8, 3u8];
+    //     // when
+    //     buffer.append(item);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 0);
+    //     assert_eq!(buffer.read_offset, 0);
+    //     assert_eq!(buffer.raw(), [0, 3, 1, 2, 3]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_and_overwrite_when_size_eq_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item1 = vec![1u8, 2u8, 3u8];
+    //     let item2 = vec![4u8, 5u8, 6u8];
+    //     // when
+    //     buffer.append(item1);
+    //     buffer.append(item2);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 0);
+    //     assert_eq!(buffer.read_offset, 0);
+    //     assert_eq!(buffer.raw(), [0, 3, 4, 5, 6]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 5],
+    //     };
+    //     let item1 = vec![1u8, 2u8];
+    //     let item2 = vec![3u8, 4u8];
+    //     // when
+    //     buffer.append(item1);
+    //     buffer.append(item2);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 3);
+    //     assert_eq!(buffer.read_offset, 4);
+    //     assert_eq!(buffer.raw(), [2, 3, 4, 0, 0]);
+    // }
+    //
+    // #[test]
+    // fn correctly_does_first_append_and_overwrite_when_size_lt_buffer_size() {
+    //     // given
+    //     let mut buffer: CyclicByteBuffer = CyclicByteBuffer {
+    //         read_offset: 0,
+    //         write_offset: 0,
+    //         items_count: 0,
+    //         buffer: [0; 7],
+    //     };
+    //     let item1 = vec![1u8, 2u8];
+    //     let item2 = vec![3u8, 4u8, 5u8];
+    //     let item3 = vec![6u8, 7u8];
+    //     // when
+    //     buffer.append(item1);
+    //     // [0, 2, 1, 2, 0, 0, 0]
+    //     assert_eq!(buffer.read_offset, 0);
+    //     buffer.append(item2);
+    //     // [4, 5, 0, 0, 0, 3, 3]
+    //     assert_eq!(buffer.read_offset, 4);
+    //     buffer.append(item3);
+    //     // then
+    //     assert_eq!(buffer.write_offset, 6);
+    //     assert_eq!(buffer.read_offset, 2);
+    //     assert_eq!(buffer.raw(), [0, 0, 0, 2, 6, 7, 0]);
+    // }
 }
