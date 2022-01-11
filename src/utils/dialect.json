@@ -220,77 +220,6 @@
           "type": "bytes"
         }
       ]
-    },
-    {
-      "name": "createMintDialect",
-      "accounts": [
-        {
-          "name": "mintAuthority",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "mint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "dialect",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "dialectNonce",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "transfer",
-      "accounts": [
-        {
-          "name": "sender",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "receiver1",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "receiver2",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "amount1",
-          "type": "u64"
-        },
-        {
-          "name": "amount2",
-          "type": "u64"
-        }
-      ]
     }
   ],
   "accounts": [
@@ -352,18 +281,6 @@
           {
             "name": "encrypted",
             "type": "bool"
-          }
-        ]
-      }
-    },
-    {
-      "name": "MintDialectAccount",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
-            "type": "publicKey"
           }
         ]
       }
@@ -529,8 +446,5 @@
         }
       ]
     }
-  ],
-  "metadata": {
-    "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
-  }
+  ]
 }

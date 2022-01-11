@@ -1,6 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
-use solana_program::program_option::COption;
 use std::array;
 
 declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
@@ -133,55 +131,6 @@ pub mod dialect {
         });
         Ok(())
     }
-
-    /*
-    Mint Dialects
-    */
-    pub fn create_mint_dialect(
-        ctx: Context<CreateMintDialect>,
-        _dialect_nonce: u8,
-    ) -> ProgramResult {
-        let mint = &ctx.accounts.mint;
-        let dialect = &mut ctx.accounts.dialect;
-        dialect.mint = mint.key();
-        Ok(())
-    }
-
-    /*
-    Transfer test
-    */
-
-    pub fn transfer(ctx: Context<Transfer>, amount1: u64, amount2: u64) -> ProgramResult {
-        let sender = &mut ctx.accounts.sender;
-        let receiver1 = &mut ctx.accounts.receiver1;
-        let receiver2 = &mut ctx.accounts.receiver2;
-        let system_program = &ctx.accounts.system_program;
-        anchor_lang::solana_program::program::invoke(
-            &anchor_lang::solana_program::system_instruction::transfer(
-                sender.key,
-                receiver1.key,
-                amount1,
-            ),
-            &[
-                sender.to_account_info(),
-                receiver1.to_account_info(),
-                system_program.to_account_info(),
-            ],
-        )?;
-        anchor_lang::solana_program::program::invoke(
-            &anchor_lang::solana_program::system_instruction::transfer(
-                sender.key,
-                receiver2.key,
-                amount2,
-            ),
-            &[
-                sender.to_account_info(),
-                receiver2.to_account_info(),
-                system_program.to_account_info(),
-            ],
-        )?;
-        Ok(())
-    }
 }
 
 /*
@@ -286,17 +235,6 @@ pub struct CreateDialect<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Transfer<'info> {
-    #[account(signer, mut)]
-    pub sender: AccountInfo<'info>,
-    #[account(mut)]
-    pub receiver1: AccountInfo<'info>,
-    #[account(mut)]
-    pub receiver2: AccountInfo<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
 pub struct SendMessage<'info> {
     #[account(
@@ -315,26 +253,6 @@ pub struct SendMessage<'info> {
         bump = dialect_nonce,
     )]
     pub dialect: Loader<'info, DialectAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(dialect_nonce: u8)]
-pub struct CreateMintDialect<'info> {
-    #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
-    pub mint_authority: AccountInfo<'info>, // The dialect owner must be the mint authority
-    // TODO: Enforce that mint.mint_authority exists
-    #[account(constraint = COption::Some(mint_authority.key()) == mint.mint_authority)]
-    pub mint: Account<'info, Mint>,
-    #[account(
-        init,
-        seeds = [b"dialect".as_ref(), mint.key().as_ref()],
-        bump = dialect_nonce,
-        payer = mint_authority,
-        space = 512, // TODO: Choose space
-    )]
-    pub dialect: Account<'info, MintDialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
 }
@@ -455,13 +373,6 @@ impl CyclicByteBuffer {
     fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
         return self.buffer;
     }
-}
-
-#[account]
-#[derive(Default)]
-pub struct MintDialectAccount {
-    pub mint: Pubkey,
-    // pub mint_authority: Pubkey, // TODO: Do we need this?
 }
 
 /*
