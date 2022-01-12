@@ -73,10 +73,10 @@ pub mod dialect {
     pub fn update_device_token(
         ctx: Context<UpdateDeviceToken>,
         _dialect_nonce: u8,
-        encrypted_device_token_array: [u8; 128], // TODO: Reduce this to 65 in payload
+        encrypted_device_token_array: [u8; 128], // Use Vec instead
         encryption_nonce: [u8; 24],
     ) -> ProgramResult {
-        // TODO: Confirm unsetting works
+        // Confirm unsetting works
         let metadata = &mut ctx.accounts.metadata.load_mut()?;
         let arr = slice(&encrypted_device_token_array);
         metadata.device_token = DeviceToken {
@@ -99,7 +99,6 @@ pub mod dialect {
             .iter()
             .filter(|s| is_present(s))
             .count();
-        // TODO: handle max subscriptions
         if num_subscriptions < 32 {
             metadata.subscriptions[num_subscriptions] = Subscription {
                 pubkey: dialect.key(),
@@ -110,6 +109,7 @@ pub mod dialect {
                 dialect: dialect.key()
             });
         } else {
+            // Handle max subscriptions
             msg!("User already subscribed to 32 dialects");
         }
         Ok(())
@@ -169,7 +169,7 @@ pub struct UpdateDeviceToken<'info> {
             b"metadata".as_ref(),
             user.key.as_ref(),
         ],
-        has_one = user, // TODO: Confirm if seeds solves this
+        has_one = user, // Confirm if seeds solves this & we don't need here.
         bump = metadata_nonce,
     )]
     pub metadata: Loader<'info, MetadataAccount>,
@@ -182,7 +182,7 @@ pub struct UpdateDeviceToken<'info> {
 pub struct SubscribeUser<'info> {
     #[account(signer, mut)]
     pub signer: AccountInfo<'info>,
-    // TOOD: Consider at some point enforcing user = signer
+    // Consider at some point enforcing user = signer
     pub user: AccountInfo<'info>,
     #[account(
         mut,
@@ -211,9 +211,8 @@ pub struct CreateDialect<'info> {
     // We dupe the owner in one of the members, since the members must be sorted
     pub owner: AccountInfo<'info>,
     pub member0: AccountInfo<'info>,
-    // // TOOD: Set limit, or use remaining accounts for members
     pub member1: AccountInfo<'info>,
-    // TODO: Support more users
+    // Support more users in this or other dialect struct
     #[account(
         init,
         // TODO: Assert that owner is a member with admin privileges
@@ -264,10 +263,10 @@ Accounts
 #[account(zero_copy)] // in anticipation of more subscriptions
 #[derive(Default)]
 pub struct MetadataAccount {
-    // TODO: Add profile
+    // Add profile
     user: Pubkey,                      // 32
     device_token: DeviceToken,         // 104
-    subscriptions: [Subscription; 32], // 32 * space(Subscription) TODO: More subscriptions
+    subscriptions: [Subscription; 32], // 32 * space(Subscription)
 }
 
 const MESSAGE_BUFFER_LENGTH: usize = 8192;
@@ -415,7 +414,7 @@ pub struct Member {
 #[event]
 pub struct CreateDialectEvent {
     pub dialect: Pubkey,
-    pub members: [Pubkey; 2], // TODO: use struct Member
+    pub members: [Pubkey; 2], // Use struct Member
 }
 
 #[event]
@@ -445,8 +444,8 @@ pub fn is_present(subscription: &Subscription) -> bool {
 }
 
 fn slice(input: &[u8]) -> [u8; 80] {
-    // :sob:
-    // TODO: Either use try_into a la https://stackoverflow.com/a/50080940, or retire the need to slice entirely by passing up [u8; 81] from client.
+    // This is no longer needed if we use a Vec in the handler argument.
+    // Either use try_into a la https://stackoverflow.com/a/50080940, or retire the need to slice entirely by passing up [u8; 81] from client.
     [
         input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8],
         input[9], input[10], input[11], input[12], input[13], input[14], input[15], input[16],
