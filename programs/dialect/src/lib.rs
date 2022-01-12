@@ -260,7 +260,7 @@ pub struct SendMessage<'info> {
 Accounts
 */
 
-#[account(zero_copy)] // in anticipation of more subscriptions
+#[account(zero_copy)]
 #[derive(Default)]
 pub struct MetadataAccount {
     // Add profile
