@@ -1,5 +1,7 @@
 import * as crypto from 'crypto';
 
+import nacl from 'tweetnacl';
+
 export const NONCE_SIZE_BYTES = 24;
 
 /**
@@ -19,4 +21,8 @@ export function generateNonce(messageCounter: number): Uint8Array {
 
 export function generateRandomNonce(): Buffer {
   return crypto.randomBytes(NONCE_SIZE_BYTES);
+}
+
+export function generateRandomNonceWithPrefix(memberId: number) {
+  return new Uint8Array([memberId, ...nacl.randomBytes(NONCE_SIZE_BYTES - 1)]);
 }
