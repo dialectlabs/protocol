@@ -3,7 +3,7 @@ import { Keypair, PublicKey, Transaction } from '@solana/web3.js';
 
 import { EmbeddedWallet } from './Wallet';
 import * as idl_ from './dialect.json';
-import * as programs_ from './programs';
+import * as programs_ from './programs.json';
 import { ecdhDecrypt, ecdhEncrypt } from './ecdh-encryption';
 
 export const idl = idl_;
@@ -142,7 +142,7 @@ export function decryptMessage(
 export type DeviceToken = {
   encryptedArray: number[];
   nonce: number[];
-}
+};
 
 export function deviceTokenIsPresent(deviceToken: DeviceToken): boolean {
   return Boolean(deviceToken?.encryptedArray.some((e: number) => e !== 0));

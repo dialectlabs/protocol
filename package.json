@@ -11,11 +11,16 @@
   "main": "./lib/es/index.js",
   "types": "./lib/es/types.d.ts",
   "scripts": {
-    "build": "rm -rf lib && tsc",
+    "clear": "rm -rf test-ledger && rm -rf target",
     "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
     "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
     "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
-    "local-publish": "rm -rf node_modules && rm -rf .anchor"
+    "local-publish": "rm -f ./test-ledger/admin.rpc && rm -rf node_modules && rm -rf .anchor",
+    "build:local": "[ -d 'node_modules' ] && echo 'Cool! You already have node_modules installed.' || { echo 'Oh, you do not have node_modules. Installing...'; npm i; } && npm run build && npm run local-publish",
+    "deploy:anchor": "anchor deploy && cp target/idl/dialect.json src/utils/.",
+    "build:fucking-everything": "anchor build && deploy:anchor && echo -n 'go update fucking programs ids in: Anchor.toml, lib.rs, programs.json. did you? (y/y)' && read answer && anchor build && anchor deploy && npm i && npm run build && npm run local-publish",
+    "build": "rm -rf lib && tsc",
+    "update-localnet": "node ./scripts/update-localnet-address.js"
   },
   "keywords": [],
   "author": "c. b. osborn",

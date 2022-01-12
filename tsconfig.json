@@ -14,7 +14,8 @@
     "jsx": "react-jsx",
     "outDir": "lib/es",
     "noEmit": false,
-    "declaration": true
+    "declaration": true,
+    "suppressImplicitAnyIndexErrors": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"],
