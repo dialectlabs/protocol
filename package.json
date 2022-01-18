@@ -18,11 +18,12 @@
     "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
     "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
     "local-publish": "rm -f ./test-ledger/admin.rpc && rm -rf node_modules && rm -rf .anchor",
+    "build": "rm -rf lib && tsc",
     "build:local": "[ -d 'node_modules' ] && echo 'Cool! You already have node_modules installed.' || { echo 'Oh, you do not have node_modules. Installing...'; npm i; } && npm run build && npm run local-publish",
     "deploy:anchor": "anchor deploy && cp target/idl/dialect.json src/utils/.",
-    "build:fucking-everything": "anchor build && deploy:anchor && echo -n 'go update fucking programs ids in: Anchor.toml, lib.rs, programs.json. did you? (y/y)' && read answer && anchor build && anchor deploy && npm i && npm run build && npm run local-publish",
-    "build": "rm -rf lib && tsc",
-    "update-localnet": "node ./scripts/update-localnet-address.js"
+    "build:fucking-everything": "anchor build && npm run deploy:anchor && echo -n 'go update fucking programs ids in: Anchor.toml, lib.rs, programs.json. did you? (y/y)' && read answer && anchor build && anchor deploy && npm run build:local",
+    "update-localnet": "node ./scripts/update-localnet-address.js",
+    "update-address": "node ./scripts/update-program-address.js"
   },
   "keywords": [],
   "author": "c. b. osborn",
@@ -54,6 +55,8 @@
     "eslint-plugin-react": "^7.24.0",
     "mocha": "^9.1.1",
     "prettier": "2.5.1",
+    "toml": "^3.0.0",
+    "toml-js": "^0.0.8",
     "ts-mocha": "^8.0.0",
     "ts-node": "^10.2.0",
     "typescript": "^4.3.5"
