@@ -274,7 +274,7 @@ export async function subscribeUser(
   program: anchor.Program,
   dialect: DialectAccount,
   user: PublicKey,
-  signer: Keypair,
+  signer: Keypair | Wallet,
 ): Promise<Metadata> {
   const [publicKey, nonce] = await getDialectProgramAddress(
     program,
@@ -296,7 +296,7 @@ export async function subscribeUser(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [signer],
+      // signers: [signer],
     },
   );
   await waitForFinality(program, tx);
