@@ -514,6 +514,28 @@ describe('Protocol v1 test', () => {
         .to.be.eq(message.timestamp);
     });
 
+    it('Anonymous user can read any of the messages', async () => {
+      // given
+      const senderDialect = await getDialectForMembers(
+        program,
+        members,
+        writer,
+      );
+      const text = generateRandomText(256);
+      await sendMessage(program, senderDialect, writer, text);
+      // when / then
+      const nonMemberDialect = await getDialectForMembers(
+        program,
+        dialect.dialect.members,
+      );
+      const message = nonMemberDialect.dialect.messages[0];
+      chai.expect(message.text).to.be.eq(text);
+      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
+      chai
+        .expect(nonMemberDialect.dialect.lastMessageTimestamp)
+        .to.be.eq(message.timestamp);
+    });
+
     it('New messages overwrite old, retrieved messages are in order.', async () => {
       // emulate ideal message alignment withing buffer
       const rawBufferSize = 8192;
