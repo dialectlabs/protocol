@@ -12,6 +12,7 @@ import { generateRandomNonce } from '../utils/nonce-generator';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
 import { TextSerdeFactory } from './text-serde'; // TODO: Switch from types to classes
+import { Wallet } from '@project-serum/anchor/src/provider';
 
 // TODO: Switch from types to classes
 
@@ -200,21 +201,25 @@ export async function getMetadata(
 
 export async function createMetadata(
   program: anchor.Program,
-  user: Keypair,
+  user: Keypair | Wallet,
 ): Promise<Metadata> {
+  // let userIsKeypair = Boolean(user?.secretKey); // TODO: Do this correctly.
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
     user.publicKey,
   );
-  const tx = await program.rpc.createMetadata(new anchor.BN(metadataNonce), {
+  const txnOpts = {
     accounts: {
       user: user.publicKey,
       metadata: metadataAddress,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [user],
-  });
+  };
+  // if (userIsKeypair) {
+  //   txnOpts.signers = [user];
+  // }
+  const tx = await program.rpc.createMetadata(new anchor.BN(metadataNonce), txnOpts);
   await waitForFinality(program, tx);
   return await getMetadata(program, user.publicKey);
 }
@@ -443,7 +448,7 @@ export async function findDialects(
 
 export async function createDialect(
   program: anchor.Program,
-  owner: anchor.web3.Keypair,
+  owner: anchor.web3.Keypair | Wallet,
   members: Member[],
   encrypted = true,
 ): Promise<DialectAccount> {
@@ -471,11 +476,11 @@ export async function createDialect(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [owner],
+      // signers: [owner],
     },
   );
   await waitForFinality(program, tx);
-  return await getDialectForMembers(program, members, owner);
+  return await getDialectForMembers(program, members, owner.secretKey ? owner : undefined);
 }
 
 /*
