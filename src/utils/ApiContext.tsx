@@ -5,6 +5,7 @@ import { ProviderPropsType as PropsType } from './';
 import useWallet from './WalletContext';
 import idl from './dialect.json';
 import programs from './programs.json';
+import { Wallet } from '@project-serum/anchor/src/provider';
 
 type ValueType = {
   connection: Connection | null | undefined;
@@ -17,7 +18,8 @@ export const ApiContext = createContext<ValueType | null>({
 });
 
 export const ApiContextProvider = (props: PropsType): JSX.Element => {
-  const { wallet, networkName } = useWallet();
+  const { wallet, webWallet, networkName } = useWallet();
+  const w = wallet || webWallet; // prioritize an embedded wallet
   const [connection, setConnection] = useState<Connection | null>(null);
   useEffect(() => {
     if (networkName) {
@@ -29,11 +31,11 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
   const [program, setProgram] = useState<anchor.Program | null>(null);
 
   useEffect(() => {
-    if (wallet?.publicKey && connection && networkName) {
+    if (w?.publicKey && connection && networkName) {
       anchor.setProvider(
         new anchor.Provider(
           connection,
-          wallet,
+          w as Wallet,
           anchor.Provider.defaultOptions(),
         ),
       );
@@ -41,9 +43,12 @@ export const ApiContextProvider = (props: PropsType): JSX.Element => {
         idl as anchor.Idl,
         new anchor.web3.PublicKey(programs[networkName].programAddress),
       );
+      console.log('setting program', program);
       setProgram(program);
+    } else {
+      console.log('UNsetting program');
     }
-  }, [wallet?.publicKey?.toString(), networkName, connection]);
+  }, [w?.publicKey?.toString(), networkName, connection]);
   return (
     <ApiContext.Provider
       value={{
