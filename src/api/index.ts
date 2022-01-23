@@ -162,9 +162,9 @@ export async function getMetadata(
         : userIsKeypair
         ? (otherParty as PublicKey) // user is keypair, other party is pubkey
         : (user as PublicKey); // user is pubkey, other party is keypair
-        console.log('Attempting to decrypt user metadata...');
-        console.log('  keypairToUse:', keypairToUse.publicKey.toString());
-        console.log('  pubkeyToUse:', pubkeyToUse.toString());
+    console.log('Attempting to decrypt user metadata...');
+    console.log('  keypairToUse:', keypairToUse.publicKey.toString());
+    console.log('  pubkeyToUse:', pubkeyToUse.toString());
   }
   const [metadataAddress] = await getMetadataProgramAddress(
     program,
@@ -187,7 +187,7 @@ export async function getMetadata(
       deviceToken = new TextDecoder().decode(decryptedDeviceToken);
       console.log('Successfully decrypted userMetadata', deviceToken);
     } catch (e) {
-      console.log('FAILED TO DECRYPT DEVICE TOKEN',  metadata.deviceToken, e);
+      console.log('FAILED TO DECRYPT DEVICE TOKEN', metadata.deviceToken, e);
     }
   }
   return {
@@ -317,20 +317,26 @@ export async function getDialectProgramAddress(
   );
 }
 
-function getMessages(
+function parseMessages(
   { messages: rawMessagesBuffer, members, encrypted }: RawDialect,
-  user: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair,
 ) {
+  if (encrypted && !user) {
+    return [];
+  }
   const messagesBuffer = new CyclicByteBuffer(
     rawMessagesBuffer.readOffset,
     rawMessagesBuffer.writeOffset,
     rawMessagesBuffer.itemsCount,
     rawMessagesBuffer.buffer,
   );
-  const textSerde = TextSerdeFactory.create(user, {
-    encrypted,
-    members,
-  });
+  const textSerde = TextSerdeFactory.create(
+    {
+      encrypted,
+      members,
+    },
+    user,
+  );
   const allMessages: Message[] = messagesBuffer.items().map(({ buffer }) => {
     const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
     const ownerMemberIndex = byteBuffer.readByte();
@@ -348,13 +354,12 @@ function getMessages(
 }
 
 function parseRawDialect(rawDialect: RawDialect, user?: anchor.web3.Keypair) {
-  const messages = user ? getMessages(rawDialect, user) : [];
   return {
     encrypted: rawDialect.encrypted,
     members: rawDialect.members,
     nextMessageIdx: rawDialect.messages.writeOffset,
     lastMessageTimestamp: rawDialect.lastMessageTimestamp * 1000,
-    messages,
+    messages: parseMessages(rawDialect, user),
   };
 }
 
@@ -558,10 +563,13 @@ export async function sendMessage(
     program,
     dialect.members,
   );
-  const textSerde = TextSerdeFactory.create(sender, {
-    encrypted: dialect.encrypted,
-    members: dialect.members,
-  });
+  const textSerde = TextSerdeFactory.create(
+    {
+      encrypted: dialect.encrypted,
+      members: dialect.members,
+    },
+    sender,
+  );
   const serializedText = textSerde.serialize(text);
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
