@@ -104,42 +104,6 @@ describe('Protocol v1 test', () => {
       chai.expect(true).to.be.true;
     });
 
-    it("Transfers funds to writer's account", async () => {
-      const senderBalanceBefore =
-        (await program.provider.connection.getAccountInfo(owner.publicKey))!
-          .lamports / web3.LAMPORTS_PER_SOL;
-      const receiver1BalanceBefore =
-        (await program.provider.connection.getAccountInfo(writer.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-      const receiver2BalanceBefore =
-        (await program.provider.connection.getAccountInfo(nonmember.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-      const tx = await program.rpc.transfer(
-        new anchor.BN(1 * web3.LAMPORTS_PER_SOL),
-        new anchor.BN(2 * web3.LAMPORTS_PER_SOL),
-        {
-          accounts: {
-            sender: owner.publicKey,
-            receiver1: writer.publicKey,
-            receiver2: nonmember.publicKey,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          },
-          signers: [owner],
-        },
-      );
-      await waitForFinality(program, tx);
-      const senderBalanceAfter =
-        (await program.provider.connection.getAccountInfo(owner.publicKey))!
-          .lamports / web3.LAMPORTS_PER_SOL;
-      const receiver1BalanceAfter =
-        (await program.provider.connection.getAccountInfo(writer.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-      const receiver2BalanceAfter =
-        (await program.provider.connection.getAccountInfo(nonmember.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-    });
-
     it('Fail to create a dialect for unsorted members', async () => {
       // use custom unsorted version of createDialect for unsorted members
       const unsortedMembers = members.sort(
