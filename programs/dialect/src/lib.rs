@@ -29,6 +29,12 @@ pub mod dialect {
         Ok(())
     }
 
+    pub fn delete_metadata(ctx: Context<DeleteMetadata>, _metadata_nonce: u8) -> ProgramResult {
+        msg!("Attempting to close account");
+
+        Ok(())
+    }
+
     /*
     Dialects
     */
@@ -152,6 +158,26 @@ pub struct CreateMetadata<'info> {
         payer = user,
         // discriminator (8) + user + device_token + 32 x (subscription) = 1201
         space = 8 + 32 + 104 + (32 * 33),
+    )]
+    pub metadata: Loader<'info, MetadataAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(metadata_nonce: u8)]
+pub struct DeleteMetadata<'info> {
+    #[account(signer, mut)]
+    pub user: AccountInfo<'info>,
+    #[account(
+        mut,
+        close = user,
+        seeds = [
+            b"metadata".as_ref(),
+            user.key.as_ref(),
+        ],
+        has_one = user, // TODO: Confirm if seeds solves this
+        bump = metadata_nonce,
     )]
     pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,

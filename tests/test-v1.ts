@@ -6,6 +6,7 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  deleteMetadata,
   DEVICE_TOKEN_LENGTH,
   DialectAccount,
   findDialects,
@@ -63,6 +64,17 @@ describe('Protocol v1 test', () => {
           deviceToken,
         );
         expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
+      }
+    });
+
+    it('Delete user metadata object(s)', async () => {
+      for (const member of [owner, writer]) {
+        await createMetadata(program, member);
+        await getMetadata(program, member.publicKey);
+        await deleteMetadata(program, member);
+        chai
+          .expect(getMetadata(program, member.publicKey))
+          .to.eventually.be.rejectedWith(Error);
       }
     });
   });

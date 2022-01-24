@@ -219,6 +219,24 @@ export async function createMetadata(
   return await getMetadata(program, user.publicKey);
 }
 
+export async function deleteMetadata(program: anchor.Program, user: Keypair) {
+  const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
+    program,
+    user.publicKey,
+  );
+  const tx = await program.rpc.deleteMetadata(new anchor.BN(metadataNonce), {
+    accounts: {
+      user: user.publicKey,
+      metadata: metadataAddress,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    },
+    signers: [user],
+  });
+  await waitForFinality(program, tx);
+  return;
+}
+
 export async function updateDeviceToken(
   program: anchor.Program,
   user: Keypair,
