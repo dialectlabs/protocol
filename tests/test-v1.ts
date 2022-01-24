@@ -19,7 +19,7 @@ import {
   subscribeUser,
   updateDeviceToken,
 } from '../src/api';
-import { sleep, waitForFinality } from '../src/utils';
+import { sleep } from '../src/utils';
 import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
