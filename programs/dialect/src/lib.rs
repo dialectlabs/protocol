@@ -1,5 +1,6 @@
-use anchor_lang::prelude::*;
 use std::array;
+
+use anchor_lang::prelude::*;
 
 declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 
@@ -29,9 +30,8 @@ pub mod dialect {
         Ok(())
     }
 
-    pub fn delete_metadata(ctx: Context<DeleteMetadata>, _metadata_nonce: u8) -> ProgramResult {
+    pub fn close_metadata(ctx: Context<CloseMetadata>, _metadata_nonce: u8) -> ProgramResult {
         msg!("Attempting to close account");
-
         Ok(())
     }
 
@@ -73,6 +73,11 @@ pub mod dialect {
             members: [*members[0].key, *members[1].key],
         });
 
+        Ok(())
+    }
+
+    pub fn close_dialect(ctx: Context<CloseDialect>, _metadata_nonce: u8) -> ProgramResult {
+        msg!("Attempting to close account");
         Ok(())
     }
 
@@ -166,7 +171,7 @@ pub struct CreateMetadata<'info> {
 
 #[derive(Accounts)]
 #[instruction(metadata_nonce: u8)]
-pub struct DeleteMetadata<'info> {
+pub struct CloseMetadata<'info> {
     #[account(signer, mut)]
     pub user: AccountInfo<'info>,
     #[account(
@@ -254,6 +259,30 @@ pub struct CreateDialect<'info> {
         // NB: max space for PDA = 10240
         // space = discriminator + dialect account size
         space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
+    )]
+    pub dialect: Loader<'info, DialectAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(dialect_nonce: u8)]
+pub struct CloseDialect<'info> {
+    #[account(
+        signer,
+        mut,
+        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *owner.key && m.scopes[0] == true).count() > 0,
+    )]
+    pub owner: AccountInfo<'info>,
+    #[account(
+        mut,
+        close = owner,
+        seeds = [
+            b"dialect".as_ref(),
+            dialect.load()?.members[0].public_key.as_ref(),
+            dialect.load()?.members[1].public_key.as_ref(),
+        ],
+        bump = dialect_nonce,
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
