@@ -34,7 +34,7 @@
       ]
     },
     {
-      "name": "deleteMetadata",
+      "name": "closeMetadata",
       "accounts": [
         {
           "name": "user",
@@ -120,6 +120,37 @@
               2
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "closeDialect",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "dialect",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "metadataNonce",
+          "type": "u8"
         }
       ]
     },
