@@ -64,7 +64,7 @@ solana airdrop 50
 Run build, the output will be the program address
 
 ```
-anchor build
+npm run build:program
 ```
 
 from the root `protocol/` directory, run
