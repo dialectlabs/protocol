@@ -19,15 +19,12 @@ import {
   Member,
   sendMessage,
   subscribeUser,
-  updateDeviceToken,
 } from '../src/api';
 import { sleep } from '../src/utils';
 import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
-
-const dialectKeypair = anchor.web3.Keypair.generate();
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -52,19 +49,10 @@ describe('Protocol v1 test', () => {
     });
 
     it('Create user metadata object(s)', async () => {
-      const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       for (const member of [owner, writer]) {
         const metadata = await createMetadata(program, member);
         const gottenMetadata = await getMetadata(program, member.publicKey);
-        expect(metadata.deviceToken).to.be.eq(null);
-        expect(gottenMetadata.deviceToken).to.be.eq(null);
-        const updatedMetadata = await updateDeviceToken(
-          program,
-          member,
-          dialectKeypair.publicKey,
-          deviceToken,
-        );
-        expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
+        expect(metadata).to.be.deep.eq(gottenMetadata);
       }
     });
 
@@ -923,14 +911,7 @@ describe('Protocol v1 test', () => {
       await connection.confirmTransaction(airDropRequest);
     }
     if (createMeta) {
-      const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       await createMetadata(program, user);
-      await updateDeviceToken(
-        program,
-        user,
-        dialectKeypair.publicKey,
-        deviceToken,
-      );
     }
     return user;
   }

@@ -4,7 +4,6 @@ import { Keypair } from '@solana/web3.js';
 import {
   createDialect,
   createMetadata,
-  DEVICE_TOKEN_LENGTH,
   DialectAccount,
   getDialectForMembers,
   idl,
@@ -13,7 +12,6 @@ import {
   programs,
   sendMessage,
   subscribeUser,
-  updateDeviceToken,
   Wallet_,
 } from '..';
 
@@ -96,10 +94,9 @@ const subscribeUsers = async (
 ): Promise<Metadata[]> => {
   const metadatas: Metadata[] = [];
   await Promise.all(
-    keypairs.map(async (keypair, idx) => {
-      await subscribeUser(program, dialect, keypair.publicKey, keypair);
+    keypairs.map(async (keypair) => {
       metadatas.push(
-        await updateDeviceToken(program, keypair, dialectPublicKey, `${idx}`.repeat(DEVICE_TOKEN_LENGTH)),
+        await subscribeUser(program, dialect, keypair.publicKey, keypair),
       );
     }),
   );

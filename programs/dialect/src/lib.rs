@@ -19,7 +19,6 @@ pub mod dialect {
         let metadata_loader = &ctx.accounts.metadata;
         let metadata = &mut metadata_loader.load_init()?;
         metadata.user = ctx.accounts.user.key();
-        metadata.device_token = DeviceToken::default();
         metadata.subscriptions = [Subscription::default(); 32];
 
         emit!(CreateMetadataEvent {
@@ -78,22 +77,6 @@ pub mod dialect {
 
     pub fn close_dialect(ctx: Context<CloseDialect>, _metadata_nonce: u8) -> ProgramResult {
         msg!("Attempting to close account");
-        Ok(())
-    }
-
-    pub fn update_device_token(
-        ctx: Context<UpdateDeviceToken>,
-        _dialect_nonce: u8,
-        encrypted_device_token_array: [u8; 128], // Use Vec instead
-        encryption_nonce: [u8; 24],
-    ) -> ProgramResult {
-        // Confirm unsetting works
-        let metadata = &mut ctx.accounts.metadata.load_mut()?;
-        let arr = slice(&encrypted_device_token_array);
-        metadata.device_token = DeviceToken {
-            encrypted_array: arr,
-            nonce: encryption_nonce,
-        };
         Ok(())
     }
 
@@ -161,8 +144,8 @@ pub struct CreateMetadata<'info> {
         ],
         bump = metadata_nonce,
         payer = user,
-        // discriminator (8) + user + device_token + 32 x (subscription) = 1201
-        space = 8 + 32 + 104 + (32 * 33),
+        // discriminator (8) + user + 32 x (subscription) = 1096
+        space = 8 + 32 + (32 * 33),
     )]
     pub metadata: Loader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -182,25 +165,6 @@ pub struct CloseMetadata<'info> {
             user.key.as_ref(),
         ],
         has_one = user, // TODO: Confirm if seeds solves this
-        bump = metadata_nonce,
-    )]
-    pub metadata: Loader<'info, MetadataAccount>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(metadata_nonce: u8)]
-pub struct UpdateDeviceToken<'info> {
-    #[account(signer, mut)]
-    pub user: AccountInfo<'info>,
-    #[account(
-        mut,
-        seeds = [
-            b"metadata".as_ref(),
-            user.key.as_ref(),
-        ],
-        has_one = user, // Confirm if seeds solves this & we don't need here.
         bump = metadata_nonce,
     )]
     pub metadata: Loader<'info, MetadataAccount>,
@@ -320,7 +284,6 @@ Accounts
 pub struct MetadataAccount {
     // Add profile
     user: Pubkey,                      // 32
-    device_token: DeviceToken,         // 104
     subscriptions: [Subscription; 32], // 32 * space(Subscription)
 }
 
@@ -434,22 +397,6 @@ Data
 */
 
 #[zero_copy]
-// space = 81 + 24 = 105
-pub struct DeviceToken {
-    pub encrypted_array: [u8; 80], // 64-byte token, 16-byte encryption overhead
-    pub nonce: [u8; 24], // https://github.com/dchest/tweetnacl-js/blob/3389b7c9f00545e516a0fdafb324b7857cf1527d/nacl-fast.js#L2074
-}
-
-impl Default for DeviceToken {
-    fn default() -> Self {
-        DeviceToken {
-            encrypted_array: [0; 80],
-            nonce: [0; 24],
-        }
-    }
-}
-
-#[zero_copy]
 #[derive(Default)]
 // space = 33
 pub struct Subscription {
@@ -496,23 +443,6 @@ Helper functions
 
 pub fn is_present(subscription: &Subscription) -> bool {
     subscription.pubkey != Pubkey::default()
-}
-
-fn slice(input: &[u8]) -> [u8; 80] {
-    // This is no longer needed if we use a Vec in the handler argument.
-    // Either use try_into a la https://stackoverflow.com/a/50080940, or retire the need to slice entirely by passing up [u8; 81] from client.
-    [
-        input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8],
-        input[9], input[10], input[11], input[12], input[13], input[14], input[15], input[16],
-        input[17], input[18], input[19], input[20], input[21], input[22], input[23], input[24],
-        input[25], input[26], input[27], input[28], input[29], input[30], input[31], input[32],
-        input[33], input[34], input[35], input[36], input[37], input[38], input[39], input[40],
-        input[41], input[42], input[43], input[44], input[45], input[46], input[47], input[48],
-        input[49], input[50], input[51], input[52], input[53], input[54], input[55], input[56],
-        input[57], input[58], input[59], input[60], input[61], input[62], input[63], input[64],
-        input[65], input[66], input[67], input[68], input[69], input[70], input[71], input[72],
-        input[73], input[74], input[75], input[76], input[77], input[78], input[79],
-    ]
 }
 
 #[cfg(test)]
