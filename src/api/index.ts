@@ -1,4 +1,5 @@
 import * as anchor from '@project-serum/anchor';
+import { Wallet } from '@project-serum/anchor/src/provider';
 import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
@@ -448,7 +449,7 @@ export async function findDialects(
 
 export async function createDialect(
   program: anchor.Program,
-  owner: anchor.web3.Keypair,
+  owner: anchor.web3.Keypair | Wallet,
   members: Member[],
   encrypted = true,
 ): Promise<DialectAccount> {
@@ -476,11 +477,11 @@ export async function createDialect(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [owner],
+      signers: 'secretKey' in owner ? [owner] : [],
     },
   );
   await waitForFinality(program, tx);
-  return await getDialectForMembers(program, members, owner);
+  return await getDialectForMembers(program, members, 'secretKey' in owner ? owner : undefined);
 }
 
 /*
