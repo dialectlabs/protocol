@@ -257,7 +257,7 @@ pub struct CreateDialect<'info> {
         payer = owner,
         // NB: max space for PDA = 10240
         // space = discriminator + dialect account size
-        space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
+        space = 8 + 68 + (2 + 2 + 2 + 2048) + 4 + 1
     )]
     pub dialect: Loader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
@@ -324,15 +324,15 @@ pub struct MetadataAccount {
     subscriptions: [Subscription; 32], // 32 * space(Subscription)
 }
 
-const MESSAGE_BUFFER_LENGTH: usize = 8192;
+const MESSAGE_BUFFER_LENGTH: usize = 2048;
 const ITEM_METADATA_OVERHEAD: u16 = 2;
 
 #[account(zero_copy)]
 // NB: max space for PDA = 10240
-// space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
+// space = 8 + 68 + (2 + 2 + 2 + 2048) + 4 + 1
 pub struct DialectAccount {
     pub members: [Member; 2],        // 2 * Member = 68
-    pub messages: CyclicByteBuffer,  // 2 + 2 + 2 + 8192
+    pub messages: CyclicByteBuffer,  // 2 + 2 + 2 + 2048
     pub last_message_timestamp: u32, // 4, UTC seconds, max value = Sunday, February 7, 2106 6:28:15 AM
     pub encrypted: bool,             // 1
 }
@@ -355,12 +355,12 @@ impl DialectAccount {
 }
 
 #[zero_copy]
-// space = 2 + 2 + 2 + 8192
+// space = 2 + 2 + 2 + 2048
 pub struct CyclicByteBuffer {
     pub read_offset: u16,   // 2
     pub write_offset: u16,  // 2
     pub items_count: u16,   // 2
-    pub buffer: [u8; 8192], // 8192
+    pub buffer: [u8; 2048], // 2048
 }
 
 impl CyclicByteBuffer {
