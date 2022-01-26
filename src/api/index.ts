@@ -220,6 +220,25 @@ export async function createMetadata(
   return await getMetadata(program, user.publicKey);
 }
 
+export async function deleteMetadata(
+  program: anchor.Program,
+  user: Keypair,
+): Promise<void> {
+  const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
+    program,
+    user.publicKey,
+  );
+  await program.rpc.closeMetadata(new anchor.BN(metadataNonce), {
+    accounts: {
+      user: user.publicKey,
+      metadata: metadataAddress,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    },
+    signers: [user],
+  });
+}
+
 export async function updateDeviceToken(
   program: anchor.Program,
   user: Keypair,
@@ -482,6 +501,26 @@ export async function createDialect(
   );
   await waitForFinality(program, tx);
   return await getDialectForMembers(program, members, 'secretKey' in owner ? owner : undefined);
+}
+
+export async function deleteDialect(
+  program: anchor.Program,
+  { dialect }: DialectAccount,
+  owner: anchor.web3.Keypair,
+): Promise<void> {
+  const [dialectPublicKey, nonce] = await getDialectProgramAddress(
+    program,
+    dialect.members,
+  );
+  await program.rpc.closeDialect(new anchor.BN(nonce), {
+    accounts: {
+      dialect: dialectPublicKey,
+      owner: owner.publicKey,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    },
+    signers: [owner],
+  });
 }
 
 /*

@@ -6,6 +6,8 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  deleteDialect,
+  deleteMetadata,
   DEVICE_TOKEN_LENGTH,
   DialectAccount,
   findDialects,
@@ -63,6 +65,17 @@ describe('Protocol v1 test', () => {
           deviceToken,
         );
         expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
+      }
+    });
+
+    it('Owner deletes metadata', async () => {
+      for (const member of [owner, writer]) {
+        await createMetadata(program, member);
+        await getMetadata(program, member.publicKey);
+        await deleteMetadata(program, member);
+        chai
+          .expect(getMetadata(program, member.publicKey))
+          .to.eventually.be.rejectedWith(Error);
       }
     });
   });
@@ -275,15 +288,24 @@ describe('Protocol v1 test', () => {
         .to.be.deep.eq([dialect2.publicKey, dialect1.publicKey]);
     });
 
-    //   it('Non-owners fail to close the dialect account', async () => {
-    //     chai.expect(true).to.be.true;
-    //   });
-    //
-    //   it('Owner closes the dialect account', async () => {
-    //     chai.expect(true).to.be.true;
-    //   });
-    //
-    // });
+    it('Non-owners fail to delete the dialect', async () => {
+      const dialect = await createDialect(program, owner, members);
+      chai
+        .expect(deleteDialect(program, dialect, writer))
+        .to.eventually.be.rejectedWith(Error);
+      chai
+        .expect(deleteDialect(program, dialect, nonmember))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
+    it('Owner deletes the dialect', async () => {
+      const dialect = await createDialect(program, owner, members);
+      await deleteDialect(program, dialect, owner);
+      chai
+        .expect(getDialectForMembers(program, members))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
     it('Fail to subscribe a user twice to the same dialect (silent, noop)', async () => {
       const dialect = await createDialect(program, owner, members);
       await subscribeUser(program, dialect, writer.publicKey, owner);

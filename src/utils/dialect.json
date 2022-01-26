@@ -34,6 +34,37 @@
       ]
     },
     {
+      "name": "closeMetadata",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "metadataNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "createDialect",
       "accounts": [
         {
@@ -89,6 +120,37 @@
               2
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "closeDialect",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "dialect",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "metadataNonce",
+          "type": "u8"
         }
       ]
     },
