@@ -138,12 +138,3 @@ export function decryptMessage(
     nonce,
   );
 }
-
-export type DeviceToken = {
-  encryptedArray: number[];
-  nonce: number[];
-}
-
-export function deviceTokenIsPresent(deviceToken: DeviceToken): boolean {
-  return Boolean(deviceToken?.encryptedArray.some((e: number) => e !== 0));
-}

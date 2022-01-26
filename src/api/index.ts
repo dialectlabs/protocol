@@ -3,9 +3,8 @@ import { Wallet } from '@project-serum/anchor/src/provider';
 import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
-import { deviceTokenIsPresent, waitForFinality, Wallet_ } from '../utils';
+import { waitForFinality, Wallet_ } from '../utils';
 import {
-  ecdhDecrypt,
   ecdhEncrypt,
   ENCRYPTION_OVERHEAD_BYTES,
 } from '../utils/ecdh-encryption';
@@ -50,7 +49,6 @@ type RawCyclicByteBuffer = {
 };
 
 export type Metadata = {
-  deviceToken: string | null;
   subscriptions: Subscription[];
 };
 
@@ -111,26 +109,15 @@ export async function getMetadataProgramAddress(
   );
 }
 
+// TODO: Simplify this function further now that we're no longer decrypting the device token.
 export async function getMetadata(
   program: anchor.Program,
   user: PublicKey | anchor.web3.Keypair,
   otherParty?: PublicKey | anchor.web3.Keypair | null,
 ): Promise<Metadata> {
-  /*
-  6 scenarios:
-
-  0. User is keypair, otherParty is null -- Cannot decrypt
-  1. User is public key, otherParty is null -- Cannot decrypt
-  2. User is public key, otherParty is public key -- Cannot decrypt
-  3. User is public key, otherParty is keypair -- Can decrypt
-  4. User is keypair, otherParty is public key -- Can decrypt
-  5. User is keypair, otherParty is keypair -- Can decrypt
-  */
   let shouldDecrypt = false;
   let userIsKeypair = false;
   let otherPartyIsKeypair = false;
-  let pubkeyToUse: anchor.web3.PublicKey | null = null;
-  let keypairToUse: anchor.web3.Keypair | null = null;
 
   try {
     // assume user is pubkey
@@ -153,46 +140,14 @@ export async function getMetadata(
     shouldDecrypt = true;
   }
 
-  if (shouldDecrypt) {
-    // we know we have a keypair, now we just prioritize which we use
-    keypairToUse = (userIsKeypair ? user : otherParty) as anchor.web3.Keypair;
-    // if both keypairs, use user keypair & other party public key
-    pubkeyToUse =
-      userIsKeypair && otherPartyIsKeypair
-        ? (otherParty as Keypair).publicKey // both keypairs, prioritize user keypair
-        : userIsKeypair
-        ? (otherParty as PublicKey) // user is keypair, other party is pubkey
-        : (user as PublicKey); // user is pubkey, other party is keypair
-    console.log('Attempting to decrypt user metadata...');
-    console.log('  keypairToUse:', keypairToUse.publicKey.toString());
-    console.log('  pubkeyToUse:', pubkeyToUse.toString());
-  }
   const [metadataAddress] = await getMetadataProgramAddress(
     program,
     userIsKeypair ? (user as Keypair).publicKey : (user as PublicKey),
   );
   const metadata = await program.account.metadataAccount.fetch(metadataAddress);
 
-  let deviceToken: string | null = null;
-  if (shouldDecrypt && deviceTokenIsPresent(metadata.deviceToken)) {
-    try {
-      const decryptedDeviceToken = ecdhDecrypt(
-        new Uint8Array(metadata.deviceToken.encryptedArray),
-        {
-          secretKey: (keypairToUse as Keypair).secretKey,
-          publicKey: (keypairToUse as Keypair).publicKey.toBytes(),
-        },
-        (pubkeyToUse as PublicKey).toBytes(),
-        new Uint8Array(metadata.deviceToken.nonce),
-      );
-      deviceToken = new TextDecoder().decode(decryptedDeviceToken);
-      console.log('Successfully decrypted userMetadata', deviceToken);
-    } catch (e) {
-      console.log('FAILED TO DECRYPT DEVICE TOKEN', metadata.deviceToken, e);
-    }
-  }
+  // TODO RM this code chunk and change function signature
   return {
-    deviceToken,
     subscriptions: metadata.subscriptions.filter(
       (s: Subscription) => !s.pubkey.equals(anchor.web3.PublicKey.default),
     ),
@@ -237,52 +192,6 @@ export async function deleteMetadata(
     },
     signers: [user],
   });
-}
-
-export async function updateDeviceToken(
-  program: anchor.Program,
-  user: Keypair,
-  otherPartyPubkey: PublicKey,
-  deviceToken: string | null,
-): Promise<Metadata> {
-  const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
-    program,
-    user.publicKey,
-  );
-  let encryptedDeviceToken: Uint8Array | null = null;
-  const nonce = generateRandomNonce();
-  if (deviceToken) {
-    const unpaddedDeviceToken = ecdhEncrypt(
-      new Uint8Array(Buffer.from(deviceToken)),
-      {
-        publicKey: user.publicKey.toBytes(),
-        secretKey: user.secretKey,
-      },
-      otherPartyPubkey.toBytes(),
-      nonce,
-    );
-    // TODO: Retire this padding
-    const padding = new Uint8Array(
-      new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0),
-    );
-    encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
-  }
-  const tx = await program.rpc.updateDeviceToken(
-    new anchor.BN(metadataNonce),
-    encryptedDeviceToken ? Buffer.from(encryptedDeviceToken) : null,
-    nonce,
-    {
-      accounts: {
-        user: user.publicKey,
-        metadata: metadataAddress,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [user],
-    },
-  );
-  await waitForFinality(program, tx);
-  return await getMetadata(program, user, otherPartyPubkey);
 }
 
 export async function subscribeUser(
