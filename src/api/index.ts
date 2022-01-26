@@ -515,8 +515,6 @@ export async function deleteDialect(
     accounts: {
       dialect: dialectPublicKey,
       owner: owner.publicKey,
-      member0: dialect.members[0].publicKey,
-      member1: dialect.members[1].publicKey,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
