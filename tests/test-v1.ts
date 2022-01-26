@@ -524,7 +524,7 @@ describe('Protocol v1 test', () => {
 
     it('New messages overwrite old, retrieved messages are in order.', async () => {
       // emulate ideal message alignment withing buffer
-      const rawBufferSize = 8192;
+      const rawBufferSize = 2048;
       const messagesPerDialect = 16;
       const numMessages = messagesPerDialect * 2;
       const salt = 3;
@@ -685,7 +685,7 @@ describe('Protocol v1 test', () => {
 
     it('New messages overwrite old, retrieved messages are in order.', async () => {
       // emulate ideal message alignment withing buffer
-      const rawBufferSize = 8192;
+      const rawBufferSize = 2048;
       const messagesPerDialect = 16;
       const numMessages = messagesPerDialect * 2;
       const salt = 3;
