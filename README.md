@@ -2,9 +2,18 @@
 
 ## local development
 
-Please make sure you are always using the latest stable rust version by running: rustup update
+### docker
+
+```bash
+# build
+docker build -f docker/Dockerfile . -t dialect/protocol:latest
+
+# run
+docker run -i --rm -p 8899:8899 -p 8900:8900 -p 9900:9900 --name protocol dialect/protocol:latest
+```
 
 ### building for local usage
+Please make sure you are always using the latest stable rust version by running: rustup update
 
 "local usage" means installation of this package through "file://..."
 
