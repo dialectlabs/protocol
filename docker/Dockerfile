@@ -23,15 +23,14 @@ RUN npm install -g @project-serum/anchor-cli
 WORKDIR /home/dialect/
 # COPY package files & source
 # TODO: DON'T COPY target/deploy/dialect-keypair.json AS THIS IS INSECURE!!!
-COPY Anchor.toml Cargo.toml Cargo.lock programs target ./
+COPY Anchor.toml Cargo.toml Cargo.lock .
+COPY programs ./programs
+COPY target ./target
 
 # Create deployment keypair
 RUN solana-keygen new --no-bip39-passphrase -o /root/.config/solana/id.json
 
 # Build to pre-load BPF
 RUN anchor build
-
-RUN mkdir .anchor
-RUN mkdir .anchor/test-ledger
 
 CMD ["anchor", "localnet"]
