@@ -25,7 +25,7 @@ WORKDIR /home/dialect/
 # TODO: DON'T COPY target/deploy/dialect-keypair.json AS THIS IS INSECURE!!!
 COPY Anchor.toml Cargo.toml Cargo.lock ./
 COPY programs ./programs
-COPY target ./target
+# COPY target ./target
 
 # Create deployment keypair
 RUN solana-keygen new --no-bip39-passphrase -o /root/.config/solana/id.json
