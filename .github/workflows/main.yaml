@@ -15,5 +15,5 @@ jobs:
     - name: Build & run tests
       run: |
         docker build -f docker/Dockerfile -t dialect/protocol:latest .
-        docker build -f docker/Dockerfile.test -t dialect/protocol-test:latest .
-        docker run --rm --name protocol-test dialect/protocol-test:latest
+        docker build -f docker/Dockerfile.tests -t dialect/protocol-tests:latest .
+        docker run --rm --name protocol-tests dialect/protocol-tests:latest
