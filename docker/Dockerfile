@@ -23,7 +23,7 @@ RUN npm install -g @project-serum/anchor-cli
 WORKDIR /home/dialect/
 # COPY package files & source
 # TODO: DON'T COPY target/deploy/dialect-keypair.json AS THIS IS INSECURE!!!
-COPY Anchor.toml Cargo.toml Cargo.lock .
+COPY Anchor.toml Cargo.toml Cargo.lock ./
 COPY programs ./programs
 COPY target ./target
 
