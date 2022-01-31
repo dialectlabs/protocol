@@ -331,16 +331,29 @@ impl DialectAccount {
     }
 }
 
+/// A special data structure that is used to efficiently store arbitrary length byte arrays.
+/// Maintains FIFO attributes on top of cyclic buffer.
+/// Ensures there's a space to append new item by erasing old items, if no space available.
 #[zero_copy]
 // space = 2 + 2 + 2 + 8192
 pub struct CyclicByteBuffer {
-    pub read_offset: u16,   // 2
-    pub write_offset: u16,  // 2
-    pub items_count: u16,   // 2
+    /// Offset of first item in [buffer].
+    pub read_offset: u16, // 2
+    /// Offset of next item in [buffer].
+    pub write_offset: u16, // 2
+    /// Current number of items in [buffer].
+    pub items_count: u16, // 2
+    /// Underlying bytebuffer, stores items.
     pub buffer: [u8; 8192], // 8192
 }
 
 impl CyclicByteBuffer {
+    /// Appends an arbitrary length item passed in the parameter to the end of the buffer.
+    /// If the buffer has no space for insertion, it returns removes old items until there's enough space.
+    ///
+    /// ### Arguments
+    ///
+    /// * `item` - an bytebuffer/bytearray to be appended.
     fn append(&mut self, item: Vec<u8>) {
         let item_with_metadata = &mut Vec::new();
         let item_len = (item.len() as u16).to_be_bytes();
@@ -354,14 +367,29 @@ impl CyclicByteBuffer {
         self.write_new_item(item_with_metadata, new_write_offset);
     }
 
+    /// Returns a number by modulo of buffer length.
+    ///
+    /// Used to re-calculate offset within cyclic buffer structure w/o moving out of buffer boundaries.
+    ///
+    /// ### Arguments
+    ///
+    /// * `value` - an offset/position to be re-calculated.
     fn mod_(&mut self, value: u16) -> u16 {
         return value % MESSAGE_BUFFER_LENGTH as u16;
     }
 
+    /// Returns true if there's no free space to append item of size [item_size] to buffer.
+    ///
+    /// Used to re-calculate offset within cyclic buffer structure w/o moving out of buffer boundaries.
+    ///
+    /// ### Arguments
+    ///
+    /// * `item_size` - a size of an item that is added to buffer.
     fn no_space_available_for(&mut self, item_size: u16) -> bool {
         return self.get_available_space() < item_size;
     }
 
+    /// Returns the amount of available free space.
     fn get_available_space(&mut self) -> u16 {
         if self.items_count == 0 {
             return MESSAGE_BUFFER_LENGTH as u16;
@@ -369,6 +397,7 @@ impl CyclicByteBuffer {
         return self.mod_(MESSAGE_BUFFER_LENGTH as u16 + self.read_offset - self.write_offset);
     }
 
+    /// Erases the oldest item from buffer by zeroing and recalculating [read_offset] and [items_count].
     fn erase_oldest_item(&mut self) {
         let item_size = ITEM_METADATA_OVERHEAD + self.read_item_size();
         let zeros = &mut vec![0u8; item_size as usize];
@@ -377,6 +406,7 @@ impl CyclicByteBuffer {
         self.items_count -= 1;
     }
 
+    /// Returns the size of the item that is present in buffer at [read_offset] position.
     fn read_item_size(&mut self) -> u16 {
         let read_offset = self.read_offset;
         let tail_size = MESSAGE_BUFFER_LENGTH as u16 - read_offset;
@@ -389,18 +419,34 @@ impl CyclicByteBuffer {
         return u16::from_be_bytes([self.buffer[read_offset as usize], self.buffer[0]]);
     }
 
+    /// Performs writing of [item] to buffer at [write_offset] position.
+    ///
+    /// ### Arguments
+    ///
+    /// * `item` - an bytebuffer/bytearray to be written at [write_offset] position.
+    /// * `new_write_offset` - a new [write_offset] to be set after writing.
     fn write_new_item(&mut self, item: &mut Vec<u8>, new_write_offset: u16) {
         self.write(item, self.write_offset);
         self.write_offset = new_write_offset;
         self.items_count += 1;
     }
 
+    /// Performs writing of [item] to buffer at [offset] position.
+    ///
+    /// Maintains cyclic structure by writing bytes at positions by calculating position by modulo of buffer size.
+    ///
+    /// ### Arguments
+    ///
+    /// * `item` - an bytebuffer/bytearray to be written at [offset] position.
+    /// * `offset` - an [offset] where to write item.
     fn write(&mut self, item: &mut Vec<u8>, offset: u16) {
         for (idx, e) in item.iter().enumerate() {
             let pos = self.mod_(offset + idx as u16);
             self.buffer[pos as usize] = *e;
         }
     }
+
+    /// Returns an underlying [buffer] that contains all items.
     fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
         return self.buffer;
     }
@@ -410,29 +456,48 @@ impl CyclicByteBuffer {
 Data
 */
 
+/// A subscription used to store information about which dialect accounts user is subscribed to.
+///
+/// Multiple subscriptions can be stored in user's metadata account.
 #[zero_copy]
 #[derive(Default)]
 // space = 33
 pub struct Subscription {
+    /// Address of dialect account subscribed to.
     pub pubkey: Pubkey, // 32
-    pub enabled: bool,  // 1
+    /// A switcher to enable/disable subscription.
+    pub enabled: bool, // 1
 }
 
+/// User who can exchange messages using a dialect account.
 #[zero_copy]
 #[derive(Default)]
 // space = 34
 pub struct Member {
+    /// User public key.
     pub public_key: Pubkey, // 32
-    // [Admin, Write]. [false, false] implies read-only
+    /// Flags that are used to support basic RBAC authorization to dialect account.
+    /// - When ```scopes[0]``` is set to true, the user is granted admin role.
+    /// - When ```scopes[1]``` is set to true, the user is granted writer role.
+    /// ```
+    /// // Examples
+    /// scopes: [true, true] // allows to administer account + read messages + write messages
+    /// scopes: [false, true] // allows to read messages + write messages
+    /// scopes: [false, false] // allows to read messages
+    /// ```
     pub scopes: [bool; 2], // 2
 }
 
+/// An event that is fired new dialect account is created.
 #[event]
 pub struct CreateDialectEvent {
+    /// Address of newly created dialect account.
     pub dialect: Pubkey,
-    pub members: [Pubkey; 2], // Use struct Member
+    /// A list of dialect members: two users who exchange messages using single dialect account.
+    pub members: [Pubkey; 2],
 }
 
+/// An event that is fired when some user sends message to dialect account.
 #[event]
 pub struct CloseDialectEvent {
     pub dialect: Pubkey,
@@ -441,19 +506,27 @@ pub struct CloseDialectEvent {
 
 #[event]
 pub struct SendMessageEvent {
+    /// Address of dialect account where messaging happens.
     pub dialect: Pubkey,
+    /// User that sent a message.
     pub sender: Pubkey,
 }
 
+/// An event that is fired when the metadata account owner is subscribed to dialect.
 #[event]
 pub struct SubscribeUserEvent {
+    /// Address of owner metadata account, where subscription to dialect is stored.
     pub metadata: Pubkey,
+    /// Address of dialect account to which user was subscribed.
     pub dialect: Pubkey,
 }
 
+/// An event that is fired when new metadata account is created.
 #[event]
 pub struct CreateMetadataEvent {
+    /// Address of metadata account.
     pub metadata: Pubkey,
+    /// Owner of metadata account.
     pub user: Pubkey,
 }
 
