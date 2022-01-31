@@ -155,55 +155,6 @@
       ]
     },
     {
-      "name": "updateDeviceToken",
-      "accounts": [
-        {
-          "name": "user",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "metadata",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "rent",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "dialectNonce",
-          "type": "u8"
-        },
-        {
-          "name": "encryptedDeviceTokenArray",
-          "type": {
-            "array": [
-              "u8",
-              128
-            ]
-          }
-        },
-        {
-          "name": "encryptionNonce",
-          "type": {
-            "array": [
-              "u8",
-              24
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "subscribeUser",
       "accounts": [
         {
@@ -295,12 +246,6 @@
             "type": "publicKey"
           },
           {
-            "name": "deviceToken",
-            "type": {
-              "defined": "DeviceToken"
-            }
-          },
-          {
             "name": "subscriptions",
             "type": {
               "array": [
@@ -372,32 +317,6 @@
               "array": [
                 "u8",
                 8192
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "DeviceToken",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "encryptedArray",
-            "type": {
-              "array": [
-                "u8",
-                80
-              ]
-            }
-          },
-          {
-            "name": "nonce",
-            "type": {
-              "array": [
-                "u8",
-                24
               ]
             }
           }
