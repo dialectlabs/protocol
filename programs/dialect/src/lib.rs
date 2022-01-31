@@ -30,7 +30,14 @@ pub mod dialect {
     }
 
     pub fn close_metadata(ctx: Context<CloseMetadata>, _metadata_nonce: u8) -> ProgramResult {
-        msg!("Attempting to close account");
+        let metadata_loader = &ctx.accounts.metadata;
+        let metadata = metadata_loader.load()?;
+
+        emit!(CloseMetadataEvent {
+            metadata: metadata_loader.key(),
+            user: metadata.user,
+        });
+
         Ok(())
     }
 
@@ -75,8 +82,15 @@ pub mod dialect {
         Ok(())
     }
 
-    pub fn close_dialect(ctx: Context<CloseDialect>, _metadata_nonce: u8) -> ProgramResult {
-        msg!("Attempting to close account");
+    pub fn close_dialect(ctx: Context<CloseDialect>, _dialect_nonce: u8) -> ProgramResult {
+        let dialect_loader = &ctx.accounts.dialect;
+        let dialect = dialect_loader.load()?;
+
+        emit!(CloseDialectEvent {
+            dialect: dialect_loader.key(),
+            members: [dialect.members[0].public_key, dialect.members[1].public_key],
+        });
+
         Ok(())
     }
 
@@ -420,6 +434,12 @@ pub struct CreateDialectEvent {
 }
 
 #[event]
+pub struct CloseDialectEvent {
+    pub dialect: Pubkey,
+    pub members: [Pubkey; 2], // Use struct Member
+}
+
+#[event]
 pub struct SendMessageEvent {
     pub dialect: Pubkey,
     pub sender: Pubkey,
@@ -433,6 +453,12 @@ pub struct SubscribeUserEvent {
 
 #[event]
 pub struct CreateMetadataEvent {
+    pub metadata: Pubkey,
+    pub user: Pubkey,
+}
+
+#[event]
+pub struct CloseMetadataEvent {
     pub metadata: Pubkey,
     pub user: Pubkey,
 }
