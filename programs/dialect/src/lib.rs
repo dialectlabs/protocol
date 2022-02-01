@@ -608,8 +608,10 @@ pub struct DialectCreatedEvent {
 /// An event that is fired when some user sends message to dialect account.
 #[event]
 pub struct DialectDeletedEvent {
+    /// Address of deleted dialect account.
     pub dialect: Pubkey,
-    pub members: [Pubkey; 2], // Use struct Member
+    /// A list of dialect members: two users who exchange messages using single dialect account.
+    pub members: [Pubkey; 2],
 }
 
 #[event]
@@ -638,9 +640,12 @@ pub struct MetadataCreatedEvent {
     pub user: Pubkey,
 }
 
+/// An event that is fired when new metadata account is deleted.
 #[event]
 pub struct MetadataDeletedEvent {
+    /// Address of deleted metadata account.
     pub metadata: Pubkey,
+    /// Owner of metadata account.
     pub user: Pubkey,
 }
 
