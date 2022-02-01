@@ -586,10 +586,10 @@ export interface UserSubscribedEvent {
   dialect: PublicKey;
 }
 
-export type EventHandler = (event: Event) => Promise<void>;
+export type EventHandler = (event: Event) => Promise<any>;
 
 export interface EventSubscription {
-  unsubscribe(): Promise<void>;
+  unsubscribe(): Promise<any>;
 }
 
 class DefaultSubscription implements EventSubscription {
@@ -605,7 +605,7 @@ class DefaultSubscription implements EventSubscription {
   }
 
   async start(): Promise<EventSubscription> {
-    await this.periodiallyReconnect();
+    this.periodiallyReconnect();
     return this;
   }
 
