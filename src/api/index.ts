@@ -1,17 +1,14 @@
 import * as anchor from '@project-serum/anchor';
+import { EventParser } from '@project-serum/anchor';
 import { Wallet } from '@project-serum/anchor/src/provider';
 import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
-import { waitForFinality, Wallet_ } from '../utils';
-import {
-  ecdhEncrypt,
-  ENCRYPTION_OVERHEAD_BYTES,
-} from '../utils/ecdh-encryption';
-import { generateRandomNonce } from '../utils/nonce-generator';
+import { sleep, waitForFinality, Wallet_ } from '../utils';
+import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
-import { TextSerdeFactory } from './text-serde'; // TODO: Switch from types to classes
+import { TextSerdeFactory } from './text-serde';
 
 // TODO: Switch from types to classes
 
@@ -409,7 +406,11 @@ export async function createDialect(
     },
   );
   await waitForFinality(program, tx);
-  return await getDialectForMembers(program, members, 'secretKey' in owner ? owner : undefined);
+  return await getDialectForMembers(
+    program,
+    members,
+    'secretKey' in owner ? owner : undefined,
+  );
 }
 
 export async function deleteDialect(
@@ -537,4 +538,165 @@ export async function sendMessage(
   );
   const d = await getDialect(program, publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
+}
+
+// Events
+// An event is something that has happened in the past
+export type Event =
+  | DialectCreatedEvent
+  | DialectDeletedEvent
+  | MetadataCreatedEvent
+  | MetadataDeletedEvent
+  | MessageSentEvent
+  | UserSubscribedEvent;
+
+export interface DialectCreatedEvent {
+  type: 'dialect-created';
+  dialect: PublicKey;
+  members: PublicKey[];
+}
+
+export interface DialectDeletedEvent {
+  type: 'dialect-deleted';
+  dialect: PublicKey;
+  members: PublicKey[];
+}
+
+export interface MetadataCreatedEvent {
+  type: 'metadata-created';
+  metadata: PublicKey;
+  user: PublicKey;
+}
+
+export interface MetadataDeletedEvent {
+  type: 'metadata-deleted';
+  metadata: PublicKey;
+  user: PublicKey;
+}
+
+export interface MessageSentEvent {
+  type: 'message-sent';
+  dialect: PublicKey;
+  sender: PublicKey;
+}
+
+export interface UserSubscribedEvent {
+  type: 'user-subscribed';
+  metadata: PublicKey;
+  dialect: PublicKey;
+}
+
+export type EventHandler = (event: Event) => Promise<any>;
+
+export interface EventSubscription {
+  unsubscribe(): Promise<any>;
+}
+
+class DefaultSubscription implements EventSubscription {
+  private readonly eventParser: EventParser;
+  private isInterrupted = false;
+  private subscriptionId?: number;
+
+  constructor(
+    private readonly program: anchor.Program,
+    private readonly eventHandler: EventHandler,
+  ) {
+    this.eventParser = new EventParser(program.programId, program.coder);
+  }
+
+  async start(): Promise<EventSubscription> {
+    this.periodicallyReconnect();
+    return this;
+  }
+
+  async reconnectSubscriptions() {
+    console.log('Reconnect');
+    await this.unsubscribeFromLogsIfSubscribed();
+    this.subscriptionId = this.program.provider.connection.onLogs(
+      this.program.programId,
+      async (logs) => {
+        if (logs.err) {
+          console.error(logs);
+          return;
+        }
+        this.eventParser.parseLogs(logs.logs, (event) => {
+          if (!this.isInterrupted) {
+            switch (event.name) {
+              case 'DialectCreatedEvent':
+                this.eventHandler({
+                  type: 'dialect-created',
+                  dialect: event.data.dialect as PublicKey,
+                  members: event.data.members as PublicKey[],
+                });
+                break;
+              case 'DialectDeletedEvent':
+                this.eventHandler({
+                  type: 'dialect-deleted',
+                  dialect: event.data.dialect as PublicKey,
+                  members: event.data.members as PublicKey[],
+                });
+                break;
+              case 'MessageSentEvent':
+                this.eventHandler({
+                  type: 'message-sent',
+                  dialect: event.data.dialect as PublicKey,
+                  sender: event.data.sender as PublicKey,
+                });
+                break;
+              case 'UserSubscribedEvent':
+                this.eventHandler({
+                  type: 'user-subscribed',
+                  metadata: event.data.metadata as PublicKey,
+                  dialect: event.data.dialect as PublicKey,
+                });
+                break;
+              case 'MetadataCreatedEvent':
+                this.eventHandler({
+                  type: 'metadata-created',
+                  metadata: event.data.metadata as PublicKey,
+                  user: event.data.user as PublicKey,
+                });
+                break;
+              case 'MetadataDeletedEvent':
+                this.eventHandler({
+                  type: 'metadata-deleted',
+                  metadata: event.data.metadata as PublicKey,
+                  user: event.data.user as PublicKey,
+                });
+                break;
+              default:
+                console.log('Unsupported event type', event.name);
+            }
+          }
+        });
+      },
+    );
+  }
+
+  unsubscribe(): Promise<void> {
+    this.isInterrupted = true;
+    return this.unsubscribeFromLogsIfSubscribed();
+  }
+
+  private async periodicallyReconnect() {
+    while (!this.isInterrupted) {
+      await this.reconnectSubscriptions();
+      await sleep(1000 * 60);
+    }
+  }
+
+  private unsubscribeFromLogsIfSubscribed() {
+    return this.subscriptionId
+      ? this.program.provider.connection.removeOnLogsListener(
+          this.subscriptionId,
+        )
+      : Promise.resolve();
+  }
+}
+
+export async function subscribeToEvents(
+  program: anchor.Program,
+  eventHandler: EventHandler,
+): Promise<EventSubscription> {
+  return new DefaultSubscription(program, eventHandler).start();
 }

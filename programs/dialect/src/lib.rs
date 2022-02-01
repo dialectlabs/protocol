@@ -31,7 +31,7 @@ pub mod dialect {
         metadata.user = ctx.accounts.user.key();
         metadata.subscriptions = [Subscription::default(); 32];
         // Emit an event for monitoring services.
-        emit!(CreateMetadataEvent {
+        emit!(MetadataCreatedEvent {
             metadata: metadata_loader.key(),
             user: ctx.accounts.user.key()
         });
@@ -49,7 +49,7 @@ pub mod dialect {
         let metadata_loader = &ctx.accounts.metadata;
         let metadata = metadata_loader.load()?;
         // Emit an event for monitoring services.
-        emit!(CloseMetadataEvent {
+        emit!(MetadataDeletedEvent {
             metadata: metadata_loader.key(),
             user: metadata.user,
         });
@@ -96,7 +96,7 @@ pub mod dialect {
         dialect.last_message_timestamp = now;
         dialect.encrypted = encrypted;
 
-        emit!(CreateDialectEvent {
+        emit!(DialectCreatedEvent {
             dialect: dialect_loader.key(),
             members: [*members[0].key, *members[1].key],
         });
@@ -117,7 +117,7 @@ pub mod dialect {
         let dialect_loader = &ctx.accounts.dialect;
         let dialect = dialect_loader.load()?;
 
-        emit!(CloseDialectEvent {
+        emit!(DialectDeletedEvent {
             dialect: dialect_loader.key(),
             members: [dialect.members[0].public_key, dialect.members[1].public_key],
         });
@@ -155,7 +155,7 @@ pub mod dialect {
                 enabled: true,
             };
             // Emit an event for monitoring services.
-            emit!(SubscribeUserEvent {
+            emit!(UserSubscribedEvent {
                 metadata: metadata_loader.key(),
                 dialect: dialect.key()
             });
@@ -185,7 +185,7 @@ pub mod dialect {
         let sender = &mut ctx.accounts.sender;
         dialect.append(text, sender);
         // Emit an event for monitoring services.
-        emit!(SendMessageEvent {
+        emit!(MessageSentEvent {
             dialect: dialect_loader.key(),
             sender: *sender.key,
         });
@@ -598,7 +598,7 @@ pub struct Member {
 
 /// An event that is fired new dialect account is created.
 #[event]
-pub struct CreateDialectEvent {
+pub struct DialectCreatedEvent {
     /// Address of newly created dialect account.
     pub dialect: Pubkey,
     /// A list of dialect members: two users who exchange messages using single dialect account.
@@ -607,13 +607,13 @@ pub struct CreateDialectEvent {
 
 /// An event that is fired when some user sends message to dialect account.
 #[event]
-pub struct CloseDialectEvent {
+pub struct DialectDeletedEvent {
     pub dialect: Pubkey,
     pub members: [Pubkey; 2], // Use struct Member
 }
 
 #[event]
-pub struct SendMessageEvent {
+pub struct MessageSentEvent {
     /// Address of dialect account where messaging happens.
     pub dialect: Pubkey,
     /// User that sent a message.
@@ -622,7 +622,7 @@ pub struct SendMessageEvent {
 
 /// An event that is fired when the metadata account owner is subscribed to dialect.
 #[event]
-pub struct SubscribeUserEvent {
+pub struct UserSubscribedEvent {
     /// Address of owner metadata account, where subscription to dialect is stored.
     pub metadata: Pubkey,
     /// Address of dialect account to which user was subscribed.
@@ -631,7 +631,7 @@ pub struct SubscribeUserEvent {
 
 /// An event that is fired when new metadata account is created.
 #[event]
-pub struct CreateMetadataEvent {
+pub struct MetadataCreatedEvent {
     /// Address of metadata account.
     pub metadata: Pubkey,
     /// Owner of metadata account.
@@ -639,7 +639,7 @@ pub struct CreateMetadataEvent {
 }
 
 #[event]
-pub struct CloseMetadataEvent {
+pub struct MetadataDeletedEvent {
     pub metadata: Pubkey,
     pub user: Pubkey,
 }

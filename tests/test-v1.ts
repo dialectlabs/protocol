@@ -9,6 +9,7 @@ import {
   deleteDialect,
   deleteMetadata,
   DialectAccount,
+  Event,
   findDialects,
   getDialect,
   getDialectForMembers,
@@ -17,6 +18,7 @@ import {
   getMetadata,
   Member,
   sendMessage,
+  subscribeToEvents,
   subscribeUser,
 } from '../src/api';
 import { sleep } from '../src/utils';
@@ -24,6 +26,7 @@ import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
+import { CountDownLatch } from '../src/utils/countdown-latch';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -892,6 +895,53 @@ describe('Protocol v1 test', () => {
       chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
       chai.expect(message2Writer2.text).to.be.eq(writer2Text);
       chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
+    });
+  });
+
+  describe('Subscription tests', () => {
+    let owner: web3.Keypair;
+    let writer: web3.Keypair;
+
+    beforeEach(async () => {
+      owner = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
+      });
+      writer = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
+      });
+    });
+
+    it('Can subscribe to events and receive them and unsubscribe suka', async () => {
+      // given
+      const eventsAccumulator: Event[] = [];
+      const expectedEvents = 8;
+      const countDownLatch = new CountDownLatch(expectedEvents);
+      const subscription = await subscribeToEvents(program, async (it) => {
+        console.log('event', it);
+        countDownLatch.countDown();
+        return eventsAccumulator.push(it);
+      });
+      // when
+      await createMetadata(program, owner); // 1 event
+      await createMetadata(program, writer); // 1 event
+      const dialectAccount = await createDialectAndSubscribeAllMembers(
+        program,
+        owner,
+        writer,
+        false,
+      ); // 3 events
+      await deleteMetadata(program, owner); // 1 event
+      await deleteMetadata(program, writer); // 1 event
+      await deleteDialect(program, dialectAccount, owner); // 1 event
+      await countDownLatch.await(5000);
+      await subscription.unsubscribe();
+      // events below should be ignored
+      await createMetadata(program, owner);
+      await createMetadata(program, writer);
+      // then
+      chai.expect(eventsAccumulator.length).to.be.eq(expectedEvents);
     });
   });
 
