@@ -1,0 +1,12 @@
+FROM dialect/protocol:latest
+
+# Install npm dependencies
+COPY ./package.json ./
+RUN npm i
+RUN npm i -g typescript ts-mocha
+
+COPY ./src ./src
+COPY ./tests ./tests
+COPY ./tsconfig.json ./
+
+CMD ["anchor", "test"]
