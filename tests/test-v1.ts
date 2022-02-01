@@ -916,7 +916,7 @@ describe('Protocol v1 test', () => {
     it('Can subscribe to events and receive them and unsubscribe suka', async () => {
       // given
       const eventsAccumulator: Event[] = [];
-      const expectedEvents = 9;
+      const expectedEvents = 8;
       const countDownLatch = new CountDownLatch(expectedEvents);
       const subscription = await subscribeToEvents(program, async (it) => {
         console.log('event', it);

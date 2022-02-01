@@ -605,11 +605,12 @@ class DefaultSubscription implements EventSubscription {
   }
 
   async start(): Promise<EventSubscription> {
-    this.periodiallyReconnect();
+    this.periodicallyReconnect();
     return this;
   }
 
   async reconnectSubscriptions() {
+    console.log('Reconnect');
     await this.unsubscribeFromLogsIfSubscribed();
     this.subscriptionId = this.program.provider.connection.onLogs(
       this.program.programId,
@@ -619,51 +620,53 @@ class DefaultSubscription implements EventSubscription {
           return;
         }
         this.eventParser.parseLogs(logs.logs, (event) => {
-          switch (event.name) {
-            case 'DialectCreatedEvent':
-              this.eventHandler({
-                type: 'dialect-created',
-                dialect: event.data.dialect as PublicKey,
-                members: event.data.members as PublicKey[],
-              });
-              break;
-            case 'DialectDeletedEvent':
-              this.eventHandler({
-                type: 'dialect-deleted',
-                dialect: event.data.dialect as PublicKey,
-                members: event.data.members as PublicKey[],
-              });
-              break;
-            case 'MessageSentEvent':
-              this.eventHandler({
-                type: 'message-sent',
-                dialect: event.data.dialect as PublicKey,
-                sender: event.data.sender as PublicKey,
-              });
-              break;
-            case 'UserSubscribedEvent':
-              this.eventHandler({
-                type: 'user-subscribed',
-                metadata: event.data.metadata as PublicKey,
-                dialect: event.data.dialect as PublicKey,
-              });
-              break;
-            case 'MetadataCreatedEvent':
-              this.eventHandler({
-                type: 'metadata-created',
-                metadata: event.data.metadata as PublicKey,
-                user: event.data.user as PublicKey,
-              });
-              break;
-            case 'MetadataDeletedEvent':
-              this.eventHandler({
-                type: 'metadata-deleted',
-                metadata: event.data.metadata as PublicKey,
-                user: event.data.user as PublicKey,
-              });
-              break;
-            default:
-              console.log('Unsupported event type', event.name);
+          if (!this.isInterrupted) {
+            switch (event.name) {
+              case 'DialectCreatedEvent':
+                this.eventHandler({
+                  type: 'dialect-created',
+                  dialect: event.data.dialect as PublicKey,
+                  members: event.data.members as PublicKey[],
+                });
+                break;
+              case 'DialectDeletedEvent':
+                this.eventHandler({
+                  type: 'dialect-deleted',
+                  dialect: event.data.dialect as PublicKey,
+                  members: event.data.members as PublicKey[],
+                });
+                break;
+              case 'MessageSentEvent':
+                this.eventHandler({
+                  type: 'message-sent',
+                  dialect: event.data.dialect as PublicKey,
+                  sender: event.data.sender as PublicKey,
+                });
+                break;
+              case 'UserSubscribedEvent':
+                this.eventHandler({
+                  type: 'user-subscribed',
+                  metadata: event.data.metadata as PublicKey,
+                  dialect: event.data.dialect as PublicKey,
+                });
+                break;
+              case 'MetadataCreatedEvent':
+                this.eventHandler({
+                  type: 'metadata-created',
+                  metadata: event.data.metadata as PublicKey,
+                  user: event.data.user as PublicKey,
+                });
+                break;
+              case 'MetadataDeletedEvent':
+                this.eventHandler({
+                  type: 'metadata-deleted',
+                  metadata: event.data.metadata as PublicKey,
+                  user: event.data.user as PublicKey,
+                });
+                break;
+              default:
+                console.log('Unsupported event type', event.name);
+            }
           }
         });
       },
@@ -675,7 +678,7 @@ class DefaultSubscription implements EventSubscription {
     return this.unsubscribeFromLogsIfSubscribed();
   }
 
-  private async periodiallyReconnect() {
+  private async periodicallyReconnect() {
     while (!this.isInterrupted) {
       await this.reconnectSubscriptions();
       await sleep(1000 * 60);
