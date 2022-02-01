@@ -15,7 +15,7 @@ declare_id!("2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 pub mod dialect {
     use super::*;
 
-    /// User metadata
+    // User metadata
 
     /// This function creates a metadata account for the signing user.
     ///
@@ -57,7 +57,7 @@ pub mod dialect {
         Ok(())
     }
 
-    /// Dialects
+    // Dialects
 
     /// This function creates a dialect account for one-on-one messaging between two users.
     ///
@@ -193,7 +193,7 @@ pub mod dialect {
     }
 }
 
-/// Contexts
+// Contexts
 
 /// Context to create a metadata account for a user, created by the user.
 #[derive(Accounts)]
@@ -372,7 +372,7 @@ pub struct SendMessage<'info> {
     pub system_program: AccountInfo<'info>,
 }
 
-/// Accounts
+// Accounts
 
 /// The MetadataAccount is an account that holds metadata about a user, who is likely a wallet.
 ///
@@ -560,9 +560,7 @@ impl CyclicByteBuffer {
     }
 }
 
-/*
-Data
-*/
+// Data
 
 /// A subscription used to store information about which dialect accounts user is subscribed to.
 ///
@@ -604,6 +602,8 @@ pub struct DialectCreatedEvent {
     /// A list of dialect members: two users who exchange messages using single dialect account.
     pub members: [Pubkey; 2],
 }
+
+// Events
 
 /// An event that is fired when some user sends message to dialect account.
 #[event]
@@ -649,9 +649,7 @@ pub struct MetadataDeletedEvent {
     pub user: Pubkey,
 }
 
-/*
-Helper functions
-*/
+// Helper functions
 
 /// This function simply checks whether an entry in the metadata account subscriptions
 /// array is empty or not. Empty values are encoded with the default public key value.
