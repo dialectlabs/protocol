@@ -21,7 +21,7 @@ pub mod dialect {
         metadata.user = ctx.accounts.user.key();
         metadata.subscriptions = [Subscription::default(); 32];
 
-        emit!(CreateMetadataEvent {
+        emit!(MetadataCreatedEvent {
             metadata: metadata_loader.key(),
             user: ctx.accounts.user.key()
         });
@@ -33,7 +33,7 @@ pub mod dialect {
         let metadata_loader = &ctx.accounts.metadata;
         let metadata = metadata_loader.load()?;
 
-        emit!(CloseMetadataEvent {
+        emit!(MetadataDeletedEvent {
             metadata: metadata_loader.key(),
             user: metadata.user,
         });
@@ -74,7 +74,7 @@ pub mod dialect {
         dialect.last_message_timestamp = now;
         dialect.encrypted = encrypted;
 
-        emit!(CreateDialectEvent {
+        emit!(DialectCreatedEvent {
             dialect: dialect_loader.key(),
             members: [*members[0].key, *members[1].key],
         });
@@ -86,7 +86,7 @@ pub mod dialect {
         let dialect_loader = &ctx.accounts.dialect;
         let dialect = dialect_loader.load()?;
 
-        emit!(CloseDialectEvent {
+        emit!(DialectDeletedEvent {
             dialect: dialect_loader.key(),
             members: [dialect.members[0].public_key, dialect.members[1].public_key],
         });
@@ -112,7 +112,7 @@ pub mod dialect {
                 pubkey: dialect.key(),
                 enabled: true,
             };
-            emit!(SubscribeUserEvent {
+            emit!(UserSubscribedEvent {
                 metadata: metadata_loader.key(),
                 dialect: dialect.key()
             });
@@ -133,7 +133,7 @@ pub mod dialect {
         let sender = &mut ctx.accounts.sender;
         dialect.append(text, sender);
 
-        emit!(SendMessageEvent {
+        emit!(MessageSentEvent {
             dialect: dialect_loader.key(),
             sender: *sender.key,
         });
@@ -428,37 +428,37 @@ pub struct Member {
 }
 
 #[event]
-pub struct CreateDialectEvent {
+pub struct DialectCreatedEvent {
     pub dialect: Pubkey,
     pub members: [Pubkey; 2], // Use struct Member
 }
 
 #[event]
-pub struct CloseDialectEvent {
+pub struct DialectDeletedEvent {
     pub dialect: Pubkey,
     pub members: [Pubkey; 2], // Use struct Member
 }
 
 #[event]
-pub struct SendMessageEvent {
+pub struct MessageSentEvent {
     pub dialect: Pubkey,
     pub sender: Pubkey,
 }
 
 #[event]
-pub struct SubscribeUserEvent {
+pub struct UserSubscribedEvent {
     pub metadata: Pubkey,
     pub dialect: Pubkey,
 }
 
 #[event]
-pub struct CreateMetadataEvent {
+pub struct MetadataCreatedEvent {
     pub metadata: Pubkey,
     pub user: Pubkey,
 }
 
 #[event]
-pub struct CloseMetadataEvent {
+pub struct MetadataDeletedEvent {
     pub metadata: Pubkey,
     pub user: Pubkey,
 }
