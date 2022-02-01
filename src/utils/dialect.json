@@ -363,7 +363,7 @@
   ],
   "events": [
     {
-      "name": "CreateDialectEvent",
+      "name": "DialectCreatedEvent",
       "fields": [
         {
           "name": "dialect",
@@ -383,7 +383,7 @@
       ]
     },
     {
-      "name": "CloseDialectEvent",
+      "name": "DialectDeletedEvent",
       "fields": [
         {
           "name": "dialect",
@@ -403,7 +403,7 @@
       ]
     },
     {
-      "name": "SendMessageEvent",
+      "name": "MessageSentEvent",
       "fields": [
         {
           "name": "dialect",
@@ -418,7 +418,7 @@
       ]
     },
     {
-      "name": "SubscribeUserEvent",
+      "name": "UserSubscribedEvent",
       "fields": [
         {
           "name": "metadata",
@@ -433,7 +433,7 @@
       ]
     },
     {
-      "name": "CreateMetadataEvent",
+      "name": "MetadataCreatedEvent",
       "fields": [
         {
           "name": "metadata",
@@ -448,7 +448,7 @@
       ]
     },
     {
-      "name": "CloseMetadataEvent",
+      "name": "MetadataDeletedEvent",
       "fields": [
         {
           "name": "metadata",
