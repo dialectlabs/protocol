@@ -149,7 +149,7 @@
       ],
       "args": [
         {
-          "name": "metadataNonce",
+          "name": "dialectNonce",
           "type": "u8"
         }
       ]
@@ -383,6 +383,26 @@
       ]
     },
     {
+      "name": "CloseDialectEvent",
+      "fields": [
+        {
+          "name": "dialect",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "members",
+          "type": {
+            "array": [
+              "publicKey",
+              2
+            ]
+          },
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "SendMessageEvent",
       "fields": [
         {
@@ -414,6 +434,21 @@
     },
     {
       "name": "CreateMetadataEvent",
+      "fields": [
+        {
+          "name": "metadata",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CloseMetadataEvent",
       "fields": [
         {
           "name": "metadata",

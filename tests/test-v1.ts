@@ -8,7 +8,6 @@ import {
   createMetadata,
   deleteDialect,
   deleteMetadata,
-  DEVICE_TOKEN_LENGTH,
   DialectAccount,
   findDialects,
   getDialect,
