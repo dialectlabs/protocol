@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import { Keypair, PublicKey, Transaction } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 
 import { EmbeddedWallet } from './Wallet';
 import * as idl_ from './dialect.json';
@@ -8,10 +8,6 @@ import { ecdhDecrypt, ecdhEncrypt } from './ecdh-encryption';
 
 export const idl = idl_;
 export const programs = programs_;
-
-export type ProviderPropsType = {
-  children: JSX.Element;
-};
 
 export const display = (publicKey: PublicKey | string): string => {
   const s = publicKey.toString();
