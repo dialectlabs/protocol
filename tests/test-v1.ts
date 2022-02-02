@@ -913,7 +913,7 @@ describe('Protocol v1 test', () => {
       });
     });
 
-    it('Can subscribe to events and receive them and unsubscribe suka', async () => {
+    it('Can subscribe to events and receive them and unsubscribe', async () => {
       // given
       const eventsAccumulator: Event[] = [];
       const expectedEvents = 8;
