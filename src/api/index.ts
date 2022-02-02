@@ -610,7 +610,6 @@ class DefaultSubscription implements EventSubscription {
   }
 
   async reconnectSubscriptions() {
-    console.log('Reconnect');
     await this.unsubscribeFromLogsIfSubscribed();
     this.subscriptionId = this.program.provider.connection.onLogs(
       this.program.programId,
