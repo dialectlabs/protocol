@@ -6,8 +6,10 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
-  DEVICE_TOKEN_LENGTH,
+  deleteDialect,
+  deleteMetadata,
   DialectAccount,
+  Event,
   findDialects,
   getDialect,
   getDialectForMembers,
@@ -16,16 +18,15 @@ import {
   getMetadata,
   Member,
   sendMessage,
+  subscribeToEvents,
   subscribeUser,
-  updateDeviceToken,
 } from '../src/api';
-import { sleep, waitForFinality } from '../src/utils';
+import { sleep } from '../src/utils';
 import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
-
-const dialectKeypair = anchor.web3.Keypair.generate();
+import { CountDownLatch } from '../src/utils/countdown-latch';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -50,19 +51,21 @@ describe('Protocol v1 test', () => {
     });
 
     it('Create user metadata object(s)', async () => {
-      const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       for (const member of [owner, writer]) {
         const metadata = await createMetadata(program, member);
         const gottenMetadata = await getMetadata(program, member.publicKey);
-        expect(metadata.deviceToken).to.be.eq(null);
-        expect(gottenMetadata.deviceToken).to.be.eq(null);
-        const updatedMetadata = await updateDeviceToken(
-          program,
-          member,
-          dialectKeypair.publicKey,
-          deviceToken,
-        );
-        expect(updatedMetadata.deviceToken?.toString()).to.be.eq(deviceToken);
+        expect(metadata).to.be.deep.eq(gottenMetadata);
+      }
+    });
+
+    it('Owner deletes metadata', async () => {
+      for (const member of [owner, writer]) {
+        await createMetadata(program, member);
+        await getMetadata(program, member.publicKey);
+        await deleteMetadata(program, member);
+        chai
+          .expect(getMetadata(program, member.publicKey))
+          .to.eventually.be.rejectedWith(Error);
       }
     });
   });
@@ -102,42 +105,6 @@ describe('Protocol v1 test', () => {
     it('Confirm only each user (& dialect) can read encrypted device tokens', async () => {
       // TODO: Implement
       chai.expect(true).to.be.true;
-    });
-
-    it("Transfers funds to writer's account", async () => {
-      const senderBalanceBefore =
-        (await program.provider.connection.getAccountInfo(owner.publicKey))!
-          .lamports / web3.LAMPORTS_PER_SOL;
-      const receiver1BalanceBefore =
-        (await program.provider.connection.getAccountInfo(writer.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-      const receiver2BalanceBefore =
-        (await program.provider.connection.getAccountInfo(nonmember.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-      const tx = await program.rpc.transfer(
-        new anchor.BN(1 * web3.LAMPORTS_PER_SOL),
-        new anchor.BN(2 * web3.LAMPORTS_PER_SOL),
-        {
-          accounts: {
-            sender: owner.publicKey,
-            receiver1: writer.publicKey,
-            receiver2: nonmember.publicKey,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          },
-          signers: [owner],
-        },
-      );
-      await waitForFinality(program, tx);
-      const senderBalanceAfter =
-        (await program.provider.connection.getAccountInfo(owner.publicKey))!
-          .lamports / web3.LAMPORTS_PER_SOL;
-      const receiver1BalanceAfter =
-        (await program.provider.connection.getAccountInfo(writer.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
-      const receiver2BalanceAfter =
-        (await program.provider.connection.getAccountInfo(nonmember.publicKey))!
-          ?.lamports / web3.LAMPORTS_PER_SOL || 0;
     });
 
     it('Fail to create a dialect for unsorted members', async () => {
@@ -311,15 +278,24 @@ describe('Protocol v1 test', () => {
         .to.be.deep.eq([dialect2.publicKey, dialect1.publicKey]);
     });
 
-    //   it('Non-owners fail to close the dialect account', async () => {
-    //     chai.expect(true).to.be.true;
-    //   });
-    //
-    //   it('Owner closes the dialect account', async () => {
-    //     chai.expect(true).to.be.true;
-    //   });
-    //
-    // });
+    it('Non-owners fail to delete the dialect', async () => {
+      const dialect = await createDialect(program, owner, members);
+      chai
+        .expect(deleteDialect(program, dialect, writer))
+        .to.eventually.be.rejectedWith(Error);
+      chai
+        .expect(deleteDialect(program, dialect, nonmember))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
+    it('Owner deletes the dialect', async () => {
+      const dialect = await createDialect(program, owner, members);
+      await deleteDialect(program, dialect, owner);
+      chai
+        .expect(getDialectForMembers(program, members))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
     it('Fail to subscribe a user twice to the same dialect (silent, noop)', async () => {
       const dialect = await createDialect(program, owner, members);
       await subscribeUser(program, dialect, writer.publicKey, owner);
@@ -363,39 +339,42 @@ describe('Protocol v1 test', () => {
           createMeta: false,
         }),
       ]);
-      const [user1User2Dialect, user1User3Dialect, user2User3Dialect] =
-        await Promise.all([
-          createDialect(program, user1, [
-            {
-              publicKey: user1.publicKey,
-              scopes: [true, true],
-            },
-            {
-              publicKey: user2.publicKey,
-              scopes: [false, true],
-            },
-          ]),
-          createDialect(program, user1, [
-            {
-              publicKey: user1.publicKey,
-              scopes: [true, true],
-            },
-            {
-              publicKey: user3.publicKey,
-              scopes: [false, true],
-            },
-          ]),
-          createDialect(program, user2, [
-            {
-              publicKey: user2.publicKey,
-              scopes: [true, true],
-            },
-            {
-              publicKey: user3.publicKey,
-              scopes: [false, true],
-            },
-          ]),
-        ]);
+      const [
+        user1User2Dialect,
+        user1User3Dialect,
+        user2User3Dialect,
+      ] = await Promise.all([
+        createDialect(program, user1, [
+          {
+            publicKey: user1.publicKey,
+            scopes: [true, true],
+          },
+          {
+            publicKey: user2.publicKey,
+            scopes: [false, true],
+          },
+        ]),
+        createDialect(program, user1, [
+          {
+            publicKey: user1.publicKey,
+            scopes: [true, true],
+          },
+          {
+            publicKey: user3.publicKey,
+            scopes: [false, true],
+          },
+        ]),
+        createDialect(program, user2, [
+          {
+            publicKey: user2.publicKey,
+            scopes: [true, true],
+          },
+          {
+            publicKey: user3.publicKey,
+            scopes: [false, true],
+          },
+        ]),
+      ]);
       // when
       const [
         user1Dialects,
@@ -505,6 +484,28 @@ describe('Protocol v1 test', () => {
         program,
         dialect.dialect.members,
         nonmember,
+      );
+      const message = nonMemberDialect.dialect.messages[0];
+      chai.expect(message.text).to.be.eq(text);
+      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
+      chai
+        .expect(nonMemberDialect.dialect.lastMessageTimestamp)
+        .to.be.eq(message.timestamp);
+    });
+
+    it('Anonymous user can read any of the messages', async () => {
+      // given
+      const senderDialect = await getDialectForMembers(
+        program,
+        members,
+        writer,
+      );
+      const text = generateRandomText(256);
+      await sendMessage(program, senderDialect, writer, text);
+      // when / then
+      const nonMemberDialect = await getDialectForMembers(
+        program,
+        dialect.dialect.members,
       );
       const message = nonMemberDialect.dialect.messages[0];
       chai.expect(message.text).to.be.eq(text);
@@ -900,6 +901,53 @@ describe('Protocol v1 test', () => {
     });
   });
 
+  describe('Subscription tests', () => {
+    let owner: web3.Keypair;
+    let writer: web3.Keypair;
+
+    beforeEach(async () => {
+      owner = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
+      });
+      writer = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
+      });
+    });
+
+    it('Can subscribe to events and receive them and unsubscribe', async () => {
+      // given
+      const eventsAccumulator: Event[] = [];
+      const expectedEvents = 8;
+      const countDownLatch = new CountDownLatch(expectedEvents);
+      const subscription = await subscribeToEvents(program, async (it) => {
+        console.log('event', it);
+        countDownLatch.countDown();
+        return eventsAccumulator.push(it);
+      });
+      // when
+      await createMetadata(program, owner); // 1 event
+      await createMetadata(program, writer); // 1 event
+      const dialectAccount = await createDialectAndSubscribeAllMembers(
+        program,
+        owner,
+        writer,
+        false,
+      ); // 3 events
+      await deleteMetadata(program, owner); // 1 event
+      await deleteMetadata(program, writer); // 1 event
+      await deleteDialect(program, dialectAccount, owner); // 1 event
+      await countDownLatch.await(5000);
+      await subscription.unsubscribe();
+      // events below should be ignored
+      await createMetadata(program, owner);
+      await createMetadata(program, writer);
+      // then
+      chai.expect(eventsAccumulator.length).to.be.eq(expectedEvents);
+    });
+  });
+
   async function createUser(
     { requestAirdrop, createMeta }: CreateUserOptions = {
       requestAirdrop: true,
@@ -915,14 +963,7 @@ describe('Protocol v1 test', () => {
       await connection.confirmTransaction(airDropRequest);
     }
     if (createMeta) {
-      const deviceToken = 'a'.repeat(DEVICE_TOKEN_LENGTH);
       await createMetadata(program, user);
-      await updateDeviceToken(
-        program,
-        user,
-        dialectKeypair.publicKey,
-        deviceToken,
-      );
     }
     return user;
   }

@@ -13,8 +13,7 @@ export interface TextSerde {
 }
 
 export class EncryptedTextSerde implements TextSerde {
-  private readonly unencryptedTextSerde: UnencryptedTextSerde =
-    new UnencryptedTextSerde();
+  private readonly unencryptedTextSerde: UnencryptedTextSerde = new UnencryptedTextSerde();
 
   constructor(
     private readonly user: anchor.web3.Keypair,
@@ -90,11 +89,15 @@ export type DialectAttributes = {
 
 export class TextSerdeFactory {
   static create(
-    user: anchor.web3.Keypair,
     { encrypted, members }: DialectAttributes,
+    user?: anchor.web3.Keypair,
   ): TextSerde {
-    return encrypted
-      ? new EncryptedTextSerde(user, members)
-      : new UnencryptedTextSerde();
+    if (!encrypted) {
+      return new UnencryptedTextSerde();
+    }
+    if (encrypted && user) {
+      return new EncryptedTextSerde(user, members);
+    }
+    throw new Error('Cannot proceed with encrypted dialect w/o user identity');
   }
 }

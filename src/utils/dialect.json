@@ -34,6 +34,37 @@
       ]
     },
     {
+      "name": "closeMetadata",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "metadataNonce",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "createDialect",
       "accounts": [
         {
@@ -81,10 +112,7 @@
           "type": {
             "array": [
               {
-                "array": [
-                  "bool",
-                  2
-                ]
+                "array": ["bool", 2]
               },
               2
             ]
@@ -93,15 +121,15 @@
       ]
     },
     {
-      "name": "updateDeviceToken",
+      "name": "closeDialect",
       "accounts": [
         {
-          "name": "user",
+          "name": "owner",
           "isMut": true,
           "isSigner": true
         },
         {
-          "name": "metadata",
+          "name": "dialect",
           "isMut": true,
           "isSigner": false
         },
@@ -120,24 +148,6 @@
         {
           "name": "dialectNonce",
           "type": "u8"
-        },
-        {
-          "name": "encryptedDeviceTokenArray",
-          "type": {
-            "array": [
-              "u8",
-              128
-            ]
-          }
-        },
-        {
-          "name": "encryptionNonce",
-          "type": {
-            "array": [
-              "u8",
-              24
-            ]
-          }
         }
       ]
     },
@@ -233,12 +243,6 @@
             "type": "publicKey"
           },
           {
-            "name": "deviceToken",
-            "type": {
-              "defined": "DeviceToken"
-            }
-          },
-          {
             "name": "subscriptions",
             "type": {
               "array": [
@@ -307,36 +311,7 @@
           {
             "name": "buffer",
             "type": {
-              "array": [
-                "u8",
-                8192
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "DeviceToken",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "encryptedArray",
-            "type": {
-              "array": [
-                "u8",
-                80
-              ]
-            }
-          },
-          {
-            "name": "nonce",
-            "type": {
-              "array": [
-                "u8",
-                24
-              ]
+              "array": ["u8", 8192]
             }
           }
         ]
@@ -370,10 +345,7 @@
           {
             "name": "scopes",
             "type": {
-              "array": [
-                "bool",
-                2
-              ]
+              "array": ["bool", 2]
             }
           }
         ]
@@ -382,7 +354,7 @@
   ],
   "events": [
     {
-      "name": "CreateDialectEvent",
+      "name": "DialectCreatedEvent",
       "fields": [
         {
           "name": "dialect",
@@ -392,17 +364,31 @@
         {
           "name": "members",
           "type": {
-            "array": [
-              "publicKey",
-              2
-            ]
+            "array": ["publicKey", 2]
           },
           "index": false
         }
       ]
     },
     {
-      "name": "SendMessageEvent",
+      "name": "DialectDeletedEvent",
+      "fields": [
+        {
+          "name": "dialect",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "members",
+          "type": {
+            "array": ["publicKey", 2]
+          },
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "MessageSentEvent",
       "fields": [
         {
           "name": "dialect",
@@ -417,7 +403,7 @@
       ]
     },
     {
-      "name": "SubscribeUserEvent",
+      "name": "UserSubscribedEvent",
       "fields": [
         {
           "name": "metadata",
@@ -432,7 +418,22 @@
       ]
     },
     {
-      "name": "CreateMetadataEvent",
+      "name": "MetadataCreatedEvent",
+      "fields": [
+        {
+          "name": "metadata",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "MetadataDeletedEvent",
       "fields": [
         {
           "name": "metadata",

@@ -1,17 +1,14 @@
 import * as anchor from '@project-serum/anchor';
+import { EventParser } from '@project-serum/anchor';
+import { Wallet } from '@project-serum/anchor/src/provider';
 import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
-import { deviceTokenIsPresent, waitForFinality, Wallet_ } from '../utils';
-import {
-  ecdhDecrypt,
-  ecdhEncrypt,
-  ENCRYPTION_OVERHEAD_BYTES,
-} from '../utils/ecdh-encryption';
-import { generateRandomNonce } from '../utils/nonce-generator';
+import { sleep, waitForFinality, Wallet_ } from '../utils';
+import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
-import { TextSerdeFactory } from './text-serde'; // TODO: Switch from types to classes
+import { TextSerdeFactory } from './text-serde';
 
 // TODO: Switch from types to classes
 
@@ -49,7 +46,6 @@ type RawCyclicByteBuffer = {
 };
 
 export type Metadata = {
-  deviceToken: string | null;
   subscriptions: Subscription[];
 };
 
@@ -110,26 +106,15 @@ export async function getMetadataProgramAddress(
   );
 }
 
+// TODO: Simplify this function further now that we're no longer decrypting the device token.
 export async function getMetadata(
   program: anchor.Program,
   user: PublicKey | anchor.web3.Keypair,
   otherParty?: PublicKey | anchor.web3.Keypair | null,
 ): Promise<Metadata> {
-  /*
-  6 scenarios:
-
-  0. User is keypair, otherParty is null -- Cannot decrypt
-  1. User is public key, otherParty is null -- Cannot decrypt
-  2. User is public key, otherParty is public key -- Cannot decrypt
-  3. User is public key, otherParty is keypair -- Can decrypt
-  4. User is keypair, otherParty is public key -- Can decrypt
-  5. User is keypair, otherParty is keypair -- Can decrypt
-  */
   let shouldDecrypt = false;
   let userIsKeypair = false;
   let otherPartyIsKeypair = false;
-  let pubkeyToUse: anchor.web3.PublicKey | null = null;
-  let keypairToUse: anchor.web3.Keypair | null = null;
 
   try {
     // assume user is pubkey
@@ -152,46 +137,14 @@ export async function getMetadata(
     shouldDecrypt = true;
   }
 
-  if (shouldDecrypt) {
-    // we know we have a keypair, now we just prioritize which we use
-    keypairToUse = (userIsKeypair ? user : otherParty) as anchor.web3.Keypair;
-    // if both keypairs, use user keypair & other party public key
-    pubkeyToUse =
-      userIsKeypair && otherPartyIsKeypair
-        ? (otherParty as Keypair).publicKey // both keypairs, prioritize user keypair
-        : userIsKeypair
-        ? (otherParty as PublicKey) // user is keypair, other party is pubkey
-        : (user as PublicKey); // user is pubkey, other party is keypair
-        console.log('Attempting to decrypt user metadata...');
-        console.log('  keypairToUse:', keypairToUse.publicKey.toString());
-        console.log('  pubkeyToUse:', pubkeyToUse.toString());
-  }
   const [metadataAddress] = await getMetadataProgramAddress(
     program,
     userIsKeypair ? (user as Keypair).publicKey : (user as PublicKey),
   );
   const metadata = await program.account.metadataAccount.fetch(metadataAddress);
 
-  let deviceToken: string | null = null;
-  if (shouldDecrypt && deviceTokenIsPresent(metadata.deviceToken)) {
-    try {
-      const decryptedDeviceToken = ecdhDecrypt(
-        new Uint8Array(metadata.deviceToken.encryptedArray),
-        {
-          secretKey: (keypairToUse as Keypair).secretKey,
-          publicKey: (keypairToUse as Keypair).publicKey.toBytes(),
-        },
-        (pubkeyToUse as PublicKey).toBytes(),
-        new Uint8Array(metadata.deviceToken.nonce),
-      );
-      deviceToken = new TextDecoder().decode(decryptedDeviceToken);
-      console.log('Successfully decrypted userMetadata', deviceToken);
-    } catch (e) {
-      console.log('FAILED TO DECRYPT DEVICE TOKEN',  metadata.deviceToken, e);
-    }
-  }
+  // TODO RM this code chunk and change function signature
   return {
-    deviceToken,
     subscriptions: metadata.subscriptions.filter(
       (s: Subscription) => !s.pubkey.equals(anchor.web3.PublicKey.default),
     ),
@@ -219,50 +172,23 @@ export async function createMetadata(
   return await getMetadata(program, user.publicKey);
 }
 
-export async function updateDeviceToken(
+export async function deleteMetadata(
   program: anchor.Program,
   user: Keypair,
-  otherPartyPubkey: PublicKey,
-  deviceToken: string | null,
-): Promise<Metadata> {
+): Promise<void> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
     user.publicKey,
   );
-  let encryptedDeviceToken: Uint8Array | null = null;
-  const nonce = generateRandomNonce();
-  if (deviceToken) {
-    const unpaddedDeviceToken = ecdhEncrypt(
-      new Uint8Array(Buffer.from(deviceToken)),
-      {
-        publicKey: user.publicKey.toBytes(),
-        secretKey: user.secretKey,
-      },
-      otherPartyPubkey.toBytes(),
-      nonce,
-    );
-    // TODO: Retire this padding
-    const padding = new Uint8Array(
-      new Array(DEVICE_TOKEN_PADDING_LENGTH).fill(0),
-    );
-    encryptedDeviceToken = new Uint8Array([...unpaddedDeviceToken, ...padding]);
-  }
-  const tx = await program.rpc.updateDeviceToken(
-    new anchor.BN(metadataNonce),
-    encryptedDeviceToken ? Buffer.from(encryptedDeviceToken) : null,
-    nonce,
-    {
-      accounts: {
-        user: user.publicKey,
-        metadata: metadataAddress,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [user],
+  await program.rpc.closeMetadata(new anchor.BN(metadataNonce), {
+    accounts: {
+      user: user.publicKey,
+      metadata: metadataAddress,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
     },
-  );
-  await waitForFinality(program, tx);
-  return await getMetadata(program, user, otherPartyPubkey);
+    signers: [user],
+  });
 }
 
 export async function subscribeUser(
@@ -317,20 +243,26 @@ export async function getDialectProgramAddress(
   );
 }
 
-function getMessages(
+function parseMessages(
   { messages: rawMessagesBuffer, members, encrypted }: RawDialect,
-  user: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair,
 ) {
+  if (encrypted && !user) {
+    return [];
+  }
   const messagesBuffer = new CyclicByteBuffer(
     rawMessagesBuffer.readOffset,
     rawMessagesBuffer.writeOffset,
     rawMessagesBuffer.itemsCount,
     rawMessagesBuffer.buffer,
   );
-  const textSerde = TextSerdeFactory.create(user, {
-    encrypted,
-    members,
-  });
+  const textSerde = TextSerdeFactory.create(
+    {
+      encrypted,
+      members,
+    },
+    user,
+  );
   const allMessages: Message[] = messagesBuffer.items().map(({ buffer }) => {
     const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
     const ownerMemberIndex = byteBuffer.readByte();
@@ -348,13 +280,12 @@ function getMessages(
 }
 
 function parseRawDialect(rawDialect: RawDialect, user?: anchor.web3.Keypair) {
-  const messages = user ? getMessages(rawDialect, user) : [];
   return {
     encrypted: rawDialect.encrypted,
     members: rawDialect.members,
     nextMessageIdx: rawDialect.messages.writeOffset,
     lastMessageTimestamp: rawDialect.lastMessageTimestamp * 1000,
-    messages,
+    messages: parseMessages(rawDialect, user),
   };
 }
 
@@ -443,7 +374,7 @@ export async function findDialects(
 
 export async function createDialect(
   program: anchor.Program,
-  owner: anchor.web3.Keypair,
+  owner: anchor.web3.Keypair | Wallet,
   members: Member[],
   encrypted = true,
 ): Promise<DialectAccount> {
@@ -471,11 +402,35 @@ export async function createDialect(
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [owner],
+      signers: 'secretKey' in owner ? [owner] : [],
     },
   );
   await waitForFinality(program, tx);
-  return await getDialectForMembers(program, members, owner);
+  return await getDialectForMembers(
+    program,
+    members,
+    'secretKey' in owner ? owner : undefined,
+  );
+}
+
+export async function deleteDialect(
+  program: anchor.Program,
+  { dialect }: DialectAccount,
+  owner: anchor.web3.Keypair,
+): Promise<void> {
+  const [dialectPublicKey, nonce] = await getDialectProgramAddress(
+    program,
+    dialect.members,
+  );
+  await program.rpc.closeDialect(new anchor.BN(nonce), {
+    accounts: {
+      dialect: dialectPublicKey,
+      owner: owner.publicKey,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    },
+    signers: [owner],
+  });
 }
 
 /*
@@ -558,10 +513,13 @@ export async function sendMessage(
     program,
     dialect.members,
   );
-  const textSerde = TextSerdeFactory.create(sender, {
-    encrypted: dialect.encrypted,
-    members: dialect.members,
-  });
+  const textSerde = TextSerdeFactory.create(
+    {
+      encrypted: dialect.encrypted,
+      members: dialect.members,
+    },
+    sender,
+  );
   const serializedText = textSerde.serialize(text);
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
@@ -580,4 +538,164 @@ export async function sendMessage(
   );
   const d = await getDialect(program, publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
+}
+
+// Events
+// An event is something that has happened in the past
+export type Event =
+  | DialectCreatedEvent
+  | DialectDeletedEvent
+  | MetadataCreatedEvent
+  | MetadataDeletedEvent
+  | MessageSentEvent
+  | UserSubscribedEvent;
+
+export interface DialectCreatedEvent {
+  type: 'dialect-created';
+  dialect: PublicKey;
+  members: PublicKey[];
+}
+
+export interface DialectDeletedEvent {
+  type: 'dialect-deleted';
+  dialect: PublicKey;
+  members: PublicKey[];
+}
+
+export interface MetadataCreatedEvent {
+  type: 'metadata-created';
+  metadata: PublicKey;
+  user: PublicKey;
+}
+
+export interface MetadataDeletedEvent {
+  type: 'metadata-deleted';
+  metadata: PublicKey;
+  user: PublicKey;
+}
+
+export interface MessageSentEvent {
+  type: 'message-sent';
+  dialect: PublicKey;
+  sender: PublicKey;
+}
+
+export interface UserSubscribedEvent {
+  type: 'user-subscribed';
+  metadata: PublicKey;
+  dialect: PublicKey;
+}
+
+export type EventHandler = (event: Event) => Promise<any>;
+
+export interface EventSubscription {
+  unsubscribe(): Promise<any>;
+}
+
+class DefaultSubscription implements EventSubscription {
+  private readonly eventParser: EventParser;
+  private isInterrupted = false;
+  private subscriptionId?: number;
+
+  constructor(
+    private readonly program: anchor.Program,
+    private readonly eventHandler: EventHandler,
+  ) {
+    this.eventParser = new EventParser(program.programId, program.coder);
+  }
+
+  async start(): Promise<EventSubscription> {
+    this.periodicallyReconnect();
+    return this;
+  }
+
+  async reconnectSubscriptions() {
+    await this.unsubscribeFromLogsIfSubscribed();
+    this.subscriptionId = this.program.provider.connection.onLogs(
+      this.program.programId,
+      async (logs) => {
+        if (logs.err) {
+          console.error(logs);
+          return;
+        }
+        this.eventParser.parseLogs(logs.logs, (event) => {
+          if (!this.isInterrupted) {
+            switch (event.name) {
+              case 'DialectCreatedEvent':
+                this.eventHandler({
+                  type: 'dialect-created',
+                  dialect: event.data.dialect as PublicKey,
+                  members: event.data.members as PublicKey[],
+                });
+                break;
+              case 'DialectDeletedEvent':
+                this.eventHandler({
+                  type: 'dialect-deleted',
+                  dialect: event.data.dialect as PublicKey,
+                  members: event.data.members as PublicKey[],
+                });
+                break;
+              case 'MessageSentEvent':
+                this.eventHandler({
+                  type: 'message-sent',
+                  dialect: event.data.dialect as PublicKey,
+                  sender: event.data.sender as PublicKey,
+                });
+                break;
+              case 'UserSubscribedEvent':
+                this.eventHandler({
+                  type: 'user-subscribed',
+                  metadata: event.data.metadata as PublicKey,
+                  dialect: event.data.dialect as PublicKey,
+                });
+                break;
+              case 'MetadataCreatedEvent':
+                this.eventHandler({
+                  type: 'metadata-created',
+                  metadata: event.data.metadata as PublicKey,
+                  user: event.data.user as PublicKey,
+                });
+                break;
+              case 'MetadataDeletedEvent':
+                this.eventHandler({
+                  type: 'metadata-deleted',
+                  metadata: event.data.metadata as PublicKey,
+                  user: event.data.user as PublicKey,
+                });
+                break;
+              default:
+                console.log('Unsupported event type', event.name);
+            }
+          }
+        });
+      },
+    );
+  }
+
+  unsubscribe(): Promise<void> {
+    this.isInterrupted = true;
+    return this.unsubscribeFromLogsIfSubscribed();
+  }
+
+  private async periodicallyReconnect() {
+    while (!this.isInterrupted) {
+      await this.reconnectSubscriptions();
+      await sleep(1000 * 60);
+    }
+  }
+
+  private unsubscribeFromLogsIfSubscribed() {
+    return this.subscriptionId
+      ? this.program.provider.connection.removeOnLogsListener(
+          this.subscriptionId,
+        )
+      : Promise.resolve();
+  }
+}
+
+export async function subscribeToEvents(
+  program: anchor.Program,
+  eventHandler: EventHandler,
+): Promise<EventSubscription> {
+  return new DefaultSubscription(program, eventHandler).start();
 }
