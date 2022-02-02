@@ -10,10 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Build & run tests
-      run: |
-        docker build -f docker/Dockerfile -t dialect/protocol:latest .
-        docker build -f docker/Dockerfile.tests -t dialect/protocol-tests:latest .
-        docker run --rm --name protocol-tests dialect/protocol-tests:latest
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build & run tests
+        run: |
+          docker build -f docker/Dockerfile -t dialect/protocol:latest .
+          docker build -f docker/Dockerfile.tests -t dialect/protocol-tests:latest .
+          docker run --rm --name protocol-tests dialect/protocol-tests:latest

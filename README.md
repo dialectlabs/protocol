@@ -13,6 +13,7 @@ docker run -i --rm -p 8899:8899 -p 8900:8900 -p 9900:9900 --name protocol dialec
 ```
 
 ### building for local usage
+
 Please make sure you are always using the latest stable rust version by running: rustup update
 
 "local usage" means installation of this package through "file://..."
@@ -203,10 +204,12 @@ DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/index.ts
 It is fine to omit the DIALECT_PUBLIC_KEY environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the notification service, you'll need to set it to the public key corresponding to the private key in the notification service.
 
 ## A note about nonce
+
 https://pynacl.readthedocs.io/en/v0.2.1/secret/
 
 ### Nonce
-The 24 bytes nonce (Number used once) given to encrypt() and decrypt() must ***NEVER*** be reused for a particular key.
+
+The 24 bytes nonce (Number used once) given to encrypt() and decrypt() must **_NEVER_** be reused for a particular key.
 Reusing the nonce means an attacker will have enough information to recover your secret key and encrypt or decrypt arbitrary messages.
 A nonce is not considered secret and may be freely transmitted or stored in plaintext alongside the ciphertext.
 
