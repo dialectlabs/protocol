@@ -1,0 +1,17 @@
+# CHANGELOG
+
+## [0.1.2] - 2022-02-03
+
+* Support `Wallet` argument to more functions.
+* Remove remaining bits of wip `MintDialect`.
+* Minor removals to fix build.
+
+## [0.1.1] - 2022-02-02
+
+* Add support for closing dialects & metadata.
+* Remove `device_token` from metadata.
+* Add more documentation.
+
+## [0.1.0] - 2022-01-12
+
+* Original deployment to devnet.
