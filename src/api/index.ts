@@ -153,7 +153,7 @@ export async function getMetadata(
 
 export async function createMetadata(
   program: anchor.Program,
-  user: Keypair,
+  user: anchor.web3.Keypair | Wallet,
 ): Promise<Metadata> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
@@ -166,7 +166,7 @@ export async function createMetadata(
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [user],
+    signers: 'secretKey' in user ? [user] : [],
   });
   await waitForFinality(program, tx);
   return await getMetadata(program, user.publicKey);
@@ -174,7 +174,7 @@ export async function createMetadata(
 
 export async function deleteMetadata(
   program: anchor.Program,
-  user: Keypair,
+  user: anchor.web3.Keypair | Wallet,
 ): Promise<void> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
@@ -187,7 +187,7 @@ export async function deleteMetadata(
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [user],
+    signers: 'secretKey' in user ? [user] : [],
   });
 }
 
@@ -416,7 +416,7 @@ export async function createDialect(
 export async function deleteDialect(
   program: anchor.Program,
   { dialect }: DialectAccount,
-  owner: anchor.web3.Keypair,
+  owner: anchor.web3.Keypair | Wallet,
 ): Promise<void> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
@@ -429,7 +429,7 @@ export async function deleteDialect(
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [owner],
+    signers: 'secretKey' in owner ? [owner] : [],
   });
 }
 
