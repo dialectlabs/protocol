@@ -292,13 +292,16 @@ function parseRawDialect(rawDialect: RawDialect, user?: anchor.web3.Keypair) {
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  user?: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair | Wallet,
 ): Promise<DialectAccount> {
   const rawDialect = (await program.account.dialectAccount.fetch(
     publicKey,
   )) as RawDialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  const dialect = parseRawDialect(rawDialect, user);
+  const dialect = parseRawDialect(
+    rawDialect,
+    user && 'secretKey' in user ? user : undefined,
+  );
   return {
     ...account,
     publicKey: publicKey,
@@ -308,7 +311,7 @@ export async function getDialect(
 
 export async function getDialects(
   program: anchor.Program,
-  user: anchor.web3.Keypair,
+  user: anchor.web3.Keypair | Wallet,
 ): Promise<DialectAccount[]> {
   const metadata = await getMetadata(program, user.publicKey);
   const enabledSubscriptions = metadata.subscriptions.filter(
