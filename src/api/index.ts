@@ -153,7 +153,7 @@ export async function getMetadata(
 
 export async function createMetadata(
   program: anchor.Program,
-  user: Keypair,
+  user: anchor.web3.Keypair | Wallet,
 ): Promise<Metadata> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
@@ -166,7 +166,7 @@ export async function createMetadata(
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [user],
+    signers: 'secretKey' in user ? [user] : [],
   });
   await waitForFinality(program, tx);
   return await getMetadata(program, user.publicKey);
@@ -174,7 +174,7 @@ export async function createMetadata(
 
 export async function deleteMetadata(
   program: anchor.Program,
-  user: Keypair,
+  user: anchor.web3.Keypair | Wallet,
 ): Promise<void> {
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
     program,
@@ -187,7 +187,7 @@ export async function deleteMetadata(
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [user],
+    signers: 'secretKey' in user ? [user] : [],
   });
 }
 
@@ -292,13 +292,16 @@ function parseRawDialect(rawDialect: RawDialect, user?: anchor.web3.Keypair) {
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  user?: anchor.web3.Keypair,
+  user?: anchor.web3.Keypair | Wallet,
 ): Promise<DialectAccount> {
   const rawDialect = (await program.account.dialectAccount.fetch(
     publicKey,
   )) as RawDialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  const dialect = parseRawDialect(rawDialect, user);
+  const dialect = parseRawDialect(
+    rawDialect,
+    user && 'secretKey' in user ? user : undefined,
+  );
   return {
     ...account,
     publicKey: publicKey,
@@ -308,7 +311,7 @@ export async function getDialect(
 
 export async function getDialects(
   program: anchor.Program,
-  user: anchor.web3.Keypair,
+  user: anchor.web3.Keypair | Wallet,
 ): Promise<DialectAccount[]> {
   const metadata = await getMetadata(program, user.publicKey);
   const enabledSubscriptions = metadata.subscriptions.filter(
@@ -416,7 +419,7 @@ export async function createDialect(
 export async function deleteDialect(
   program: anchor.Program,
   { dialect }: DialectAccount,
-  owner: anchor.web3.Keypair,
+  owner: anchor.web3.Keypair | Wallet,
 ): Promise<void> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
@@ -429,7 +432,7 @@ export async function deleteDialect(
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     },
-    signers: [owner],
+    signers: 'secretKey' in owner ? [owner] : [],
   });
 }
 
