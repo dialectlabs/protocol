@@ -14,9 +14,9 @@
   "types": "./lib/es/types.d.ts",
   "scripts": {
     "build": "rm -rf lib && tsc",
-    "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
-    "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
-    "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
+    "lint": "eslint --ext .js --ext .ts {examples,src,tests}/**/* && prettier --check {examples,src,tests}/**/*",
+    "lint:fix": "eslint --ext .js --ext .ts {examples,src,tests}/**/* --fix && prettier --write {examples,src,tests}/**/*.{js,ts}",
+    "pretty": "prettier --write {examples,src,tests}/**/*.{js,ts}",
     "local-publish": "rm -rf node_modules && rm -rf .anchor"
   },
   "keywords": [],
