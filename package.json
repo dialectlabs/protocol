@@ -13,6 +13,7 @@
   "main": "./lib/es/index.js",
   "types": "./lib/es/types.d.ts",
   "scripts": {
+    "publish": "npm run build && npm publish && rm -rf lib",
     "build": "rm -rf lib && tsc",
     "lint": "eslint --ext .js --ext .ts {examples,src,tests}/**/*.ts && prettier --check {examples,src,tests}/**/*.ts",
     "lint:fix": "eslint --ext .js --ext .ts {examples,src,tests}/**/*.ts --fix && prettier --write {examples,src,tests}/**/*.ts",
