@@ -1,8 +1,8 @@
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
-[programs.devnet]
+[programs.localnet]
 dialect = "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
 
 [scripts]
