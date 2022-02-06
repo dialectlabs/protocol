@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [0.1.3] - 2022-02-06
+
+* Improve package management.
+* Remove vestiges of react in linting.
+
 ## [0.1.2] - 2022-02-03
 
 * Support `Wallet` argument to more functions.
