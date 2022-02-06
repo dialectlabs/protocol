@@ -1,6 +1,6 @@
 {
   "name": "@dialectlabs/web3",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "",
   "module": "./lib/es/index.js",
   "repository": {
