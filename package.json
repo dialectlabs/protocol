@@ -13,10 +13,11 @@
   "main": "./lib/es/index.js",
   "types": "./lib/es/types.d.ts",
   "scripts": {
+    "publish": "npm run build && npm publish && rm -rf lib",
     "build": "rm -rf lib && tsc",
-    "lint": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* && prettier --check {components,pages,tests,utils}/**/*",
-    "lint:fix": "eslint --ext .js --ext .ts --ext .tsx {components,pages,tests,utils}/**/* --fix && prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
-    "pretty": "prettier --write {components,pages,tests,utils}/**/*.{js,ts,tsx}",
+    "lint": "eslint --ext .js --ext .ts {examples,src,tests}/**/*.ts && prettier --check {examples,src,tests}/**/*.ts",
+    "lint:fix": "eslint --ext .js --ext .ts {examples,src,tests}/**/*.ts --fix && prettier --write {examples,src,tests}/**/*.ts",
+    "pretty": "prettier --write {examples,src,tests}/**/*.ts",
     "local-publish": "rm -rf node_modules && rm -rf .anchor"
   },
   "keywords": [],

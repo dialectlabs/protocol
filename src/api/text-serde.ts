@@ -13,7 +13,8 @@ export interface TextSerde {
 }
 
 export class EncryptedTextSerde implements TextSerde {
-  private readonly unencryptedTextSerde: UnencryptedTextSerde = new UnencryptedTextSerde();
+  private readonly unencryptedTextSerde: UnencryptedTextSerde =
+    new UnencryptedTextSerde();
 
   constructor(
     private readonly user: anchor.web3.Keypair,

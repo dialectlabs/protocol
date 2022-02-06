@@ -339,42 +339,39 @@ describe('Protocol v1 test', () => {
           createMeta: false,
         }),
       ]);
-      const [
-        user1User2Dialect,
-        user1User3Dialect,
-        user2User3Dialect,
-      ] = await Promise.all([
-        createDialect(program, user1, [
-          {
-            publicKey: user1.publicKey,
-            scopes: [true, true],
-          },
-          {
-            publicKey: user2.publicKey,
-            scopes: [false, true],
-          },
-        ]),
-        createDialect(program, user1, [
-          {
-            publicKey: user1.publicKey,
-            scopes: [true, true],
-          },
-          {
-            publicKey: user3.publicKey,
-            scopes: [false, true],
-          },
-        ]),
-        createDialect(program, user2, [
-          {
-            publicKey: user2.publicKey,
-            scopes: [true, true],
-          },
-          {
-            publicKey: user3.publicKey,
-            scopes: [false, true],
-          },
-        ]),
-      ]);
+      const [user1User2Dialect, user1User3Dialect, user2User3Dialect] =
+        await Promise.all([
+          createDialect(program, user1, [
+            {
+              publicKey: user1.publicKey,
+              scopes: [true, true],
+            },
+            {
+              publicKey: user2.publicKey,
+              scopes: [false, true],
+            },
+          ]),
+          createDialect(program, user1, [
+            {
+              publicKey: user1.publicKey,
+              scopes: [true, true],
+            },
+            {
+              publicKey: user3.publicKey,
+              scopes: [false, true],
+            },
+          ]),
+          createDialect(program, user2, [
+            {
+              publicKey: user2.publicKey,
+              scopes: [true, true],
+            },
+            {
+              publicKey: user3.publicKey,
+              scopes: [false, true],
+            },
+          ]),
+        ]);
       // when
       const [
         user1Dialects,

@@ -44,9 +44,8 @@ export function ecdhEncrypt(
   if (!curve25519KeyPair) {
     throw new IncorrectPublicKeyFormatError('encryptor keypair');
   }
-  const otherPartyCurve25519PublicKey = ed2curve.convertPublicKey(
-    otherPartyPublicKey,
-  );
+  const otherPartyCurve25519PublicKey =
+    ed2curve.convertPublicKey(otherPartyPublicKey);
   if (!otherPartyCurve25519PublicKey) {
     throw new IncorrectPublicKeyFormatError('other party');
   }
@@ -71,9 +70,8 @@ export function ecdhDecrypt(
   if (!curve25519KeyPair) {
     throw new IncorrectPublicKeyFormatError('decryptor keypair');
   }
-  const otherPartyCurve25519PublicKey = ed2curve.convertPublicKey(
-    otherPartyPublicKey,
-  );
+  const otherPartyCurve25519PublicKey =
+    ed2curve.convertPublicKey(otherPartyPublicKey);
   if (!otherPartyCurve25519PublicKey) {
     throw new IncorrectPublicKeyFormatError('other party');
   }
