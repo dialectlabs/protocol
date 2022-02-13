@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.1.4] - 2022-02-13
+
+* Fix dockerized tests #84.
+* Fix prettier actions #87.
+* README improvements #80.
+
 ## [0.1.3] - 2022-02-06
 
 * Improve package management.
