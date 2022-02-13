@@ -16,7 +16,7 @@ jobs:
       - uses: actionsx/prettier@v2
         with:
           # prettier CLI arguments.
-          args: --check .
+          args: --check index.ts examples/ src/ tests/
 
   fmt:
     name: Rustfmt
