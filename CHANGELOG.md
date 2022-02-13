@@ -2,8 +2,9 @@
 
 ## [0.1.4] - 2022-02-13
 
-* Fix dockerized tests #84.
+* Fix clippy actions #83.
 * Fix prettier actions #87.
+* Fix dockerized tests #84.
 * README improvements #80.
 
 ## [0.1.3] - 2022-02-06
