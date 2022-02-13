@@ -326,7 +326,7 @@ pub struct CloseDialect<'info> {
     #[account(
         signer,
         mut,
-        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *owner.key && m.scopes[0] == true).count() > 0,
+        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *owner.key && m.scopes[0]).count() > 0,
     )]
     pub owner: AccountInfo<'info>,
     // The dialect account being closed.
@@ -354,7 +354,7 @@ pub struct SendMessage<'info> {
         signer,
         mut,
         // The sender must be a member with write privileges.
-        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1] == true).count() > 0,
+        constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1]).count() > 0,
     )]
     pub sender: AccountInfo<'info>,
     // The dialect in which the message is being sent.
@@ -483,7 +483,7 @@ impl CyclicByteBuffer {
     ///
     /// * value: an offset/position to be re-calculated.
     fn mod_(&mut self, value: u16) -> u16 {
-        return value % MESSAGE_BUFFER_LENGTH as u16;
+        value % MESSAGE_BUFFER_LENGTH as u16
     }
 
     /// Returns true if there's no free space to append item of size [item_size] to buffer.
@@ -494,7 +494,7 @@ impl CyclicByteBuffer {
     ///
     /// * item_size: a size of an item that is added to buffer.
     fn no_space_available_for(&mut self, item_size: u16) -> bool {
-        return self.get_available_space() < item_size;
+        self.get_available_space() < item_size
     }
 
     /// Returns the amount of available free space.
@@ -502,7 +502,7 @@ impl CyclicByteBuffer {
         if self.items_count == 0 {
             return MESSAGE_BUFFER_LENGTH as u16;
         }
-        return self.mod_(MESSAGE_BUFFER_LENGTH as u16 + self.read_offset - self.write_offset);
+        self.mod_(MESSAGE_BUFFER_LENGTH as u16 + self.read_offset - self.write_offset)
     }
 
     /// Erases the oldest item from buffer by zeroing and recalculating [read_offset] and [items_count].
@@ -524,7 +524,7 @@ impl CyclicByteBuffer {
                 self.buffer[read_offset as usize + 1],
             ]);
         }
-        return u16::from_be_bytes([self.buffer[read_offset as usize], self.buffer[0]]);
+        u16::from_be_bytes([self.buffer[read_offset as usize], self.buffer[0]])
     }
 
     /// Performs writing of [item] to buffer at [write_offset] position.
@@ -555,8 +555,8 @@ impl CyclicByteBuffer {
     }
 
     /// Returns an underlying [buffer] that contains all items.
-    fn raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
-        return self.buffer;
+    fn _raw(&mut self) -> [u8; MESSAGE_BUFFER_LENGTH] {
+        self.buffer
     }
 }
 
