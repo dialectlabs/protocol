@@ -1,8 +1,61 @@
-# dialect
+# Protocol & web3
 
-## local development
+Dialect is a smart messaging protocol for dapp notifications and wallet-to-wallet messaging on the Solana Blockchain.
 
-### docker
+Dialect works by decorating on-chain resources, or sets of resources, with publish-subscribe (pub-sub) messaging capabilities. This is accomplished by creating a PDA whose seeds are the (lexically sorted) resources' public keys. Each pub-sub messaging PDA is called a _dialect_.
+
+Dialect `v0` currently supports one-to-one messaging between wallets, which powers both dapp notifications as well as user-to-user chat. Future versions of Dialect will also support one-to-many and many-to-many messaging.
+
+This repository contains both the Dialect rust programs (protocol), in Anchor, as well as a typescript client, published to npm as `@dialectlabs/web3`.
+
+## Local development
+
+Note: If you just need a local running instance of the Dialect program, it is easiest to simply run Dialect in a docker container. See the [Docker](###docker) section below.
+
+Dialect is built with Solana and Anchor. Install both dependencies first following their respective documentation
+
+- [Solana](https://docs.solana.com/cli/install-solana-cli-tools)
+- [Anchor](https://book.anchor-lang.com)
+
+Be sure you are targeting a Solana `localnet` instance:
+
+```shell
+solana config set --url localhost
+```
+
+Run a local validator:
+
+```shell
+solana-test-validator --rpc-port 8899
+```
+
+Build the Dialect Solana program:
+
+```shell
+anchor build
+```
+
+If you haven't deployed before, the output of `anchor build` will give you a program keypair, stored in `target/deploy/dialect-keypair.json`. Add this keypair in the following additional places:
+
+1. In the `dialect = "<program-id>"` in `Anchor.toml`
+2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
+3. In the `localnet` key in `src/utils/program.json` (redundant, to be retired)
+
+Deploy the Dialect Solana program with:
+
+```shell
+anchor deploy
+```
+
+Finally, install the `js`/`ts` `npm` dependencies with
+
+```shell
+npm i
+```
+
+### Docker
+
+The Dialect docker image will get you a deployed Dialect program running on a Solana validator. This is ideal if you're building off of `@dialectlabs/protocol`, rather than actively developing on it.
 
 ```bash
 # build
@@ -12,185 +65,18 @@ docker build -f docker/Dockerfile . -t dialect/protocol:latest
 docker run -i --rm -p 8899:8899 -p 8900:8900 -p 9900:9900 --name protocol dialect/protocol:latest
 ```
 
-### building for local usage
+## tests
 
-Please make sure you are always using the latest stable rust version by running: rustup update
+First ensure you have ts-mocha install globally:
 
-"local usage" means installation of this package through "file://..."
-
-```
-> npm install
-> npm run build
-> npm run local-publish
+```shell
+npm install -g ts-mocha
 ```
 
-During local-publish step we remove the node_modules from this folder so that, when installed, they are not being consumed during main app's run
+Run the tests with:
 
-### install solana, anchor
-
-TODO: notes
-
-install solana on m1
-
-1. brew install coreutils
-2. https://dev.to/nickgarfield/how-to-install-solana-dev-tools-on-an-m1-mac-kfn
-
-https://project-serum.github.io/anchor/getting-started/installation.html
-
-install anchor —
-
-```
-cargo install --git https://github.com/project-serum/anchor --tag v0.18.0 anchor-cli --locked
-```
-
-TODO:???
-
-```
-npm -g install ts-mocha
-npm install -g @project-serum/anchor
-```
-
-check your installation with
-
-```
-solana balance
-```
-
-### run localnoet
-
-```
-solana-test-validator --rpc-port 8899
-solana config set --url http://127.0.0.1:8899
-```
-
-### build & deploy
-
-make sure you have SOL via an airdrop
-
-```
-solana airdrop 50
-```
-
-Run build, the output will be the program address
-
-```
-anchor build
-```
-
-from the root `protocol/` directory, run
-
-```
-anchor deploy
-```
-
-this will give you a program id as output, which you should then put in program.json
-
-## Tokenized communication
-
-### Memos
-
-https://explorer.solana.com/tx/47eaxtBi6JY5GHvKmsdJcRba1PE7T19X4QX2dQ6FVpA2wuUwpxjFa6pgKnaassbmgKiwiewy6RhMCEpgzd6h6RfV
-
-## Upgrading anchor
-
-If you get the error
-
-```bash
-error[E0460]: found possibly newer version of crate `std` which `rustc_version` depends on
-```
-
-the simplest solution is to `rm -r target/`.
-
-## Adding new workspace
-
-From the root dir
-
-```bash
-anchor new <program-name>
-```
-
-This will create a new `/programs/<program-name>/` directory with boilerplate.
-
-## Debugging
-
-Convert `0x<n>` from hex, look up error number here. https://github.com/project-serum/anchor/blob/master/lang/src/error.rs
-
-## Open questions
-
-- Read efficiency for determining group members
-- Deleting a mint
-
-## design
-
-messaging via the pub-sub pattern, basically you need:
-
-1. an entity that acts as the thing to which ppl pub-sub.
-2. a way for someone to know what they've subbed to
-3. a way to store ppl's permissions to pub
-4. a way to store ppls pubs
-
-in a tokenized design, it's:
-
-1. the token mint
-2. holding (any amount of?) the token
-   - tbd if
-3.
-
-SRM has no authority https://solscan.io/token/SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt, but e.g. solrise does https://solscan.io/token/SLRSSpSLUTP7okbCUBYStWCo1vUgyt775faPqz8HUMr
-
-## Account with list of dialects
-
-Users will need a list of the dialects they're members of, but e.g. protocols won't necessarily want this -- they might be a part of many, and they may only need to find these when they already know the member(s) that belong (this can be derived deterministically). We need a way to either flexibly create or not create the dialects account, or explicitly choose to create or not create it.
-
-### How do users opt-in?
-
-This might be how we relate dialects to the user dialects account.
-
-## etc
-
-Put the program address in 3 places
-
-1. Anchor.toml
-
-```
-[programs.localnet]
-dialect = "<PROGRAM-ADDRESS>"
-```
-
-2. lib.rs
-
-```
-declare_id!("<PROGRAM-ADDRESS>");
-```
-
-3. programs.json
-
-```
-{
-  "localnet": {
-    "clusterAddress": "http://10.0.0.253:8899",
-    "programAddress": "<PROGRAM-ADDRESS>"
-  },
-  ...
-}
-```
-
-Run in frontend repo, which uses @dialect/web3
-
-```
-npm i @dialect/web3 ??? force update
-```
-
-### ISSUES
-
-```
-error An unexpected error occurred: "unsure how to copy this: /Users/kirillchernakov/Documents/projects/dialect/protocol/test-ledger/admin.rpc".
-```
-
-q fix
-
-```
-
+```shell
+anchor test
 ```
 
 ## examples
@@ -201,9 +87,11 @@ Run the example with:
 DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/index.ts
 ```
 
-It is fine to omit the DIALECT_PUBLIC_KEY environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the notification service, you'll need to set it to the public key corresponding to the private key in the notification service.
+It is fine to omit the `DIALECT_PUBLIC_KEY` environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the monitoring, you'll need to set it to the public key corresponding to the private key in the notification service.
 
-## A note about nonce
+## Message encryption
+
+A note about the encryption nonce.
 
 https://pynacl.readthedocs.io/en/v0.2.1/secret/
 
