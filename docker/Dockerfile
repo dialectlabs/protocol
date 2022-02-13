@@ -17,7 +17,7 @@ RUN node --version
 RUN npm --version
 
 # Install Anchor CLI
-RUN npm install -g @project-serum/anchor-cli
+RUN npm install -g @project-serum/anchor-cli@0.18.2
 
 # Copy Anchor project
 WORKDIR /home/dialect/
