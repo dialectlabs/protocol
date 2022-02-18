@@ -26,7 +26,7 @@ const DIALECT_ACCOUNT_MEMBER0_OFFSET = ACCOUNT_DESCRIPTOR_SIZE;
 const DIALECT_ACCOUNT_MEMBER1_OFFSET =
   DIALECT_ACCOUNT_MEMBER0_OFFSET + DIALECT_ACCOUNT_MEMBER_SIZE;
 
-type Subscription = {
+export type Subscription = {
   pubkey: PublicKey;
   enabled: boolean;
 };
@@ -62,7 +62,7 @@ export type Dialect = {
   encrypted: boolean;
 };
 
-type Message = {
+export type Message = {
   owner: PublicKey;
   text: string;
   timestamp: number;
