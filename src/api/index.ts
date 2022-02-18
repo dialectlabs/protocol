@@ -452,7 +452,7 @@ Messages
 export async function sendMessage(
   program: anchor.Program,
   { dialect, publicKey }: DialectAccount,
-  sender: anchor.web3.Keypair,
+  sender: anchor.web3.Keypair | Wallet,
   text: string,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
@@ -464,7 +464,7 @@ export async function sendMessage(
       encrypted: dialect.encrypted,
       members: dialect.members,
     },
-    sender,
+    sender && 'secretKey' in sender ? sender : undefined,
   );
   const serializedText = textSerde.serialize(text);
   await program.rpc.sendMessage(
@@ -473,13 +473,13 @@ export async function sendMessage(
     {
       accounts: {
         dialect: dialectPublicKey,
-        sender: sender.publicKey,
+        sender: sender ? sender.publicKey : program.provider.wallet.publicKey,
         member0: dialect.members[0].publicKey,
         member1: dialect.members[1].publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [sender],
+      signers: sender && 'secretKey' in sender ? [sender] : [],
     },
   );
   const d = await getDialect(program, publicKey, sender);
