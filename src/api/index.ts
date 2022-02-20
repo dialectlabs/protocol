@@ -375,7 +375,7 @@ export async function findDialects(
   ).then((dialects) =>
     dialects.sort(
       ({ dialect: d1 }, { dialect: d2 }) =>
-        d2.lastMessageTimestamp - d1.lastMessageTimestamp,
+        d2.lastMessageTimestamp - d1.lastMessageTimestamp, // descending
     ),
   );
 }
