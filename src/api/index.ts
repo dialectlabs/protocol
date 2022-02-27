@@ -1,7 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
 import { Wallet } from '@project-serum/anchor/src/provider';
-import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { sleep, waitForFinality, Wallet_ } from '../utils';
@@ -15,6 +14,7 @@ import { TextSerdeFactory } from './text-serde';
 /*
 User metadata
 */
+// TODO: Remove device token consts here
 export const DEVICE_TOKEN_LENGTH = 64;
 export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
 export const DEVICE_TOKEN_PADDING_LENGTH =
@@ -26,7 +26,7 @@ const DIALECT_ACCOUNT_MEMBER0_OFFSET = ACCOUNT_DESCRIPTOR_SIZE;
 const DIALECT_ACCOUNT_MEMBER1_OFFSET =
   DIALECT_ACCOUNT_MEMBER0_OFFSET + DIALECT_ACCOUNT_MEMBER_SIZE;
 
-type Subscription = {
+export type Subscription = {
   pubkey: PublicKey;
   enabled: boolean;
 };
@@ -62,7 +62,7 @@ export type Dialect = {
   encrypted: boolean;
 };
 
-type Message = {
+export type Message = {
   owner: PublicKey;
   text: string;
   timestamp: number;
@@ -71,6 +71,15 @@ type Message = {
 export type FindDialectQuery = {
   userPk?: anchor.web3.PublicKey;
 };
+
+export function isDialectAdmin(
+  dialect: DialectAccount,
+  user: anchor.web3.PublicKey,
+): boolean {
+  return dialect.dialect.members.some(
+    (m) => m.publicKey.equals(user) && m.scopes[0],
+  );
+}
 
 export async function accountInfoGet(
   connection: Connection,
@@ -363,16 +372,23 @@ export async function findDialects(
     : [];
   return Promise.all(
     memberFilters.map((it) => program.account.dialectAccount.all([it])),
-  ).then((it) =>
-    it.flat().map((a) => {
-      const rawDialect = a.account as RawDialect;
-      const dialectAccount: DialectAccount = {
-        publicKey: a.publicKey,
-        dialect: parseRawDialect(rawDialect),
-      };
-      return dialectAccount;
-    }),
-  );
+  )
+    .then((it) =>
+      it.flat().map((a) => {
+        const rawDialect = a.account as RawDialect;
+        const dialectAccount: DialectAccount = {
+          publicKey: a.publicKey,
+          dialect: parseRawDialect(rawDialect),
+        };
+        return dialectAccount;
+      }),
+    )
+    .then((dialects) =>
+      dialects.sort(
+        ({ dialect: d1 }, { dialect: d2 }) =>
+          d2.lastMessageTimestamp - d1.lastMessageTimestamp, // descending
+      ),
+    );
 }
 
 export async function createDialect(
@@ -452,7 +468,7 @@ Messages
 export async function sendMessage(
   program: anchor.Program,
   { dialect, publicKey }: DialectAccount,
-  sender: anchor.web3.Keypair,
+  sender: anchor.web3.Keypair | Wallet,
   text: string,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
@@ -464,7 +480,7 @@ export async function sendMessage(
       encrypted: dialect.encrypted,
       members: dialect.members,
     },
-    sender,
+    sender && 'secretKey' in sender ? sender : undefined,
   );
   const serializedText = textSerde.serialize(text);
   await program.rpc.sendMessage(
@@ -473,13 +489,13 @@ export async function sendMessage(
     {
       accounts: {
         dialect: dialectPublicKey,
-        sender: sender.publicKey,
+        sender: sender ? sender.publicKey : program.provider.wallet.publicKey,
         member0: dialect.members[0].publicKey,
         member1: dialect.members[1].publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
       },
-      signers: [sender],
+      signers: sender && 'secretKey' in sender ? [sender] : [],
     },
   );
   const d = await getDialect(program, publicKey, sender);
