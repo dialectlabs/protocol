@@ -6,6 +6,7 @@
 * Add `isDialectAdmin` utility function.
 * Export `Subscription` & `Message` types.
 * Sort results in `findDialects`.
+* Add `LICENSE`.
 
 ## [0.1.4] - 2022-02-13
 
