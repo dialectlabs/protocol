@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.1.5] - 2022-02-27]
+
+* Support `Wallet` argument for `sendMessage`.
+* Add `isDialectAdmin` utility function.
+* Export `Subscription` & `Message` types.
+* Sort results in `findDialects`.
+
 ## [0.1.4] - 2022-02-13
 
 * Fix clippy actions #83.
