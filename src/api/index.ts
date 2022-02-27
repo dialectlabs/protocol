@@ -1,7 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
 import { Wallet } from '@project-serum/anchor/src/provider';
-import * as splToken from '@solana/spl-token';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { sleep, waitForFinality, Wallet_ } from '../utils';
@@ -15,6 +14,7 @@ import { TextSerdeFactory } from './text-serde';
 /*
 User metadata
 */
+// TODO: Remove device token consts here
 export const DEVICE_TOKEN_LENGTH = 64;
 export const DEVICE_TOKEN_PAYLOAD_LENGTH = 128;
 export const DEVICE_TOKEN_PADDING_LENGTH =
@@ -71,6 +71,15 @@ export type Message = {
 export type FindDialectQuery = {
   userPk?: anchor.web3.PublicKey;
 };
+
+export function isDialectAdmin(
+  dialect: DialectAccount,
+  user: anchor.web3.PublicKey,
+): boolean {
+  return dialect.dialect.members.some(
+    (m) => m.publicKey.equals(user) && m.scopes[0],
+  );
+}
 
 export async function accountInfoGet(
   connection: Connection,
@@ -363,21 +372,23 @@ export async function findDialects(
     : [];
   return Promise.all(
     memberFilters.map((it) => program.account.dialectAccount.all([it])),
-  ).then((it) =>
-    it.flat().map((a) => {
-      const rawDialect = a.account as RawDialect;
-      const dialectAccount: DialectAccount = {
-        publicKey: a.publicKey,
-        dialect: parseRawDialect(rawDialect),
-      };
-      return dialectAccount;
-    }),
-  ).then((dialects) =>
-    dialects.sort(
-      ({ dialect: d1 }, { dialect: d2 }) =>
-        d2.lastMessageTimestamp - d1.lastMessageTimestamp, // descending
-    ),
-  );
+  )
+    .then((it) =>
+      it.flat().map((a) => {
+        const rawDialect = a.account as RawDialect;
+        const dialectAccount: DialectAccount = {
+          publicKey: a.publicKey,
+          dialect: parseRawDialect(rawDialect),
+        };
+        return dialectAccount;
+      }),
+    )
+    .then((dialects) =>
+      dialects.sort(
+        ({ dialect: d1 }, { dialect: d2 }) =>
+          d2.lastMessageTimestamp - d1.lastMessageTimestamp, // descending
+      ),
+    );
 }
 
 export async function createDialect(
