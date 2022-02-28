@@ -11,7 +11,7 @@
     "clusterAddress": "",
     "programAddress": ""
   },
-  "mainnet-beta": {
+  "mainnet": {
     "clusterAddress": "https://api.mainnet-beta.solana.com",
     "programAddress": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
   }
