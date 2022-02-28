@@ -21,10 +21,6 @@ const local = new web3.Connection(
   'recent',
 );
 
-const dialectPublicKey = process.env.DIALECT_PUBLIC_KEY
-  ? new web3.PublicKey(process.env.DIALECT_PUBLIC_KEY)
-  : web3.Keypair.generate().publicKey;
-
 const setup = async (
   n: number,
 ): Promise<[anchor.Program, web3.Keypair[], Member[]]> => {

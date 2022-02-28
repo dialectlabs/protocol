@@ -1,6 +1,10 @@
 # CHANGELOG
 
-## [0.1.5] - 2022-02-27]
+## [0.1.6] - 2022-02-28
+
+* Update program ids for mainnet.
+
+## [0.1.5] - 2022-02-27
 
 * Support `Wallet` argument for `sendMessage`.
 * Add `isDialectAdmin` utility function.

@@ -1,7 +1,7 @@
 {
   "localnet": {
     "clusterAddress": "http://127.0.0.1:8899",
-    "programAddress": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
+    "programAddress": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
   },
   "devnet": {
     "clusterAddress": "https://api.devnet.solana.com",
@@ -12,7 +12,7 @@
     "programAddress": ""
   },
   "mainnet-beta": {
-    "clusterAddress": "",
-    "programAddress": ""
+    "clusterAddress": "https://api.mainnet-beta.solana.com",
+    "programAddress": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
   }
 }
