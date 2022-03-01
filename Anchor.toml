@@ -5,5 +5,11 @@ wallet = "~/.config/solana/id.json"
 [programs.localnet]
 dialect = "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
 
+[programs.devnet]
+dialect = "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
+
+[programs.mainnet]
+dialect = "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
+
 [scripts]
 test = "ts-mocha -t 1000000 tests/test-v1.ts"
