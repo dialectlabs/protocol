@@ -112,10 +112,7 @@
           "type": {
             "array": [
               {
-                "array": [
-                  "bool",
-                  2
-                ]
+                "array": ["bool", 2]
               },
               2
             ]
@@ -314,10 +311,7 @@
           {
             "name": "buffer",
             "type": {
-              "array": [
-                "u8",
-                8192
-              ]
+              "array": ["u8", 8192]
             }
           }
         ]
@@ -351,10 +345,7 @@
           {
             "name": "scopes",
             "type": {
-              "array": [
-                "bool",
-                2
-              ]
+              "array": ["bool", 2]
             }
           }
         ]
@@ -373,10 +364,7 @@
         {
           "name": "members",
           "type": {
-            "array": [
-              "publicKey",
-              2
-            ]
+            "array": ["publicKey", 2]
           },
           "index": false
         }
@@ -393,10 +381,7 @@
         {
           "name": "members",
           "type": {
-            "array": [
-              "publicKey",
-              2
-            ]
+            "array": ["publicKey", 2]
           },
           "index": false
         }
