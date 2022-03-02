@@ -190,10 +190,9 @@ describe('Protocol v1 test', () => {
           scopes: [false, true], // non-owner, read-write
         },
       ];
-      const val = await createDialect(program, owner, members);
-      // chai
-      //   .expect(val)
-      //   .to.eventually.be.rejectedWith(Error);
+      chai
+        .expect(createDialect(program, owner, members))
+        .to.eventually.be.rejectedWith(Error);
     });
 
     it('Fail to create a dialect for duplicate members', async () => {
