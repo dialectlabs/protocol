@@ -183,11 +183,11 @@ describe('Protocol v1 test', () => {
       members = [
         {
           publicKey: owner.publicKey,
-          scopes: [false, false], // owner, read-only
+          scopes: [false, false],
         },
         {
           publicKey: writer.publicKey,
-          scopes: [false, true], // non-owner, read-write
+          scopes: [false, true],
         },
       ];
       chai
