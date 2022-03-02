@@ -24,7 +24,7 @@ yarn add @dialectlabs/protocol
 
 ## Usage 
 
-Dialect's protocol is best learned by example. This section describes how to use Dialect protocol in your app by showing you examples in the`examples/` folder of this repository. Follow along in this section, & refer to the code in those examples.
+This section describes how to use Dialect protocol in your app by showing you examples in the`examples/` directory of this repository. Follow along in this section, & refer to the code in those examples.
 
 ### Create your first dialect, send and receive message
 
