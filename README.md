@@ -8,6 +8,8 @@ Dialect `v0` currently supports one-to-one messaging between wallets, which powe
 
 This repository contains both the Dialect rust programs (protocol), in Anchor, as well as a typescript client, published to npm as `@dialectlabs/web3`.
 
+Currently, the dialect account rent cost is `~0.059 SOL`.
+
 ## Local development
 
 Note: If you just need a local running instance of the Dialect program, it is easiest to simply run Dialect in a docker container. See the [Docker](###docker) section below.
