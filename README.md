@@ -38,12 +38,10 @@ import {
   Member,
 } from '@dialectlabs/protocol';
 
-const program = // ... initialize dialect program, see the complete examples
+const program = // ... initialize dialect program
 
 const [user1, user2] = [Keypair.generate(), Keypair.generate()];
-// ...
-// fund keypairs
-// ...
+// ... fund keypairs
 const dialectMembers: Member[] = [
   {
     publicKey: user1.publicKey,
