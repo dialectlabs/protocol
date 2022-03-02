@@ -167,6 +167,35 @@ describe('Protocol v1 test', () => {
         .to.eventually.be.rejectedWith(Error);
     });
 
+    it('Fail to create dialect when no member w/ admin scope', async () => {
+      owner = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      writer = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      nonmember = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
+      });
+      members = [
+        {
+          publicKey: owner.publicKey,
+          scopes: [false, false], // owner, read-only
+        },
+        {
+          publicKey: writer.publicKey,
+          scopes: [false, true], // non-owner, read-write
+        },
+      ];
+      const val = await createDialect(program, owner, members);
+      // chai
+      //   .expect(val)
+      //   .to.eventually.be.rejectedWith(Error);
+    });
+
     it('Fail to create a dialect for duplicate members', async () => {
       const duplicateMembers = [
         { publicKey: owner.publicKey, scopes: [true, true] } as Member,

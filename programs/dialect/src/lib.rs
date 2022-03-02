@@ -74,6 +74,9 @@ pub mod dialect {
         encrypted: bool,
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
+        if !(scopes[0][0] || scopes[1][0]) {
+            return Err(ErrorCode::NoAdminSpecified.into());
+        }
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_init()?;
         let _owner = &mut ctx.accounts.owner;
@@ -660,6 +663,12 @@ pub struct MetadataDeletedEvent {
 /// * subscription: a pointer to a Subscription, which is the entry being checked.
 pub fn is_present(subscription: &Subscription) -> bool {
     subscription.pubkey != Pubkey::default()
+}
+
+#[error]
+pub enum ErrorCode {
+    #[msg("Each dialect account must have at least one admin.")]
+    NoAdminSpecified,
 }
 
 #[cfg(test)]
