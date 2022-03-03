@@ -74,14 +74,17 @@ pub mod dialect {
         encrypted: bool,
         scopes: [[bool; 2]; 2],
     ) -> ProgramResult {
-        if !(scopes[0][0] || scopes[1][0]) {
-            return Err(ErrorCode::NoAdminSpecified.into());
-        }
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_init()?;
         let _owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
 
+        let owner_idx = members.iter().position(|m| m.key == _owner.key).unwrap();
+        let is_owner_admin = scopes[owner_idx][0];
+
+        if !is_owner_admin {
+            return Err(ErrorCode::DialectOwnerMustBeAdmin.into());
+        }
         dialect.members = [
             Member {
                 public_key: *members[0].key,
@@ -667,8 +670,8 @@ pub fn is_present(subscription: &Subscription) -> bool {
 
 #[error]
 pub enum ErrorCode {
-    #[msg("Each dialect account must have at least one admin.")]
-    NoAdminSpecified,
+    #[msg("Dialect owner must be an admin.")]
+    DialectOwnerMustBeAdmin,
 }
 
 #[cfg(test)]

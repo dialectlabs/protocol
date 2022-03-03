@@ -167,7 +167,7 @@ describe('Protocol v1 test', () => {
         .to.eventually.be.rejectedWith(Error);
     });
 
-    it('Fail to create dialect when no member w/ admin scope', async () => {
+    it('Fail to create dialect when owner not admin', async () => {
       owner = await createUser({
         requestAirdrop: true,
         createMeta: true,
@@ -187,7 +187,7 @@ describe('Protocol v1 test', () => {
         },
         {
           publicKey: writer.publicKey,
-          scopes: [false, true],
+          scopes: [true, true],
         },
       ];
       chai
