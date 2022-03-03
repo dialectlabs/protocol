@@ -8,6 +8,74 @@ Dialect `v0` currently supports one-to-one messaging between wallets, which powe
 
 This repository contains both the Dialect rust programs (protocol), in Anchor, as well as a typescript client, published to npm as `@dialectlabs/web3`.
 
+Currently, the dialect account rent cost is `~0.059 SOL`.
+
+## Installation
+
+**npm:**
+
+```shell
+npm install @dialectlabs/protocol --save
+```
+
+**yarn:**
+
+```shell
+yarn add @dialectlabs/protocol
+```
+
+## Usage 
+
+This section describes how to use Dialect protocol in your app by showing you examples in the`examples/` directory of this repository. Follow along in this section, & refer to the code in those examples.
+
+### Create your first dialect, send and receive message
+
+The example in `examples/hello-world.ts` demonstrates how to create a new dialect, send and receive message.
+
+```typescript
+import {
+  createDialect,
+  getDialectForMembers,
+  sendMessage,
+  Member,
+} from '@dialectlabs/protocol';
+
+const program = // ... initialize dialect program
+
+const [user1, user2] = [Keypair.generate(), Keypair.generate()];
+// ... fund keypairs
+const dialectMembers: Member[] = [
+  {
+    publicKey: user1.publicKey,
+    scopes: [true, true],
+  },
+  {
+    publicKey: user2.publicKey,
+    scopes: [false, true],
+  },
+];
+const user1Dialect = await createDialect(
+  program,
+  user1,
+  dialectMembers,
+  false,
+); // crate dialect on behalf of 1st user
+await sendMessage(program, user1Dialect, user1, 'Hello dialect!'); // send message
+const { dialect: user2Dialect } = await getDialectForMembers(
+  program,
+  dialectMembers,
+  user2,
+); // get dialect on behalf of 2nd user
+console.log(JSON.stringify(user2Dialect.messages));
+// Will print [{"text":"Hello dialect!", ...}]
+```
+
+Run the example above
+
+```shell
+ts-node examples/hello-world.ts
+```
+
 ## Local development
 
 Note: If you just need a local running instance of the Dialect program, it is easiest to simply run Dialect in a docker container. See the [Docker](###docker) section below.
@@ -65,7 +133,7 @@ docker build -f docker/Dockerfile . -t dialect/protocol:latest
 docker run -i --rm -p 8899:8899 -p 8900:8900 -p 9900:9900 --name protocol dialect/protocol:latest
 ```
 
-## tests
+## Tests
 
 First ensure you have ts-mocha install globally:
 
