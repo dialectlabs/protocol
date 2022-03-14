@@ -79,6 +79,12 @@ pub mod dialect {
         let _owner = &mut ctx.accounts.owner;
         let members = [&mut ctx.accounts.member0, &mut ctx.accounts.member1];
 
+        let owner_idx = members.iter().position(|m| m.key == _owner.key).unwrap();
+        let is_owner_admin = scopes[owner_idx][0];
+
+        if !is_owner_admin {
+            return Err(ErrorCode::DialectOwnerMustBeAdmin.into());
+        }
         dialect.members = [
             Member {
                 public_key: *members[0].key,
@@ -660,6 +666,12 @@ pub struct MetadataDeletedEvent {
 /// * subscription: a pointer to a Subscription, which is the entry being checked.
 pub fn is_present(subscription: &Subscription) -> bool {
     subscription.pubkey != Pubkey::default()
+}
+
+#[error]
+pub enum ErrorCode {
+    #[msg("Dialect owner must be an admin.")]
+    DialectOwnerMustBeAdmin,
 }
 
 #[cfg(test)]
