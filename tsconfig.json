@@ -16,7 +16,8 @@
     "noEmit": false,
     "declaration": true
   },
-  "include": ["next-env.d.ts", "**/*.ts"],
+  "rootDir": "./src",
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"],
   "type": "module"
 }
