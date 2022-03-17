@@ -8,7 +8,7 @@
     "url": "https://github.com/dialectlabs/protocol"
   },
   "main": "./lib/es/index.js",
-  "types": "./lib/es/types.d.ts",
+  "types": "./lib/es/index.d.ts",
   "scripts": {
     "publish": "npm run build && npm publish && rm -rf lib",
     "build": "rm -rf lib && tsc",
