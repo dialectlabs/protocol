@@ -83,7 +83,7 @@ Note: If you just need a local running instance of the Dialect program, it is ea
 Dialect is built with Solana and Anchor. Install both dependencies first following their respective documentation
 
 - [Solana](https://docs.solana.com/cli/install-solana-cli-tools)
-- [Anchor](https://book.anchor-lang.com)
+- [Anchor](https://book.anchor-lang.com) v0.18.0
 
 Be sure you are targeting a Solana `localnet` instance:
 
@@ -103,7 +103,12 @@ Build the Dialect Solana program:
 anchor build
 ```
 
-If you haven't deployed before, the output of `anchor build` will give you a program keypair, stored in `target/deploy/dialect-keypair.json`. Add this keypair in the following additional places:
+If you haven't deployed before, the output of `anchor build` will give you a program keypair, stored in `target/deploy/dialect-keypair.json`.\
+Note: if it doesn't print a keypair, fetch it with the following command:
+`solana address -k target/deploy/dialect-keypair.json`
+
+
+Add this keypair in the following additional places:
 
 1. In the `dialect = "<program-id>"` in `Anchor.toml`
 2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
