@@ -4,15 +4,15 @@
 //!
 //! The entrypoints and data structures below implement the one-on-one messaging thread use case, as well as associated authentication and management of such threads.
 
-use std::array;
-
 use anchor_lang::prelude::*;
+use solana_program::entrypoint::ProgramResult;
 
 declare_id!("CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb");
 
 /// The dialect module contains all entrypoint functions for interacting with dialects.
 #[program]
 pub mod dialect {
+
     use super::*;
 
     // User metadata
@@ -182,7 +182,7 @@ pub mod dialect {
     ) -> ProgramResult {
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_mut()?;
-        let sender = &mut ctx.accounts.sender;
+        let sender = &mut ctx.accounts.sender.to_account_info();
         dialect.append(text, sender);
         // Emit an event for monitoring services.
         emit!(MessageSentEvent {
@@ -197,11 +197,10 @@ pub mod dialect {
 
 /// Context to create a metadata account for a user, created by the user.
 #[derive(Accounts)]
-#[instruction(metadata_nonce: u8)]
 pub struct CreateMetadata<'info> {
     // The metadata owner and the signer for this transaction.
-    #[account(signer, mut)]
-    pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
     // The metadata account being created
     #[account(
         init,
@@ -209,14 +208,14 @@ pub struct CreateMetadata<'info> {
             b"metadata".as_ref(),
             user.key.as_ref(),
         ],
-        bump = metadata_nonce,
+        bump,
         payer = user,
         // discriminator (8) + user + 32 x (subscription) = 1096
         space = 8 + 32 + (32 * 33),
     )]
-    pub metadata: Loader<'info, MetadataAccount>,
+    pub metadata: AccountLoader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Context to close a metadata account and recover its rent. This action is permanent, and all data is lost.
@@ -226,8 +225,8 @@ pub struct CreateMetadata<'info> {
 #[instruction(metadata_nonce: u8)]
 pub struct CloseMetadata<'info> {
     // The metadata owner and the signer for this transaction.
-    #[account(signer, mut)]
-    pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
     // The metadata account being closed.
     #[account(
         mut,
@@ -240,9 +239,9 @@ pub struct CloseMetadata<'info> {
         has_one = user, // TODO: Does seeds address this, is this redundant?
         bump = metadata_nonce,
     )]
-    pub metadata: Loader<'info, MetadataAccount>,
+    pub metadata: AccountLoader<'info, MetadataAccount>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Context for subscribing a user to a dialect, which adds the dialect's address to the user's
@@ -251,9 +250,9 @@ pub struct CloseMetadata<'info> {
 #[instruction(dialect_nonce: u8, metadata_nonce: u8)] // metadata0_nonce: u8, metadata1_nonce: u8)]
 pub struct SubscribeUser<'info> {
     // The signing key, a.k.a. the user taking action to subscribe the other user to a new dialect.
-    #[account(signer, mut)]
-    pub signer: AccountInfo<'info>,
-    // N.b. we do not enforce that user is the signer. Meaning, users can subscribe other users
+    #[account(mut)]
+    pub signer: Signer<'info>,
+    /// CHECK: N.b. we do not enforce that user is the signer. Meaning, users can subscribe other users
     // to dialects.
     pub user: AccountInfo<'info>,
     // The metadata account belonging to the user, & to whose subscriptions the dialect will be added.
@@ -273,12 +272,12 @@ pub struct SubscribeUser<'info> {
             .filter(|s| s.pubkey == dialect.key())
             .count() < 1
     )]
-    pub metadata: Loader<'info, MetadataAccount>,
-    // We only need the pubkey of hte dialect, so AccountInfo is fine.
+    pub metadata: AccountLoader<'info, MetadataAccount>,
+    /// CHECK: We only need the pubkey of the dialect, so AccountInfo is fine.
     // TODO: is this a security risk that we don't enforce an account type for the dialect?
     pub dialect: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Context for creating a new dialect for one-on-one messaging. The owner deposits the rent,
@@ -287,12 +286,12 @@ pub struct SubscribeUser<'info> {
 #[derive(Accounts)]
 #[instruction(dialect_nonce: u8)]
 pub struct CreateDialect<'info> {
-    #[account(signer, mut)] // mut is needed because they're the payer for PDA initialization
+    #[account(mut)] // mut is needed because they're the payer for PDA initialization
     // We dupe the owner in one of the members, since the members must be sorted
-    pub owner: AccountInfo<'info>,
-    /// First member, alphabetically
+    pub owner: Signer<'info>,
+    /// CHECK: First member, alphabetically
     pub member0: AccountInfo<'info>,
-    /// Second member, alphabetically
+    /// CHECK: Second member, alphabetically
     pub member1: AccountInfo<'info>,
     // Support more users in this or other dialect struct
     #[account(
@@ -306,15 +305,15 @@ pub struct CreateDialect<'info> {
         // TODO: Assert that owner is a member with admin privileges
         // Assert that the members are sorted alphabetically, & unique
         constraint = member0.key().cmp(&member1.key()) == std::cmp::Ordering::Less,
-        bump = dialect_nonce,
+        bump,
         payer = owner,
         // NB: max space for PDA = 10240
         // space = discriminator + dialect account size
         space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
     )]
-    pub dialect: Loader<'info, DialectAccount>,
+    pub dialect: AccountLoader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Context for closing a dialect account and recovering the rent. Only the owning user who
@@ -324,11 +323,10 @@ pub struct CreateDialect<'info> {
 pub struct CloseDialect<'info> {
     // The owner, who originally created the dialect.
     #[account(
-        signer,
         mut,
         constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *owner.key && m.scopes[0]).count() > 0,
     )]
-    pub owner: AccountInfo<'info>,
+    pub owner: Signer<'info>,
     // The dialect account being closed.
     #[account(
         mut,
@@ -340,9 +338,9 @@ pub struct CloseDialect<'info> {
         ],
         bump = dialect_nonce,
     )]
-    pub dialect: Loader<'info, DialectAccount>,
+    pub dialect: AccountLoader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 /// Context for sending a message in a dialect. Only a member with write privileges can send messages.
@@ -351,12 +349,11 @@ pub struct CloseDialect<'info> {
 pub struct SendMessage<'info> {
     // The signer. Must also be the message sender.
     #[account(
-        signer,
         mut,
         // The sender must be a member with write privileges.
         constraint = dialect.load()?.members.iter().filter(|m| m.public_key == *sender.key && m.scopes[1]).count() > 0,
     )]
-    pub sender: AccountInfo<'info>,
+    pub sender: Signer<'info>,
     // The dialect in which the message is being sent.
     #[account(
         mut,
@@ -367,9 +364,9 @@ pub struct SendMessage<'info> {
         ],
         bump = dialect_nonce,
     )]
-    pub dialect: Loader<'info, DialectAccount>,
+    pub dialect: AccountLoader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 // Accounts
@@ -403,6 +400,10 @@ const ITEM_METADATA_OVERHEAD: u16 = 2;
 /// 3. the time stamp of the last message sent in the dialect, and
 /// 4. whether or not the dialect is encrypted.
 #[account(zero_copy)]
+// zero_copy used to use repr(packed) rather than its new default, repr(C), so
+// we need to explicitly use repr(packed) here to maintain backwards
+// compatibility with old dialect accounts.
+#[repr(packed)]
 /// NB: max space for PDA = 10240
 /// space = 8 + 68 + (2 + 2 + 2 + 8192) + 4 + 1
 pub struct DialectAccount {
@@ -414,6 +415,11 @@ pub struct DialectAccount {
     pub last_message_timestamp: u32, // 4, UTC seconds, max value = Sunday, February 7, 2106 6:28:15 AM
     /// A bool representing whether or not the dialect is encrypted.
     pub encrypted: bool, // 1
+}
+
+#[test]
+fn hmm() {
+    println!("{:?}", std::mem::size_of::<DialectAccount>());
 }
 
 impl DialectAccount {
@@ -432,8 +438,8 @@ impl DialectAccount {
             .position(|m| m.public_key == *sender.key)
             .unwrap() as u8;
         let mut serialized_message = Vec::new();
-        serialized_message.extend(array::IntoIter::new(sender_member_idx.to_be_bytes()));
-        serialized_message.extend(array::IntoIter::new(now.to_be_bytes()));
+        serialized_message.extend(sender_member_idx.to_be_bytes().into_iter());
+        serialized_message.extend(now.to_be_bytes().into_iter());
         serialized_message.extend(text);
         self.messages.append(serialized_message)
     }
@@ -465,7 +471,7 @@ impl CyclicByteBuffer {
     fn append(&mut self, item: Vec<u8>) {
         let item_with_metadata = &mut Vec::new();
         let item_len = (item.len() as u16).to_be_bytes();
-        item_with_metadata.extend(array::IntoIter::new(item_len));
+        item_with_metadata.extend(item_len.into_iter());
         item_with_metadata.extend(item);
 
         let new_write_offset: u16 = self.mod_(self.write_offset + item_with_metadata.len() as u16);
