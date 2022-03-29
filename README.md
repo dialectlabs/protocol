@@ -103,7 +103,15 @@ Build the Dialect Solana program:
 anchor build
 ```
 
-If you haven't deployed before, the output of `anchor build` will give you a program keypair, stored in `target/deploy/dialect-keypair.json`. Add this keypair in the following additional places:
+If you haven't deployed this program to localnet before, `anchor build` produces a program-id stored in `target/idl/dialect.json`. The program-id is the address field of the "metadata" element (usually at bottom of file, note your address may differ locally):
+
+```
+  "metadata": {
+    "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
+  }
+```
+
+Add this program-id in the following additional places before proceeding:
 
 1. In the `dialect = "<program-id>"` in `Anchor.toml`
 2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
