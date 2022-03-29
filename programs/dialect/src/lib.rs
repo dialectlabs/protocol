@@ -273,9 +273,7 @@ pub struct SubscribeUser<'info> {
             .count() < 1
     )]
     pub metadata: AccountLoader<'info, MetadataAccount>,
-    /// CHECK: We only need the pubkey of the dialect, so AccountInfo is fine.
-    // TODO: is this a security risk that we don't enforce an account type for the dialect?
-    pub dialect: AccountInfo<'info>,
+    pub dialect: AccountLoader<'info, DialectAccount>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
