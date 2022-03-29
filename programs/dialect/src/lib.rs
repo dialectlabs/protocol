@@ -417,11 +417,6 @@ pub struct DialectAccount {
     pub encrypted: bool, // 1
 }
 
-#[test]
-fn hmm() {
-    println!("{:?}", std::mem::size_of::<DialectAccount>());
-}
-
 impl DialectAccount {
     /// Append another message to the dialect's messages. See the CyclicByteBuffer for more information on implementation.
     ///
