@@ -73,7 +73,7 @@ pub mod dialect {
         _dialect_nonce: u8,
         encrypted: bool,
         scopes: [[bool; 2]; 2],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let dialect_loader = &ctx.accounts.dialect;
         let mut dialect = dialect_loader.load_init()?;
         let _owner = &mut ctx.accounts.owner;
@@ -89,6 +89,15 @@ pub mod dialect {
                 scopes: scopes[1],
             },
         ];
+
+        if !dialect
+            .members
+            .iter()
+            .any(|member| member.is_admin() && member.public_key == _owner.key())
+        {
+            return err!(ErrorCode::DialectOwnerIsNotAdmin);
+        }
+
         let now = Clock::get()?.unix_timestamp as u32;
         dialect.messages.read_offset = 0;
         dialect.messages.write_offset = 0;
@@ -591,6 +600,18 @@ pub struct Member {
     /// scopes: [false, false] // allows to read messages
     /// ```
     pub scopes: [bool; 2], // 2
+}
+
+impl Member {
+    fn is_admin(&self) -> bool {
+        return self.scopes[0];
+    }
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("The dialect owner must be a member with admin privileges")]
+    DialectOwnerIsNotAdmin,
 }
 
 /// An event that is fired new dialect account is created.
