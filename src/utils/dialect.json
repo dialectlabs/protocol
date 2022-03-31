@@ -112,7 +112,10 @@
           "type": {
             "array": [
               {
-                "array": ["bool", 2]
+                "array": [
+                  "bool",
+                  2
+                ]
               },
               2
             ]
@@ -230,6 +233,17 @@
           "type": "bytes"
         }
       ]
+    },
+    {
+      "name": "backwardsCompatibility",
+      "accounts": [
+        {
+          "name": "dialect",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -311,7 +325,10 @@
           {
             "name": "buffer",
             "type": {
-              "array": ["u8", 8192]
+              "array": [
+                "u8",
+                8192
+              ]
             }
           }
         ]
@@ -345,7 +362,10 @@
           {
             "name": "scopes",
             "type": {
-              "array": ["bool", 2]
+              "array": [
+                "bool",
+                2
+              ]
             }
           }
         ]
@@ -364,7 +384,10 @@
         {
           "name": "members",
           "type": {
-            "array": ["publicKey", 2]
+            "array": [
+              "publicKey",
+              2
+            ]
           },
           "index": false
         }
@@ -381,7 +404,10 @@
         {
           "name": "members",
           "type": {
-            "array": ["publicKey", 2]
+            "array": [
+              "publicKey",
+              2
+            ]
           },
           "index": false
         }
@@ -447,5 +473,15 @@
         }
       ]
     }
-  ]
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "DialectOwnerIsNotAdmin",
+      "msg": "The dialect owner must be a member with admin privileges"
+    }
+  ],
+  "metadata": {
+    "address": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
+  }
 }
