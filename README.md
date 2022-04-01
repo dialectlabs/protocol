@@ -24,7 +24,7 @@ npm install @dialectlabs/protocol --save
 yarn add @dialectlabs/protocol
 ```
 
-## Usage 
+## Usage
 
 This section describes how to use Dialect protocol in your app by showing you examples in the`examples/` directory of this repository. Follow along in this section, & refer to the code in those examples.
 
@@ -85,10 +85,26 @@ Dialect is built with Solana and Anchor. Install both dependencies first followi
 - [Solana](https://docs.solana.com/cli/install-solana-cli-tools)
 - [Anchor](https://book.anchor-lang.com)
 
+We recommend installing anchor with [avm](https://book.anchor-lang.com/chapter_2/installation.html#installing-using-anchor-version-manager-avm-recommended) and using the `"@project-serum/anchor"` version that's specified in our [package.json](https://github.com/dialectlabs/protocol/blob/master/package.json) file.
+
 Be sure you are targeting a Solana `localnet` instance:
 
 ```shell
 solana config set --url localhost
+```
+
+Next run the tests to verify everything is setup correctly:
+
+First ensure you have ts-mocha installed globally:
+
+```shell
+npm install -g ts-mocha
+```
+
+Run the tests with:
+
+```shell
+anchor test
 ```
 
 Run a local validator:
@@ -108,6 +124,18 @@ If you haven't deployed before, the output of `anchor build` will give you a pro
 1. In the `dialect = "<program-id>"` in `Anchor.toml`
 2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
 3. In the `localnet` key in `src/utils/program.json` (redundant, to be retired)
+
+Before deploying make sure you fund your Solana wallet:
+
+You can fund your wallet with:
+```shell
+solana airdrop 10
+```
+
+You can verify your token balance with:
+```shell
+solana balance
+```
 
 Deploy the Dialect Solana program with:
 
@@ -131,20 +159,6 @@ docker build -f docker/Dockerfile . -t dialect/protocol:latest
 
 # run
 docker run -i --rm -p 8899:8899 -p 8900:8900 -p 9900:9900 --name protocol dialect/protocol:latest
-```
-
-## Tests
-
-First ensure you have ts-mocha install globally:
-
-```shell
-npm install -g ts-mocha
-```
-
-Run the tests with:
-
-```shell
-anchor test
 ```
 
 ## examples
