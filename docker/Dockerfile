@@ -3,9 +3,9 @@ FROM rust:1.57
 
 RUN rustc --version
 
-# Install Solana v1.8.0
-RUN sh -c "$(curl -sSfL https://release.solana.com/v1.8.0/install)"
-ENV PATH="/root/.local/share/solana/install/releases/1.8.0/solana-release/bin:${PATH}"
+# Install Solana 1.8.16
+RUN sh -c "$(curl -sSfL https://release.solana.com/v1.8.16/install)"
+ENV PATH="/root/.local/share/solana/install/releases/1.8.16/solana-release/bin:${PATH}"
 
 RUN solana --version
 
