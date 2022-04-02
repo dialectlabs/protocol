@@ -10,7 +10,7 @@ import {
   programs,
   sendMessage,
   Wallet_,
-} from '..';
+} from '../src';
 
 const NETWORK_NAME = 'localnet';
 const local = new web3.Connection(
