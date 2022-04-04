@@ -1,5 +1,7 @@
 # Protocol & web3
 
+## Summary
+
 Dialect is a smart messaging protocol for dapp notifications and wallet-to-wallet messaging on the Solana Blockchain.
 
 Dialect works by decorating on-chain resources, or sets of resources, with publish-subscribe (pub-sub) messaging capabilities. This is accomplished by creating a PDA whose seeds are the (lexically sorted) resources' public keys. Each pub-sub messaging PDA is called a _dialect_.
@@ -9,6 +11,15 @@ Dialect `v0` currently supports one-to-one messaging between wallets, which powe
 This repository contains both the Dialect rust programs (protocol), in Anchor, as well as a typescript client, published to npm as `@dialectlabs/web3`.
 
 Currently, the dialect account rent cost is `~0.059 SOL`.
+
+## Table of Contents
+1. Installation
+2. Usage
+3. Local Development
+4. Docker
+5. Anchor Tests
+6. Examples
+7. Message Encryption
 
 ## Installation
 
@@ -76,7 +87,7 @@ Run the example above
 ts-node examples/hello-world.ts
 ```
 
-## Local development
+## Local Development
 
 Note: If you just need a local running instance of the Dialect program, it is easiest to simply run Dialect in a docker container. See the [Docker](###docker) section below.
 
@@ -119,7 +130,15 @@ Build the Dialect Solana program:
 anchor build
 ```
 
-If you haven't deployed before, the output of `anchor build` will give you a program keypair, stored in `target/deploy/dialect-keypair.json`. Add this keypair in the following additional places:
+If you haven't deployed this program to localnet before, `anchor build` produces a program-id stored in `target/idl/dialect.json`. The program-id is the address field of the "metadata" element (usually at bottom of file, note your address may differ locally):
+
+```
+  "metadata": {
+    "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
+  }
+```
+
+Add this program-id in the following additional places before proceeding:
 
 1. In the `dialect = "<program-id>"` in `Anchor.toml`
 2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
@@ -161,17 +180,31 @@ docker build -f docker/Dockerfile . -t dialect/protocol:latest
 docker run -i --rm -p 8899:8899 -p 8900:8900 -p 9900:9900 --name protocol dialect/protocol:latest
 ```
 
-## examples
+## Tests
+
+First ensure you have ts-mocha install globally:
+
+```shell
+npm install -g ts-mocha
+```
+
+Run the tests with:
+
+```shell
+anchor test
+```
+
+## Examples
 
 Run the example with:
 
 ```bash
-DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/index.ts
+DIALECT_PUBLIC_KEY=<dialect-public-key> ts-node examples/hello-world.ts
 ```
 
-It is fine to omit the `DIALECT_PUBLIC_KEY` environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the monitoring, you'll need to set it to the public key corresponding to the private key in the notification service.
+It is fine to omit the `DIALECT_PUBLIC_KEY` environment variable, the example will generate one on the fly. However, if you're using this example as an integration test with other services, such as the monitoring service, you'll need to set it to the public key corresponding to the private key in the monitoring service.
 
-## Message encryption
+## Message Encryption
 
 A note about the encryption nonce.
 
