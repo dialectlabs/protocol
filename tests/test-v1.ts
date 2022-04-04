@@ -39,7 +39,6 @@ anchor.setProvider(anchor.Provider.local());
 describe('Protocol v1 test', () => {
   const program: anchor.Program = anchor.workspace.Dialect;
   const connection = program.provider.connection;
-  console.log('program', program);
 
   describe('Metadata tests', () => {
     let owner: Program;
@@ -70,11 +69,11 @@ describe('Protocol v1 test', () => {
 
     it('Owner deletes metadata', async () => {
       for (const member of [owner, writer]) {
-        await createMetadata(program, member);
-        await getMetadata(program, member.publicKey);
-        await deleteMetadata(program, member);
+        await createMetadata(member);
+        await getMetadata(member, member.provider.wallet.publicKey);
+        await deleteMetadata(member);
         chai
-          .expect(getMetadata(program, member.publicKey))
+          .expect(getMetadata(member, member.provider.wallet.publicKey))
           .to.eventually.be.rejectedWith(Error);
       }
     });
