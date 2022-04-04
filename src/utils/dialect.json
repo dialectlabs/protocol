@@ -230,6 +230,17 @@
           "type": "bytes"
         }
       ]
+    },
+    {
+      "name": "backwardsCompatibility",
+      "accounts": [
+        {
+          "name": "dialect",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -447,5 +458,15 @@
         }
       ]
     }
-  ]
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "DialectOwnerIsNotAdmin",
+      "msg": "The dialect owner must be a member with admin privileges"
+    }
+  ],
+  "metadata": {
+    "address": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
+  }
 }
