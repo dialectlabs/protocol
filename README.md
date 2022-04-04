@@ -94,7 +94,7 @@ Note: If you just need a local running instance of the Dialect program, it is ea
 Dialect is built with Solana and Anchor. Install both dependencies first following their respective documentation
 
 - [Solana](https://docs.solana.com/cli/install-solana-cli-tools)
-- [Anchor](https://book.anchor-lang.com)
+- [Anchor](https://book.anchor-lang.com) v0.18.0
 
 We recommend installing anchor with [avm](https://book.anchor-lang.com/chapter_2/installation.html#installing-using-anchor-version-manager-avm-recommended) and using the `"@project-serum/anchor"` version that's specified in our [package.json](https://github.com/dialectlabs/protocol/blob/master/package.json) file.
 
@@ -132,13 +132,19 @@ anchor build
 
 If you haven't deployed this program to localnet before, `anchor build` produces a program-id stored in `target/idl/dialect.json`. The program-id is the address field of the "metadata" element (usually at bottom of file, note your address may differ locally):
 
-```
+```json
   "metadata": {
     "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
   }
 ```
 
-Add this program-id in the following additional places before proceeding:
+Alternatively, you can get this program id from the command
+
+```bash
+solana address -k target/deploy/dialect-keypair.json
+```
+
+Add this program id in the following additional places before proceeding:
 
 1. In the `dialect = "<program-id>"` in `Anchor.toml`
 2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
