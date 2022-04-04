@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import { Program } from '@project-serum/anchor';
+import { AnchorError, Program } from '@project-serum/anchor';
 import * as web3 from '@solana/web3.js';
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -105,6 +105,37 @@ describe('Protocol v1 test', () => {
     it('Confirm only each user (& dialect) can read encrypted device tokens', async () => {
       // TODO: Implement
       chai.expect(true).to.be.true;
+    });
+
+    it("Fail to create a dialect if the owner isn't a member with admin privileges", async () => {
+      try {
+        await createDialect(program, nonmember, members, true);
+        chai.assert(
+          false,
+          "Creating a dialect whose owner isn't a member should fail.",
+        );
+      } catch (e) {
+        chai.assert(
+          (e as AnchorError).message.includes(
+            'The dialect owner must be a member with admin privileges.',
+          ),
+        );
+      }
+
+      try {
+        // TODO: write this in a nicer way
+        await createDialect(program, writer, members, true);
+        chai.assert(
+          false,
+          "Creating a dialect whose owner isn't a member should fail.",
+        );
+      } catch (e) {
+        chai.assert(
+          (e as AnchorError).message.includes(
+            'The dialect owner must be a member with admin privileges.',
+          ),
+        );
+      }
     });
 
     it('Fail to create a dialect for unsorted members', async () => {

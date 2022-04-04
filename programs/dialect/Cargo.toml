@@ -2,7 +2,7 @@
 name = "dialect"
 version = "0.1.6"
 description = "Created with Anchor"
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -15,6 +15,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.18.2"
-anchor-spl = "0.18.2"
-solana-program = "1.8.0"
+anchor-lang = "0.23.0"
+anchor-spl = "0.23.0"
+solana-program = "1.8.16"

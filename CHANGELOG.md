@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [0.1.12] - 2022-04-02
+
+* Upgrade anchor to 0.23.0.
+* Move index.ts to src/index.ts.
+* Enforce that dialect owner must be a member with admin privileges.
+
 ## [0.1.6] - 2022-02-28
 
 * Update program ids for mainnet.
