@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import { AnchorError, Program } from '@project-serum/anchor';
+import { AnchorError, Idl, Program, Provider } from '@project-serum/anchor';
 import * as web3 from '@solana/web3.js';
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -30,6 +30,7 @@ import {
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
 import { CountDownLatch } from '../src/utils/countdown-latch';
+import { idl, programs, Wallet_ } from '../src/utils';
 import { EncryptionProps } from '../src/api/text-serde';
 
 chai.use(chaiAsPromised);
@@ -38,10 +39,11 @@ anchor.setProvider(anchor.Provider.local());
 describe('Protocol v1 test', () => {
   const program: anchor.Program = anchor.workspace.Dialect;
   const connection = program.provider.connection;
+  console.log('program', program);
 
   describe('Metadata tests', () => {
-    let owner: web3.Keypair;
-    let writer: web3.Keypair;
+    let owner: Program;
+    let writer: Program;
 
     beforeEach(async () => {
       owner = (
@@ -49,19 +51,19 @@ describe('Protocol v1 test', () => {
           requestAirdrop: true,
           createMeta: false,
         })
-      ).user;
+      ).program;
       writer = (
         await createUser({
           requestAirdrop: true,
           createMeta: false,
         })
-      ).user;
+      ).program;
     });
 
     it('Create user metadata object(s)', async () => {
       for (const member of [owner, writer]) {
-        const metadata = await createMetadata(program, member);
-        const gottenMetadata = await getMetadata(program, member.publicKey);
+        const metadata = await createMetadata(member);
+        const gottenMetadata = await getMetadata(member, member.provider.wallet.publicKey);
         expect(metadata).to.be.deep.eq(gottenMetadata);
       }
     });
@@ -1080,25 +1082,41 @@ describe('Protocol v1 test', () => {
       createMeta: true,
     },
   ) {
-    const user = web3.Keypair.generate();
+    const keypair = web3.Keypair.generate();
+    const wallet = Wallet_.embedded(keypair.secretKey);
+    const RPC_URL = process.env.RPC_URL || 'http://localhost:8899';
+    const dialectConnection = new web3.Connection(RPC_URL, 'recent');
+    const dialectProvider = new Provider(
+      dialectConnection,
+      wallet,
+      Provider.defaultOptions(),
+    );
+    // @ts-ignore
+    const NETWORK_NAME = 'localnet';
+    const DIALECT_PROGRAM_ADDRESS = programs[NETWORK_NAME].programAddress;
+    const program = new Program(
+      idl as Idl,
+      new web3.PublicKey(DIALECT_PROGRAM_ADDRESS),
+      dialectProvider,
+    );
     if (requestAirdrop) {
       const airDropRequest = await connection.requestAirdrop(
-        user.publicKey,
+        wallet.publicKey,
         10 * web3.LAMPORTS_PER_SOL,
       );
       await connection.confirmTransaction(airDropRequest);
     }
     if (createMeta) {
-      await createMetadata(program, user);
+      await createMetadata(program);
     }
     const encryptionProps = {
-      ed25519PublicKey: user.publicKey.toBytes(),
+      ed25519PublicKey: keypair.publicKey.toBytes(),
       diffieHellmanKeyPair: ed25519KeyPairToCurve25519({
-        publicKey: user.publicKey.toBytes(),
-        secretKey: user.secretKey,
+        publicKey: keypair.publicKey.toBytes(),
+        secretKey: keypair.secretKey,
       }),
     };
-    return { user, encryptionProps };
+    return { program, encryptionProps };
   }
 });
 
