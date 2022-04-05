@@ -1,12 +1,23 @@
 import { expect } from 'chai';
 import {
+  Curve25519KeyPair,
   ecdhDecrypt,
   ecdhEncrypt,
   ENCRYPTION_OVERHEAD_BYTES,
-  generateEd25519KeyPair,
 } from './ecdh-encryption';
 import { randomBytes } from 'tweetnacl';
 import { NONCE_SIZE_BYTES } from './nonce-generator';
+import { Keypair } from '@solana/web3.js';
+import ed2curve from 'ed2curve';
+
+function generateCurve25519Keypair() {
+  const { publicKey, secretKey } = new Keypair();
+  const keyPair: Curve25519KeyPair = ed2curve.convertKeyPair({
+    publicKey: publicKey.toBytes(),
+    secretKey,
+  })!;
+  return keyPair;
+}
 
 describe('ECDH encryptor/decryptor test', async () => {
   /*
@@ -25,10 +36,13 @@ describe('ECDH encryptor/decryptor test', async () => {
     const sizesComparison = messageSizes.map((size) => {
       const unencrypted = randomBytes(size);
       const nonce = randomBytes(NONCE_SIZE_BYTES);
+      const keyPair1 = generateCurve25519Keypair();
+      const keyPair2 = generateCurve25519Keypair();
+
       const encrypted = ecdhEncrypt(
         unencrypted,
-        generateEd25519KeyPair(),
-        generateEd25519KeyPair().publicKey,
+        keyPair1,
+        keyPair2.publicKey,
         nonce,
       );
       return {
@@ -47,8 +61,8 @@ describe('ECDH encryptor/decryptor test', async () => {
     // given
     const unencrypted = randomBytes(10);
     const nonce = randomBytes(NONCE_SIZE_BYTES);
-    const party1KeyPair = generateEd25519KeyPair();
-    const party2KeyPair = generateEd25519KeyPair();
+    const party1KeyPair = generateCurve25519Keypair();
+    const party2KeyPair = generateCurve25519Keypair();
     const encrypted = ecdhEncrypt(
       unencrypted,
       party1KeyPair,
@@ -71,8 +85,8 @@ describe('ECDH encryptor/decryptor test', async () => {
     // given
     const unencrypted = randomBytes(10);
     const nonce = randomBytes(NONCE_SIZE_BYTES);
-    const party1KeyPair = generateEd25519KeyPair();
-    const party2KeyPair = generateEd25519KeyPair();
+    const party1KeyPair = generateCurve25519Keypair();
+    const party2KeyPair = generateCurve25519Keypair();
     const encrypted = ecdhEncrypt(
       unencrypted,
       party1KeyPair,
