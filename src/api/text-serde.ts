@@ -3,8 +3,14 @@ import {
   generateRandomNonceWithPrefix,
   NONCE_SIZE_BYTES,
 } from '../utils/nonce-generator';
-import { ecdhDecrypt, ecdhEncrypt } from '../utils/ecdh-encryption';
+import {
+  Curve25519KeyPair,
+  ecdhDecrypt,
+  ecdhEncrypt,
+  Ed25519Key,
+} from '../utils/ecdh-encryption';
 import * as anchor from '@project-serum/anchor';
+import { PublicKey } from '@solana/web3.js';
 
 export interface TextSerde {
   serialize(text: string): Uint8Array;
@@ -17,37 +23,35 @@ export class EncryptedTextSerde implements TextSerde {
     new UnencryptedTextSerde();
 
   constructor(
-    private readonly user: anchor.web3.Keypair,
+    private readonly encryptionProps: EncryptionProps,
     private readonly members: Member[],
   ) {}
 
   deserialize(bytes: Uint8Array): string {
     const encryptionNonce = bytes.slice(0, NONCE_SIZE_BYTES);
     const encryptedText = bytes.slice(NONCE_SIZE_BYTES, bytes.length);
-    const otherMember = this.findOtherMember(this.user.publicKey);
+    const otherMember = this.findOtherMember(
+      new PublicKey(this.encryptionProps.publicKey),
+    );
     const encodedText = ecdhDecrypt(
       encryptedText,
-      {
-        secretKey: this.user.secretKey,
-        publicKey: this.user.publicKey.toBytes(),
-      },
-      otherMember.publicKey.toBuffer(),
+      this.encryptionProps.keypair,
+      otherMember.publicKey.toBytes(),
       encryptionNonce,
     );
     return this.unencryptedTextSerde.deserialize(encodedText);
   }
 
   serialize(text: string): Uint8Array {
-    const senderMemberIdx = this.findMemberIdx(this.user.publicKey);
+    const publicKey = new PublicKey(this.encryptionProps.publicKey);
+    const senderMemberIdx = this.findMemberIdx(publicKey);
     const textBytes = this.unencryptedTextSerde.serialize(text);
-    const otherMember = this.findOtherMember(this.user.publicKey);
+    const otherMember = this.findOtherMember(publicKey);
     const encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
     const encryptedText = ecdhEncrypt(
       textBytes,
-      {
-        secretKey: this.user.secretKey,
-        publicKey: this.user.publicKey.toBytes(),
-      },
+      this.encryptionProps.keypair,
+
       otherMember.publicKey.toBytes(),
       encryptionNonce,
     );
@@ -88,17 +92,22 @@ export type DialectAttributes = {
   members: Member[];
 };
 
+export interface EncryptionProps {
+  keypair: Curve25519KeyPair;
+  publicKey: Ed25519Key;
+}
+
 export class TextSerdeFactory {
   static create(
     { encrypted, members }: DialectAttributes,
-    user?: anchor.web3.Keypair,
+    encryptionProps?: EncryptionProps,
   ): TextSerde {
     if (!encrypted) {
       return new UnencryptedTextSerde();
     }
-    if (encrypted && user) {
-      return new EncryptedTextSerde(user, members);
+    if (encrypted && encryptionProps) {
+      return new EncryptedTextSerde(encryptionProps, members);
     }
-    throw new Error('Cannot proceed with encrypted dialect w/o user identity');
+    throw new Error('Cannot proceed without encryptionProps');
   }
 }
