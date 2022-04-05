@@ -7,7 +7,7 @@ import { sleep, waitForFinality, Wallet_ } from '../utils';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
-import { TextSerdeFactory } from './text-serde';
+import { EncryptionProps, TextSerdeFactory } from './text-serde';
 
 // TODO: Switch from types to classes
 
@@ -254,9 +254,9 @@ export async function getDialectProgramAddress(
 
 function parseMessages(
   { messages: rawMessagesBuffer, members, encrypted }: RawDialect,
-  user?: anchor.web3.Keypair,
+  encryptionProps?: EncryptionProps,
 ) {
-  if (encrypted && !user) {
+  if (encrypted && !encryptionProps) {
     return [];
   }
   const messagesBuffer = new CyclicByteBuffer(
@@ -270,7 +270,7 @@ function parseMessages(
       encrypted,
       members,
     },
-    user,
+    encryptionProps,
   );
   const allMessages: Message[] = messagesBuffer.items().map(({ buffer }) => {
     const byteBuffer = new ByteBuffer(buffer.length).append(buffer).flip();
@@ -288,29 +288,29 @@ function parseMessages(
   return allMessages.reverse();
 }
 
-function parseRawDialect(rawDialect: RawDialect, user?: anchor.web3.Keypair) {
+function parseRawDialect(
+  rawDialect: RawDialect,
+  encryptionProps?: EncryptionProps,
+) {
   return {
     encrypted: rawDialect.encrypted,
     members: rawDialect.members,
     nextMessageIdx: rawDialect.messages.writeOffset,
     lastMessageTimestamp: rawDialect.lastMessageTimestamp * 1000,
-    messages: parseMessages(rawDialect, user),
+    messages: parseMessages(rawDialect, encryptionProps),
   };
 }
 
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  user?: anchor.web3.Keypair | Wallet,
+  encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount> {
   const rawDialect = (await program.account.dialectAccount.fetch(
     publicKey,
   )) as RawDialect;
   const account = await program.provider.connection.getAccountInfo(publicKey);
-  const dialect = parseRawDialect(
-    rawDialect,
-    user && 'secretKey' in user ? user : undefined,
-  );
+  const dialect = parseRawDialect(rawDialect, encryptionProps);
   return {
     ...account,
     publicKey: publicKey,
@@ -321,6 +321,7 @@ export async function getDialect(
 export async function getDialects(
   program: anchor.Program,
   user: anchor.web3.Keypair | Wallet,
+  encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount[]> {
   const metadata = await getMetadata(program, user.publicKey);
   const enabledSubscriptions = metadata.subscriptions.filter(
@@ -328,7 +329,7 @@ export async function getDialects(
   );
   return Promise.all(
     enabledSubscriptions.map(async ({ pubkey }) =>
-      getDialect(program, pubkey, user),
+      getDialect(program, pubkey, encryptionProps),
     ),
   ).then((dialects) =>
     dialects.sort(
@@ -341,13 +342,13 @@ export async function getDialects(
 export async function getDialectForMembers(
   program: anchor.Program,
   members: Member[],
-  user?: anchor.web3.Keypair,
+  encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
   );
   const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
-  return await getDialect(program, publicKey, user);
+  return await getDialect(program, publicKey, encryptionProps);
 }
 
 export async function findDialects(
@@ -395,7 +396,8 @@ export async function createDialect(
   program: anchor.Program,
   owner: anchor.web3.Keypair | Wallet,
   members: Member[],
-  encrypted = true,
+  encrypted = false,
+  encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
@@ -425,11 +427,7 @@ export async function createDialect(
     },
   );
   await waitForFinality(program, tx);
-  return await getDialectForMembers(
-    program,
-    members,
-    'secretKey' in owner ? owner : undefined,
-  );
+  return await getDialectForMembers(program, members, encryptionProps);
 }
 
 export async function deleteDialect(
@@ -470,6 +468,7 @@ export async function sendMessage(
   { dialect, publicKey }: DialectAccount,
   sender: anchor.web3.Keypair | Wallet,
   text: string,
+  encryptionProps?: EncryptionProps,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
@@ -480,7 +479,7 @@ export async function sendMessage(
       encrypted: dialect.encrypted,
       members: dialect.members,
     },
-    sender && 'secretKey' in sender ? sender : undefined,
+    encryptionProps,
   );
   const serializedText = textSerde.serialize(text);
   await program.rpc.sendMessage(
@@ -498,7 +497,7 @@ export async function sendMessage(
       signers: sender && 'secretKey' in sender ? [sender] : [],
     },
   );
-  const d = await getDialect(program, publicKey, sender);
+  const d = await getDialect(program, publicKey, encryptionProps);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
 
