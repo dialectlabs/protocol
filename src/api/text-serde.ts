@@ -31,11 +31,11 @@ export class EncryptedTextSerde implements TextSerde {
     const encryptionNonce = bytes.slice(0, NONCE_SIZE_BYTES);
     const encryptedText = bytes.slice(NONCE_SIZE_BYTES, bytes.length);
     const otherMember = this.findOtherMember(
-      new PublicKey(this.encryptionProps.ed25519PublicKey),
+      new PublicKey(this.encryptionProps.publicKey),
     );
     const encodedText = ecdhDecrypt(
       encryptedText,
-      this.encryptionProps.diffieHellmanKeyPair,
+      this.encryptionProps.keypair,
       otherMember.publicKey.toBytes(),
       encryptionNonce,
     );
@@ -43,14 +43,14 @@ export class EncryptedTextSerde implements TextSerde {
   }
 
   serialize(text: string): Uint8Array {
-    const publicKey = new PublicKey(this.encryptionProps.ed25519PublicKey);
+    const publicKey = new PublicKey(this.encryptionProps.publicKey);
     const senderMemberIdx = this.findMemberIdx(publicKey);
     const textBytes = this.unencryptedTextSerde.serialize(text);
     const otherMember = this.findOtherMember(publicKey);
     const encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
     const encryptedText = ecdhEncrypt(
       textBytes,
-      this.encryptionProps.diffieHellmanKeyPair,
+      this.encryptionProps.keypair,
 
       otherMember.publicKey.toBytes(),
       encryptionNonce,
@@ -93,8 +93,8 @@ export type DialectAttributes = {
 };
 
 export interface EncryptionProps {
-  diffieHellmanKeyPair: Curve25519KeyPair;
-  ed25519PublicKey: Ed25519Key;
+  keypair: Curve25519KeyPair;
+  publicKey: Ed25519Key;
 }
 
 export class TextSerdeFactory {
