@@ -54,22 +54,27 @@ export function ed25519PublicKeyToCurve25519(key: Ed25519Key): Curve25519Key {
 export function ecdhEncrypt(
   payload: Uint8Array,
   { secretKey, publicKey }: Curve25519KeyPair,
-  otherPartyPublicKey: Curve25519Key,
+  otherPartyPublicKey: Ed25519Key,
   nonce: Uint8Array,
 ): Uint8Array {
-  return nacl.box(payload, nonce, otherPartyPublicKey, secretKey);
+  return nacl.box(
+    payload,
+    nonce,
+    ed25519PublicKeyToCurve25519(otherPartyPublicKey),
+    secretKey,
+  );
 }
 
 export function ecdhDecrypt(
   payload: Uint8Array,
   { secretKey, publicKey }: Curve25519KeyPair,
-  otherPartyPublicKey: Curve25519Key,
+  otherPartyPublicKey: Ed25519Key,
   nonce: Uint8Array,
 ): Uint8Array {
   const decrypted = nacl.box.open(
     payload,
     nonce,
-    otherPartyPublicKey,
+    ed25519PublicKeyToCurve25519(otherPartyPublicKey),
     secretKey,
   );
   if (!decrypted) {
