@@ -515,6 +515,7 @@ export async function sendMessage(
         text,
         retries);
     }
+    // TODO if we never succeed on sendMessage, should re-throw exception
   }
 
   const d = await getDialect(program, publicKey, sender);
