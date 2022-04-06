@@ -502,7 +502,7 @@ export async function sendMessage(
       },
     );
   } catch (error) {
-    if (retries && retries > 0) {
+    if (typeof(retries) !== 'undefined' && retries > 0) {
       // TODO consider error matching here for specific retry policies.
       //  i.e. if get "30 seconds but not sure" msg, could check solscan for suc/fail
       //       before deciding to retry sendMessage ... this would also eliminate
