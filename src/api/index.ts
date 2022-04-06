@@ -470,6 +470,7 @@ export async function sendMessage(
   { dialect, publicKey }: DialectAccount,
   sender: anchor.web3.Keypair | Wallet,
   text: string,
+  retries?: number,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
@@ -483,21 +484,39 @@ export async function sendMessage(
     sender && 'secretKey' in sender ? sender : undefined,
   );
   const serializedText = textSerde.serialize(text);
-  await program.rpc.sendMessage(
-    new anchor.BN(nonce),
-    Buffer.from(serializedText),
-    {
-      accounts: {
-        dialect: dialectPublicKey,
-        sender: sender ? sender.publicKey : program.provider.wallet.publicKey,
-        member0: dialect.members[0].publicKey,
-        member1: dialect.members[1].publicKey,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
+
+  try {
+    await program.rpc.sendMessage(
+      new anchor.BN(nonce),
+      Buffer.from(serializedText),
+      {
+        accounts: {
+          dialect: dialectPublicKey,
+          sender: sender ? sender.publicKey : program.provider.wallet.publicKey,
+          member0: dialect.members[0].publicKey,
+          member1: dialect.members[1].publicKey,
+          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: sender && 'secretKey' in sender ? [sender] : [],
       },
-      signers: sender && 'secretKey' in sender ? [sender] : [],
-    },
-  );
+    );
+  } catch (error) {
+    if (retries && retries > 0) {
+      // TODO consider error matching here for specific retry policies.
+      //  i.e. if get "30 seconds but not sure" msg, could check solscan for suc/fail
+      //       before deciding to retry sendMessage ... this would also eliminate
+      //       the related issue in the UI
+      retries--;
+      return await sendMessage(
+        program,
+        { dialect, publicKey },
+        sender,
+        text,
+        retries);
+    }
+  }
+
   const d = await getDialect(program, publicKey, sender);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
