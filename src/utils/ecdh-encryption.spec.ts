@@ -1,12 +1,29 @@
 import { expect } from 'chai';
 import {
+  Curve25519KeyPair,
   ecdhDecrypt,
   ecdhEncrypt,
   ENCRYPTION_OVERHEAD_BYTES,
-  generateEd25519KeyPair,
 } from './ecdh-encryption';
 import { randomBytes } from 'tweetnacl';
 import { NONCE_SIZE_BYTES } from './nonce-generator';
+import { Keypair } from '@solana/web3.js';
+import ed2curve from 'ed2curve';
+
+function generateKeypair() {
+  const { publicKey, secretKey } = new Keypair();
+  const curve25519: Curve25519KeyPair = ed2curve.convertKeyPair({
+    publicKey: publicKey.toBytes(),
+    secretKey,
+  })!;
+  return {
+    ed25519: {
+      publicKey: publicKey.toBytes(),
+      secretKey,
+    },
+    curve25519,
+  };
+}
 
 describe('ECDH encryptor/decryptor test', async () => {
   /*
@@ -25,10 +42,13 @@ describe('ECDH encryptor/decryptor test', async () => {
     const sizesComparison = messageSizes.map((size) => {
       const unencrypted = randomBytes(size);
       const nonce = randomBytes(NONCE_SIZE_BYTES);
+      const keyPair1 = generateKeypair();
+      const keyPair2 = generateKeypair();
+
       const encrypted = ecdhEncrypt(
         unencrypted,
-        generateEd25519KeyPair(),
-        generateEd25519KeyPair().publicKey,
+        keyPair1.curve25519,
+        keyPair2.ed25519.publicKey,
         nonce,
       );
       return {
@@ -47,19 +67,19 @@ describe('ECDH encryptor/decryptor test', async () => {
     // given
     const unencrypted = randomBytes(10);
     const nonce = randomBytes(NONCE_SIZE_BYTES);
-    const party1KeyPair = generateEd25519KeyPair();
-    const party2KeyPair = generateEd25519KeyPair();
+    const party1KeyPair = generateKeypair();
+    const party2KeyPair = generateKeypair();
     const encrypted = ecdhEncrypt(
       unencrypted,
-      party1KeyPair,
-      party2KeyPair.publicKey,
+      party1KeyPair.curve25519,
+      party2KeyPair.ed25519.publicKey,
       nonce,
     );
     // when
     const decrypted = ecdhDecrypt(
       encrypted,
-      party1KeyPair,
-      party2KeyPair.publicKey,
+      party1KeyPair.curve25519,
+      party2KeyPair.ed25519.publicKey,
       nonce,
     );
     // then
@@ -71,19 +91,19 @@ describe('ECDH encryptor/decryptor test', async () => {
     // given
     const unencrypted = randomBytes(10);
     const nonce = randomBytes(NONCE_SIZE_BYTES);
-    const party1KeyPair = generateEd25519KeyPair();
-    const party2KeyPair = generateEd25519KeyPair();
+    const party1KeyPair = generateKeypair();
+    const party2KeyPair = generateKeypair();
     const encrypted = ecdhEncrypt(
       unencrypted,
-      party1KeyPair,
-      party2KeyPair.publicKey,
+      party1KeyPair.curve25519,
+      party2KeyPair.ed25519.publicKey,
       nonce,
     );
     // when
     const decrypted = ecdhDecrypt(
       encrypted,
-      party2KeyPair,
-      party1KeyPair.publicKey,
+      party2KeyPair.curve25519,
+      party1KeyPair.ed25519.publicKey,
       nonce,
     );
     // then
