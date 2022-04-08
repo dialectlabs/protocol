@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import { Idl, Program, Provider } from '@project-serum/anchor';
+import { AnchorError, Idl, Program, Provider } from '@project-serum/anchor';
 import * as web3 from '@solana/web3.js';
 import { PublicKey } from '@solana/web3.js';
 import chai, { expect } from 'chai';
@@ -7,16 +7,23 @@ import chaiAsPromised from 'chai-as-promised';
 import {
   createDialect,
   createMetadata,
+  deleteDialect,
   deleteMetadata,
+  getDialectForMembers,
+  getDialectProgramAddress,
+  getDialects,
   getMetadata,
   Member,
+  sendMessage,
   subscribeUser,
 } from '../src/api';
-import { idl, programs, Wallet_ } from '../src/utils';
+import { idl, programs, sleep, Wallet_ } from '../src/utils';
 import { ed25519KeyPairToCurve25519 } from '../src/utils/ecdh-encryption';
 import { Wallet } from '../src/utils/Wallet';
 import { EncryptionProps } from '../src/api/text-serde';
+import process from 'process';
 
+process.env.ANCHOR_WALLET = '/Users/tsmbl/.config/solana/id.json';
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
 
@@ -64,294 +71,276 @@ describe('Protocol v1 test', () => {
     });
   });
 
-  // describe('Dialect initialization tests', () => {
-  //   let owner: Program;
-  //   let writer: Program;
-  //   let nonmember: Program;
-  //
-  //   let members: Member[] = [];
-  //
-  //   beforeEach(async () => {
-  //     owner = (
-  //       await createUser({
-  //         requestAirdrop: true,
-  //         createMeta: true,
-  //       })
-  //     ).program;
-  //     writer = (
-  //       await createUser({
-  //         requestAirdrop: true,
-  //         createMeta: true,
-  //       })
-  //     ).program;
-  //     nonmember = (
-  //       await createUser({
-  //         requestAirdrop: true,
-  //         createMeta: false,
-  //       })
-  //     ).program;
-  //     members = [
-  //       {
-  //         publicKey: owner.provider.wallet.publicKey,
-  //         scopes: [true, false], // owner, read-only
-  //       },
-  //       {
-  //         publicKey: writer.publicKey,
-  //         scopes: [false, true], // non-owner, read-write
-  //       },
-  //     ];
-  //   });
-  //
-  //   it('Confirm only each user (& dialect) can read encrypted device tokens', async () => {
-  //     // TODO: Implement
-  //     chai.expect(true).to.be.true;
-  //   });
-  //
-  //   it("Fail to create a dialect if the owner isn't a member with admin privileges", async () => {
-  //     try {
-  //       await createDialect(program, nonmember, members, true);
-  //       chai.assert(
-  //         false,
-  //         "Creating a dialect whose owner isn't a member should fail.",
-  //       );
-  //     } catch (e) {
-  //       chai.assert(
-  //         (e as AnchorError).message.includes(
-  //           'The dialect owner must be a member with admin privileges.',
-  //         ),
-  //       );
-  //     }
-  //
-  //     try {
-  //       // TODO: write this in a nicer way
-  //       await createDialect(program, writer, members, true);
-  //       chai.assert(
-  //         false,
-  //         "Creating a dialect whose owner isn't a member should fail.",
-  //       );
-  //     } catch (e) {
-  //       chai.assert(
-  //         (e as AnchorError).message.includes(
-  //           'The dialect owner must be a member with admin privileges.',
-  //         ),
-  //       );
-  //     }
-  //   });
-  //
-  //   it('Fail to create a dialect for unsorted members', async () => {
-  //     // use custom unsorted version of createDialect for unsorted members
-  //     const unsortedMembers = members.sort(
-  //       (a, b) => -a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
-  //     );
-  //     const [publicKey, nonce] = await getDialectProgramAddress(
-  //       program,
-  //       unsortedMembers,
-  //     );
-  //     // TODO: assert owner in members
-  //     const keyedMembers = unsortedMembers.reduce(
-  //       (ms, m, idx) => ({ ...ms, [`member${idx}`]: m.publicKey }),
-  //       {},
-  //     );
-  //     chai
-  //       .expect(
-  //         program.rpc.createDialect(
-  //           new anchor.BN(nonce),
-  //           members.map((m) => m.scopes),
-  //           {
-  //             accounts: {
-  //               dialect: publicKey,
-  //               owner: owner.publicKey,
-  //               ...keyedMembers,
-  //               rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-  //               systemProgram: anchor.web3.SystemProgram.programId,
-  //             },
-  //             signers: [owner],
-  //           },
-  //         ),
-  //       )
-  //       .to.eventually.be.rejectedWith(Error);
-  //   });
-  //
-  //   it('Create encrypted dialect for 2 members, with owner and write scopes, respectively', async () => {
-  //     const dialectAccount = await createDialect(program, owner, members, true);
-  //     expect(dialectAccount.dialect.encrypted).to.be.true;
-  //   });
-  //
-  //   it('Create unencrypted dialect for 2 members, with owner and write scopes, respectively', async () => {
-  //     const dialectAccount = await createDialect(
-  //       program,
-  //       owner,
-  //       members,
-  //       false,
-  //     );
-  //     expect(dialectAccount.dialect.encrypted).to.be.false;
-  //   });
-  //
-  //   it('Creates unencrypted dialect by default', async () => {
-  //     const dialectAccount = await createDialect(program, owner, members);
-  //     expect(dialectAccount.dialect.encrypted).to.be.false;
-  //   });
-  //
-  //   it('Fail to create a second dialect for the same members', async () => {
-  //     chai
-  //       .expect(createDialect(program, owner, members))
-  //       .to.eventually.be.rejectedWith(Error);
-  //   });
-  //
-  //   it('Fail to create a dialect for duplicate members', async () => {
-  //     const duplicateMembers = [
-  //       { publicKey: owner.publicKey, scopes: [true, true] } as Member,
-  //       { publicKey: owner.publicKey, scopes: [true, true] } as Member,
-  //     ];
-  //     chai
-  //       .expect(createDialect(program, owner, duplicateMembers))
-  //       .to.be.rejectedWith(Error);
-  //   });
-  //
-  //   it('Find a dialect for a given member pair, verify correct scopes.', async () => {
-  //     await createDialect(program, owner, members);
-  //     const dialect = await getDialectForMembers(program, members);
-  //     members.every((m, i) =>
-  //       expect(
-  //         m.publicKey.equals(dialect.dialect.members[i].publicKey) &&
-  //           m.scopes.every(
-  //             (s, j) => s === dialect.dialect.members[i].scopes[j],
-  //           ),
-  //       ),
-  //     );
-  //   });
-  //
-  //   it('Subscribe users to dialect', async () => {
-  //     const dialect = await createDialect(program, owner, members);
-  //     // owner subscribes themselves
-  //     await subscribeUser(program, dialect, owner.publicKey, owner);
-  //     // owner subscribes writer
-  //     await subscribeUser(program, dialect, writer.publicKey, owner);
-  //     const ownerMeta = await getMetadata(program, owner.publicKey);
-  //     const writerMeta = await getMetadata(program, writer.publicKey);
-  //     chai
-  //       .expect(
-  //         ownerMeta.subscriptions.filter((s) =>
-  //           s.pubkey.equals(dialect.publicKey),
-  //         ).length,
-  //       )
-  //       .to.equal(1);
-  //     chai
-  //       .expect(
-  //         writerMeta.subscriptions.filter((s) =>
-  //           s.pubkey.equals(dialect.publicKey),
-  //         ).length,
-  //       )
-  //       .to.equal(1);
-  //   });
-  //
-  //   it('Should return list of dialects sorted by time desc', async () => {
-  //     // given
-  //     console.log('Creating users');
-  //     const [user1, user2, user3] = await Promise.all([
-  //       createUser({
-  //         requestAirdrop: true,
-  //         createMeta: true,
-  //       }).then((it) => it.user),
-  //       createUser({
-  //         requestAirdrop: true,
-  //         createMeta: true,
-  //       }).then((it) => it.user),
-  //       createUser({
-  //         requestAirdrop: true,
-  //         createMeta: true,
-  //       }).then((it) => it.user),
-  //     ]);
-  //     console.log('Creating dialects');
-  //     // create first dialect and subscribe users
-  //     const dialect1 = await createDialectAndSubscribeAllMembers(
-  //       program,
-  //       user1,
-  //       user2,
-  //       false,
-  //     );
-  //     const dialect2 = await createDialectAndSubscribeAllMembers(
-  //       program,
-  //       user1,
-  //       user3,
-  //       false,
-  //     );
-  //     // when
-  //     const afterCreatingDialects = await getDialects(program, user1);
-  //     await sleep(3000); // wait a bit to avoid equal timestamp, since since we get utc seconds as a timestamp
-  //     await sendMessage(
-  //       program,
-  //       dialect1,
-  //       user1,
-  //       'Dummy message to increment latest message timestamp',
-  //     );
-  //     const afterSendingMessageToDialect1 = await getDialects(program, user1);
-  //     await sleep(3000); // wait a bit to avoid equal timestamp, since since we get utc seconds as a timestamp
-  //     await sendMessage(
-  //       program,
-  //       dialect2,
-  //       user1,
-  //       'Dummy message to increment latest message timestamp',
-  //     );
-  //     const afterSendingMessageToDialect2 = await getDialects(program, user1);
-  //     // then
-  //     // assert dialects before sending messages
-  //     chai
-  //       .expect(afterCreatingDialects.map((it) => it.publicKey))
-  //       .to.be.deep.eq([dialect2.publicKey, dialect1.publicKey]); // dialect 2 was created after dialect 1
-  //     // assert dialects after sending message to first dialect
-  //     chai
-  //       .expect(afterSendingMessageToDialect1.map((it) => it.publicKey))
-  //       .to.be.deep.eq([dialect1.publicKey, dialect2.publicKey]);
-  //     // assert dialects after sending message to second dialect
-  //     chai
-  //       .expect(afterSendingMessageToDialect2.map((it) => it.publicKey))
-  //       .to.be.deep.eq([dialect2.publicKey, dialect1.publicKey]);
-  //   });
-  //
-  //   it('Non-owners fail to delete the dialect', async () => {
-  //     const dialect = await createDialect(program, owner, members);
-  //     chai
-  //       .expect(deleteDialect(program, dialect, writer))
-  //       .to.eventually.be.rejectedWith(Error);
-  //     chai
-  //       .expect(deleteDialect(program, dialect, nonmember))
-  //       .to.eventually.be.rejectedWith(Error);
-  //   });
-  //
-  //   it('Owner deletes the dialect', async () => {
-  //     const dialect = await createDialect(program, owner, members);
-  //     await deleteDialect(program, dialect, owner);
-  //     chai
-  //       .expect(getDialectForMembers(program, members))
-  //       .to.eventually.be.rejectedWith(Error);
-  //   });
-  //
-  //   it('Fail to subscribe a user twice to the same dialect (silent, noop)', async () => {
-  //     const dialect = await createDialect(program, owner, members);
-  //     await subscribeUser(program, dialect, writer.publicKey, owner);
-  //     const metadata = await getMetadata(program, writer.publicKey);
-  //     // subscribed once
-  //     chai
-  //       .expect(
-  //         metadata.subscriptions.filter((s) =>
-  //           s.pubkey.equals(dialect.publicKey),
-  //         ).length,
-  //       )
-  //       .to.equal(1);
-  //     chai
-  //       .expect(subscribeUser(program, dialect, writer.publicKey, owner))
-  //       .to.be.rejectedWith(Error);
-  //     // still subscribed just once
-  //     chai
-  //       .expect(
-  //         metadata.subscriptions.filter((s) =>
-  //           s.pubkey.equals(dialect.publicKey),
-  //         ).length,
-  //       )
-  //       .to.equal(1);
-  //   });
-  // });
+  describe('Dialect initialization tests', () => {
+    let owner: User;
+    let writer: User;
+    let nonmember: User;
+
+    let members: Member[] = [];
+
+    beforeEach(async () => {
+      owner = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      writer = await createUser({
+        requestAirdrop: true,
+        createMeta: true,
+      });
+      nonmember = await createUser({
+        requestAirdrop: true,
+        createMeta: false,
+      });
+      members = [
+        {
+          publicKey: owner.publicKey,
+          scopes: [true, false], // owner, read-only
+        },
+        {
+          publicKey: writer.publicKey,
+          scopes: [false, true], // non-owner, read-write
+        },
+      ];
+    });
+
+    it('Confirm only each user (& dialect) can read encrypted device tokens', async () => {
+      // TODO: Implement
+      chai.expect(true).to.be.true;
+    });
+
+    it("Fail to create a dialect if the owner isn't a member with admin privileges", async () => {
+      try {
+        await createDialect(nonmember.program, members);
+        chai.assert(
+          false,
+          "Creating a dialect whose owner isn't a member should fail.",
+        );
+      } catch (e) {
+        chai.assert(
+          (e as AnchorError).message.includes(
+            'The dialect owner must be a member with admin privileges.',
+          ),
+        );
+      }
+
+      try {
+        // TODO: write this in a nicer way
+        await createDialect(writer.program, members);
+        chai.assert(
+          false,
+          "Creating a dialect whose owner isn't a member should fail.",
+        );
+      } catch (e) {
+        chai.assert(
+          (e as AnchorError).message.includes(
+            'The dialect owner must be a member with admin privileges.',
+          ),
+        );
+      }
+    });
+
+    it('Fail to create a dialect for unsorted members', async () => {
+      // use custom unsorted version of createDialect for unsorted members
+      const unsortedMembers = members.sort(
+        (a, b) => -a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
+      );
+      const [publicKey, nonce] = await getDialectProgramAddress(
+        writer.program,
+        unsortedMembers,
+      );
+      // TODO: assert owner in members
+      const keyedMembers = unsortedMembers.reduce(
+        (ms, m, idx) => ({ ...ms, [`member${idx}`]: m.publicKey }),
+        {},
+      );
+      chai
+        .expect(
+          writer.program.rpc.createDialect(
+            new anchor.BN(nonce),
+            members.map((m) => m.scopes),
+            {
+              accounts: {
+                dialect: publicKey,
+                owner: owner.publicKey,
+                ...keyedMembers,
+                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                systemProgram: anchor.web3.SystemProgram.programId,
+              },
+            },
+          ),
+        )
+        .to.eventually.be.rejectedWith(Error);
+    });
+
+    it('Create encrypted dialect for 2 members, with owner and write scopes, respectively', async () => {
+      const dialectAccount = await createDialect(owner.program, members, true);
+      expect(dialectAccount.dialect.encrypted).to.be.true;
+    });
+
+    it('Create unencrypted dialect for 2 members, with owner and write scopes, respectively', async () => {
+      const dialectAccount = await createDialect(owner.program, members, false);
+      expect(dialectAccount.dialect.encrypted).to.be.false;
+    });
+
+    it('Creates unencrypted dialect by default', async () => {
+      const dialectAccount = await createDialect(owner.program, members);
+      expect(dialectAccount.dialect.encrypted).to.be.false;
+    });
+
+    it('Fail to create a second dialect for the same members', async () => {
+      await createDialect(owner.program, members);
+      chai
+        .expect(createDialect(owner.program, members))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
+    it('Fail to create a dialect for duplicate members', async () => {
+      const duplicateMembers = [
+        { publicKey: owner.publicKey, scopes: [true, true] } as Member,
+        { publicKey: owner.publicKey, scopes: [true, true] } as Member,
+      ];
+      chai
+        .expect(createDialect(owner.program, duplicateMembers))
+        .to.be.rejectedWith(Error);
+    });
+
+    it('Find a dialect for a given member pair, verify correct scopes.', async () => {
+      await createDialect(owner.program, members);
+      const dialect = await getDialectForMembers(owner.program, members);
+      members.every((m, i) =>
+        expect(
+          m.publicKey.equals(dialect.dialect.members[i].publicKey) &&
+            m.scopes.every(
+              (s, j) => s === dialect.dialect.members[i].scopes[j],
+            ),
+        ),
+      );
+    });
+
+    // it('Subscribe users to dialect', async () => {
+    //   const dialect = await createDialect(owner.program, members);
+    //   // owner subscribes themselves
+    //   await subscribeUser(program, dialect, owner.publicKey, owner);
+    //   // owner subscribes writer
+    //   await subscribeUser(program, dialect, writer.publicKey, owner);
+    //   const ownerMeta = await getMetadata(program, owner.publicKey);
+    //   const writerMeta = await getMetadata(program, writer.publicKey);
+    //   chai
+    //     .expect(
+    //       ownerMeta.subscriptions.filter((s) =>
+    //         s.pubkey.equals(dialect.publicKey),
+    //       ).length,
+    //     )
+    //     .to.equal(1);
+    //   chai
+    //     .expect(
+    //       writerMeta.subscriptions.filter((s) =>
+    //         s.pubkey.equals(dialect.publicKey),
+    //       ).length,
+    //     )
+    //     .to.equal(1);
+    // });
+
+    it('Should return list of dialects sorted by time desc', async () => {
+      // given
+      console.log('Creating users');
+      const [user1, user2, user3] = await Promise.all([
+        createUser(),
+        createUser(),
+        createUser(),
+      ]);
+      // create first dialect and subscribe users
+      const dialect1 = await createDialectAndSubscribeAllMembers(
+        user1,
+        user2.publicKey,
+      );
+      const dialect2 = await createDialectAndSubscribeAllMembers(
+        user1,
+        user3.publicKey,
+      );
+      // when
+      const afterCreatingDialects = await getDialects(
+        user1.program,
+        user1.publicKey,
+      );
+      await sleep(3000); // wait a bit to avoid equal timestamp, since since we get utc seconds as a timestamp
+      await sendMessage(
+        user1.program,
+        dialect1,
+        'Dummy message to increment latest message timestamp',
+      );
+      const afterSendingMessageToDialect1 = await getDialects(
+        user1.program,
+        user1.publicKey,
+      );
+      await sleep(3000); // wait a bit to avoid equal timestamp, since since we get utc seconds as a timestamp
+      await sendMessage(
+        user1.program,
+        dialect2,
+        'Dummy message to increment latest message timestamp',
+      );
+      const afterSendingMessageToDialect2 = await getDialects(
+        user1.program,
+        user1.publicKey,
+      );
+      // then
+      // assert dialects before sending messages
+      chai
+        .expect(afterCreatingDialects.map((it) => it.publicKey))
+        .to.be.deep.eq([dialect2.publicKey, dialect1.publicKey]); // dialect 2 was created after dialect 1
+      // assert dialects after sending message to first dialect
+      chai
+        .expect(afterSendingMessageToDialect1.map((it) => it.publicKey))
+        .to.be.deep.eq([dialect1.publicKey, dialect2.publicKey]);
+      // assert dialects after sending message to second dialect
+      chai
+        .expect(afterSendingMessageToDialect2.map((it) => it.publicKey))
+        .to.be.deep.eq([dialect2.publicKey, dialect1.publicKey]);
+    });
+
+    it('Non-owners fail to delete the dialect', async () => {
+      const dialect = await createDialect(owner.program, members);
+      chai
+        .expect(deleteDialect(writer.program, dialect))
+        .to.eventually.be.rejectedWith(Error);
+      chai
+        .expect(deleteDialect(nonmember.program, dialect))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
+    it('Owner deletes the dialect', async () => {
+      const dialect = await createDialect(owner.program, members);
+      await deleteDialect(owner.program, dialect);
+      chai
+        .expect(getDialectForMembers(owner.program, members))
+        .to.eventually.be.rejectedWith(Error);
+    });
+
+    it('Fail to subscribe a user twice to the same dialect (silent, noop)', async () => {
+      const dialect = await createDialect(owner.program, members);
+      await subscribeUser(owner.program, dialect, writer.publicKey);
+      const metadata = await getMetadata(program, writer.publicKey);
+      // subscribed once
+      chai
+        .expect(
+          metadata.subscriptions.filter((s) =>
+            s.pubkey.equals(dialect.publicKey),
+          ).length,
+        )
+        .to.equal(1);
+      chai
+        .expect(subscribeUser(owner.program, dialect, writer.publicKey))
+        .to.be.rejectedWith(Error);
+      // still subscribed just once
+      chai
+        .expect(
+          metadata.subscriptions.filter((s) =>
+            s.pubkey.equals(dialect.publicKey),
+          ).length,
+        )
+        .to.equal(1);
+    });
+  });
 
   // describe('Find dialects', () => {
   //   it('Can find all dialects filtering by user public key', async () => {
@@ -1060,13 +1049,6 @@ describe('Protocol v1 test', () => {
   //   });
   // });
 
-  interface User {
-    program: Program;
-    wallet: Wallet;
-    publicKey: PublicKey;
-    encryptionProps: EncryptionProps;
-  }
-
   async function createUser(
     { requestAirdrop, createMeta }: CreateUserOptions = {
       requestAirdrop: true,
@@ -1096,7 +1078,7 @@ describe('Protocol v1 test', () => {
         publicKey,
         10 * web3.LAMPORTS_PER_SOL,
       );
-      await connection.confirmTransaction(airDropRequest);
+      await connection.confirmTransaction(airDropRequest); // TODO:  replace conneciton
     }
     if (createMeta) {
       await createMetadata(program);
@@ -1127,11 +1109,17 @@ function generateRandomText(length: number) {
   return result;
 }
 
+interface User {
+  program: Program;
+  wallet: Wallet;
+  publicKey: PublicKey;
+  encryptionProps: EncryptionProps;
+}
+
 async function createDialectAndSubscribeAllMembers(
-  program: Program,
-  owner: anchor.web3.Keypair,
-  member: anchor.web3.Keypair,
-  encrypted: boolean,
+  owner: User,
+  otherMember: PublicKey,
+  encrypted: boolean = false,
 ) {
   const members: Member[] = [
     {
@@ -1139,12 +1127,13 @@ async function createDialectAndSubscribeAllMembers(
       scopes: [true, true], // owner, read-only
     },
     {
-      publicKey: member.publicKey,
+      publicKey: otherMember,
       scopes: [false, true], // non-owner, read-write
     },
   ];
-  const dialect = await createDialect(program, owner, members, encrypted);
-  await subscribeUser(program, dialect, owner.publicKey, owner);
-  await subscribeUser(program, dialect, member.publicKey, member);
+  const ownerProgram = owner.program;
+  const dialect = await createDialect(ownerProgram, members, encrypted);
+  await subscribeUser(ownerProgram, dialect, owner.publicKey);
+  await subscribeUser(ownerProgram, dialect, otherMember);
   return dialect;
 }

@@ -181,9 +181,7 @@ export async function createMetadata(
   return await getMetadata(program, publicKey);
 }
 
-export async function deleteMetadata(
-  program: anchor.Program,
-): Promise<void> {
+export async function deleteMetadata(program: anchor.Program): Promise<void> {
   const wallet = program.provider.wallet;
   const publicKey = wallet.publicKey;
   const [metadataAddress, metadataNonce] = await getMetadataProgramAddress(
@@ -320,10 +318,10 @@ export async function getDialect(
 
 export async function getDialects(
   program: anchor.Program,
-  user: Wallet,
+  user: PublicKey | Wallet, // TODO: why we need wallet here?
   encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount[]> {
-  const metadata = await getMetadata(program, user.publicKey);
+  const metadata = await getMetadata(program, user);
   const enabledSubscriptions = metadata.subscriptions.filter(
     (it) => it.enabled,
   );
@@ -467,7 +465,6 @@ export async function sendMessage(
   text: string,
   encryptionProps?: EncryptionProps,
 ): Promise<Message> {
-  const wallet = program.provider.wallet;
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
     dialect.members,
@@ -480,6 +477,7 @@ export async function sendMessage(
     encryptionProps,
   );
   const serializedText = textSerde.serialize(text);
+  const wallet = program.provider.wallet;
   await program.rpc.sendMessage(
     new anchor.BN(nonce),
     Buffer.from(serializedText),
