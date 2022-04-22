@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [UNRELEASED]
+
+* Remove wildcard exports
+
 ## [0.1.12] - 2022-04-02
 
 * Upgrade anchor to 0.23.0.
