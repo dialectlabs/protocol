@@ -5,7 +5,7 @@
 Dialect is a smart messaging protocol for dapp notifications and wallet-to-wallet messaging on the Solana Blockchain.
 
 Dialect works by decorating on-chain resources, or sets of resources, with publish-subscribe (pub-sub) messaging capabilities. This is accomplished by creating a PDA whose seeds are the (lexically sorted) resources' public keys. Each pub-sub messaging PDA is called a _dialect_.
-
+    
 Dialect `v0` currently supports one-to-one messaging between wallets, which powers both dapp notifications as well as user-to-user chat. Future versions of Dialect will also support one-to-many and many-to-many messaging.
 
 This repository contains both the Dialect rust programs (protocol), in Anchor, as well as a typescript client, published to npm as `@dialectlabs/web3`.
