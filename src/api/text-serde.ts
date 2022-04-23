@@ -1,10 +1,10 @@
-import { Member } from './index';
+import type { Member } from './index';
 import {
   generateRandomNonceWithPrefix,
   NONCE_SIZE_BYTES,
 } from '../utils/nonce-generator';
 import { ecdhDecrypt, ecdhEncrypt } from '../utils/ecdh-encryption';
-import * as anchor from '@project-serum/anchor';
+import type * as anchor from '@project-serum/anchor';
 
 export interface TextSerde {
   serialize(text: string): Uint8Array;

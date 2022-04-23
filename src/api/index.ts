@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
-import { Wallet } from '@project-serum/anchor/src/provider';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import type { Wallet } from '@project-serum/anchor';
+import type { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { sleep, waitForFinality, Wallet_ } from '../utils';
 import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
