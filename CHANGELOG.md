@@ -2,7 +2,9 @@
 
 ## [UNRELEASED]
 
-* Remove wildcard exports
+* Add esm build
+* Update packages with vulnerabilities
+* Imports cleanup
 
 ## [0.1.12] - 2022-04-02
 
