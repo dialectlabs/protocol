@@ -1,23 +1,38 @@
 {
+  "exclude": [
+    "node_modules",
+    "lib",
+  ],
   "compilerOptions": {
-    "target": "es2019",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "esModuleInterop": true,
+    // target
+    "target": "ES2019",
     "module": "commonjs",
     "moduleResolution": "node",
+    // build
+    "types": [],
+    "esModuleInterop": true,
+    "preserveConstEnums": true,
+    "skipLibCheck": true,
+    "importHelpers": true,
+    "noEmit": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "outDir": "lib/es",
-    "noEmit": false,
-    "declaration": true
+    // linting
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "noErrorTruncation": true,
+    "importsNotUsedAsValues": "error",
+    // sources
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true
   },
   "rootDir": "./src",
-  "include": ["next-env.d.ts", "src/**/*.ts"],
-  "exclude": ["node_modules"],
-  "type": "module"
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

@@ -1,4 +1,4 @@
-import { Member } from './index';
+import type { Member } from './index';
 import {
   generateRandomNonceWithPrefix,
   NONCE_SIZE_BYTES,
@@ -9,7 +9,7 @@ import {
   ecdhEncrypt,
   Ed25519Key,
 } from '../utils/ecdh-encryption';
-import * as anchor from '@project-serum/anchor';
+import type * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
 
 export interface TextSerde {

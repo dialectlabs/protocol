@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [UNRELEASED]
+
+* Add esm build
+* Update packages with vulnerabilities
+* Imports cleanup
+
 ## [0.2.0] - 2022-04-08
 
 * Support dialect messages encryption using Curve25519 key pair.

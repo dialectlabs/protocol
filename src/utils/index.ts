@@ -1,4 +1,4 @@
-import * as anchor from '@project-serum/anchor';
+import type * as anchor from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
 
 import { EmbeddedWallet } from './Wallet';

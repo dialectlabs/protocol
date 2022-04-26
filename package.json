@@ -2,16 +2,25 @@
   "name": "@dialectlabs/web3",
   "description": "A smart messaging protocol for dapp notifications and wallet-to-wallet messaging on the Solana Blockchain.",
   "version": "0.2.0",
-  "module": "./lib/es/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/dialectlabs/protocol"
   },
-  "main": "./lib/es/index.js",
-  "types": "./lib/es/index.d.ts",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/types/index.d.ts",
+  "exports": {
+    "import": "./lib/esm/index.js",
+    "require": "./lib/cjs/index.js"
+  },
   "scripts": {
     "publish": "npm run build && npm publish && rm -rf lib",
-    "build": "rm -rf lib && tsc",
+    "build": "npm run clean && npm run build:cjs || npm run build:esm",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build:cjs:watch": "tsc --watch --project tsconfig.cjs.json",
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "build:esm:watch": "tsc --project tsconfig.esm.json --watch",
+    "clean": "rm -rf lib",
     "lint": "eslint --ext .js --ext .ts {examples,src,tests}/**/*.ts && prettier --check {examples,src,tests}/**/*.ts",
     "lint:fix": "eslint --ext .js --ext .ts {examples,src,tests}/**/*.ts --fix && prettier --write {examples,src,tests}/**/*.ts",
     "pretty": "prettier --write {examples,src,tests}/**/*.ts",
@@ -43,7 +52,7 @@
     "eslint": "7.32.0",
     "mocha": "^9.1.1",
     "prettier": "2.5.1",
-    "ts-mocha": "^9.0.0",
+    "ts-mocha": "^9.0.2",
     "ts-node": "^10.2.0",
     "typescript": "^4.3.5"
   },
