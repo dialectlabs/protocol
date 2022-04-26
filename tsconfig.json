@@ -2,13 +2,11 @@
   "exclude": [
     "node_modules",
     "lib",
-    "packages/*/*/node_modules",
-    "packages/*/*/lib"
   ],
   "compilerOptions": {
     // target
     "target": "ES2019",
-    "module": "ESNext",
+    "module": "commonjs",
     "moduleResolution": "node",
     // build
     "types": [],
@@ -36,5 +34,5 @@
     "inlineSources": true
   },
   "rootDir": "./src",
-  "include": ["next-env.d.ts", "src/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }
