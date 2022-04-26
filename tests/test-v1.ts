@@ -23,10 +23,14 @@ import {
 } from '../src/api';
 import { sleep } from '../src/utils';
 import { ITEM_METADATA_OVERHEAD } from '../src/utils/cyclic-bytebuffer';
-import { ENCRYPTION_OVERHEAD_BYTES } from '../src/utils/ecdh-encryption';
+import {
+  ed25519KeyPairToCurve25519,
+  ENCRYPTION_OVERHEAD_BYTES,
+} from '../src/utils/ecdh-encryption';
 import { NONCE_SIZE_BYTES } from '../src/utils/nonce-generator';
 import { randomInt } from 'crypto';
 import { CountDownLatch } from '../src/utils/countdown-latch';
+import { EncryptionProps } from '../src/api/text-serde';
 
 chai.use(chaiAsPromised);
 anchor.setProvider(anchor.Provider.local());
@@ -40,14 +44,18 @@ describe('Protocol v1 test', () => {
     let writer: web3.Keypair;
 
     beforeEach(async () => {
-      owner = await createUser({
-        requestAirdrop: true,
-        createMeta: false,
-      });
-      writer = await createUser({
-        requestAirdrop: true,
-        createMeta: false,
-      });
+      owner = (
+        await createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        })
+      ).user;
+      writer = (
+        await createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        })
+      ).user;
     });
 
     it('Create user metadata object(s)', async () => {
@@ -78,18 +86,24 @@ describe('Protocol v1 test', () => {
     let members: Member[] = [];
 
     beforeEach(async () => {
-      owner = await createUser({
-        requestAirdrop: true,
-        createMeta: true,
-      });
-      writer = await createUser({
-        requestAirdrop: true,
-        createMeta: true,
-      });
-      nonmember = await createUser({
-        requestAirdrop: true,
-        createMeta: false,
-      });
+      owner = (
+        await createUser({
+          requestAirdrop: true,
+          createMeta: true,
+        })
+      ).user;
+      writer = (
+        await createUser({
+          requestAirdrop: true,
+          createMeta: true,
+        })
+      ).user;
+      nonmember = (
+        await createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        })
+      ).user;
       members = [
         {
           publicKey: owner.publicKey,
@@ -187,9 +201,9 @@ describe('Protocol v1 test', () => {
       expect(dialectAccount.dialect.encrypted).to.be.false;
     });
 
-    it('Creates encrypted dialect by default', async () => {
+    it('Creates unencrypted dialect by default', async () => {
       const dialectAccount = await createDialect(program, owner, members);
-      expect(dialectAccount.dialect.encrypted).to.be.true;
+      expect(dialectAccount.dialect.encrypted).to.be.false;
     });
 
     it('Fail to create a second dialect for the same members', async () => {
@@ -210,7 +224,7 @@ describe('Protocol v1 test', () => {
 
     it('Find a dialect for a given member pair, verify correct scopes.', async () => {
       await createDialect(program, owner, members);
-      const dialect = await getDialectForMembers(program, members, writer);
+      const dialect = await getDialectForMembers(program, members);
       members.every((m, i) =>
         expect(
           m.publicKey.equals(dialect.dialect.members[i].publicKey) &&
@@ -252,15 +266,15 @@ describe('Protocol v1 test', () => {
         createUser({
           requestAirdrop: true,
           createMeta: true,
-        }),
+        }).then((it) => it.user),
         createUser({
           requestAirdrop: true,
           createMeta: true,
-        }),
+        }).then((it) => it.user),
         createUser({
           requestAirdrop: true,
           createMeta: true,
-        }),
+        }).then((it) => it.user),
       ]);
       console.log('Creating dialects');
       // create first dialect and subscribe users
@@ -360,15 +374,15 @@ describe('Protocol v1 test', () => {
         createUser({
           requestAirdrop: true,
           createMeta: false,
-        }),
+        }).then((it) => it.user),
         createUser({
           requestAirdrop: true,
           createMeta: false,
-        }),
+        }).then((it) => it.user),
         createUser({
           requestAirdrop: true,
           createMeta: false,
-        }),
+        }).then((it) => it.user),
       ]);
       const [user1User2Dialect, user1User3Dialect, user2User3Dialect] =
         await Promise.all([
@@ -454,34 +468,34 @@ describe('Protocol v1 test', () => {
     let dialect: DialectAccount;
 
     beforeEach(async () => {
-      owner = await createUser({
+      (owner = await createUser({
         requestAirdrop: true,
         createMeta: true,
-      });
-      writer = await createUser({
-        requestAirdrop: true,
-        createMeta: true,
-      });
-      nonmember = await createUser({
-        requestAirdrop: true,
-        createMeta: false,
-      });
-      members = [
-        {
-          publicKey: owner.publicKey,
-          scopes: [true, false], // owner, read-only
-        },
-        {
-          publicKey: writer.publicKey,
-          scopes: [false, true], // non-owner, read-write
-        },
-      ];
+      }).then((it) => it.user)),
+        (writer = await createUser({
+          requestAirdrop: true,
+          createMeta: true,
+        }).then((it) => it.user)),
+        (nonmember = await createUser({
+          requestAirdrop: true,
+          createMeta: false,
+        }).then((it) => it.user)),
+        (members = [
+          {
+            publicKey: owner.publicKey,
+            scopes: [true, false], // owner, read-only
+          },
+          {
+            publicKey: writer.publicKey,
+            scopes: [false, true], // non-owner, read-write
+          },
+        ]);
       dialect = await createDialect(program, owner, members, false);
     });
 
     it('Message sender and receiver can read the message text and time', async () => {
       // given
-      const dialect = await getDialectForMembers(program, members, writer);
+      const dialect = await getDialectForMembers(program, members);
       const text = generateRandomText(256);
       // when
       await sendMessage(program, dialect, writer, text);
@@ -489,7 +503,6 @@ describe('Protocol v1 test', () => {
       const senderDialect = await getDialectForMembers(
         program,
         dialect.dialect.members,
-        writer,
       );
       const message = senderDialect.dialect.messages[0];
       chai.expect(message.text).to.be.eq(text);
@@ -498,36 +511,9 @@ describe('Protocol v1 test', () => {
         .to.be.eq(message.timestamp);
     });
 
-    it('Non-member can read any of the messages', async () => {
-      // given
-      const senderDialect = await getDialectForMembers(
-        program,
-        members,
-        writer,
-      );
-      const text = generateRandomText(256);
-      await sendMessage(program, senderDialect, writer, text);
-      // when / then
-      const nonMemberDialect = await getDialectForMembers(
-        program,
-        dialect.dialect.members,
-        nonmember,
-      );
-      const message = nonMemberDialect.dialect.messages[0];
-      chai.expect(message.text).to.be.eq(text);
-      chai.expect(message.owner).to.be.deep.eq(writer.publicKey);
-      chai
-        .expect(nonMemberDialect.dialect.lastMessageTimestamp)
-        .to.be.eq(message.timestamp);
-    });
-
     it('Anonymous user can read any of the messages', async () => {
       // given
-      const senderDialect = await getDialectForMembers(
-        program,
-        members,
-        writer,
-      );
+      const senderDialect = await getDialectForMembers(program, members);
       const text = generateRandomText(256);
       await sendMessage(program, senderDialect, writer, text);
       // when / then
@@ -563,7 +549,7 @@ describe('Protocol v1 test', () => {
         // verify last last N messages look correct
         const messageCounter = messageIdx + 1;
         const text = texts[messageIdx];
-        const dialect = await getDialectForMembers(program, members, writer);
+        const dialect = await getDialectForMembers(program, members);
         console.log(
           `Sending message ${messageCounter}/${texts.length}
     len = ${text.length}
@@ -580,7 +566,7 @@ describe('Protocol v1 test', () => {
         );
         const sliceEnd = sliceStart + expectedMessagesCount;
         const expectedMessages = texts.slice(sliceStart, sliceEnd).reverse();
-        const d = await getDialect(program, dialect.publicKey, writer);
+        const d = await getDialect(program, dialect.publicKey);
         const actualMessages = d.dialect.messages.map((m) => m.text);
         console.log(`  msgs count after send: ${actualMessages.length}\n`);
         expect(actualMessages).to.be.deep.eq(expectedMessages);
@@ -595,7 +581,7 @@ describe('Protocol v1 test', () => {
       for (let messageIdx = 0; messageIdx < texts.length; messageIdx++) {
         const text = texts[messageIdx];
         const messageCounter = messageIdx + 1;
-        const dialect = await getDialectForMembers(program, members, writer);
+        const dialect = await getDialectForMembers(program, members);
         console.log(
           `Sending message ${messageCounter}/${texts.length}
   len = ${text.length}
@@ -603,7 +589,7 @@ describe('Protocol v1 test', () => {
         );
         // when
         await sendMessage(program, dialect, writer, text);
-        const d = await getDialect(program, dialect.publicKey, writer);
+        const d = await getDialect(program, dialect.publicKey);
         const actualMessages = d.dialect.messages;
         const lastMessage = actualMessages[0];
         console.log(`  msgs count after send: ${actualMessages.length}\n`);
@@ -615,24 +601,33 @@ describe('Protocol v1 test', () => {
 
   describe('Encrypted messaging tests', () => {
     let owner: web3.Keypair;
+    let ownerEncryptionProps: EncryptionProps;
     let writer: web3.Keypair;
+    let writerEncryptionProps: EncryptionProps;
     let nonmember: web3.Keypair;
+    let nonmemberEncryptionProps: EncryptionProps;
     let members: Member[] = [];
     let dialect: DialectAccount;
 
     beforeEach(async () => {
-      owner = await createUser({
+      const ownerUser = await createUser({
         requestAirdrop: true,
         createMeta: true,
       });
-      writer = await createUser({
+      owner = ownerUser.user;
+      ownerEncryptionProps = ownerUser.encryptionProps;
+      const writerUser = await createUser({
         requestAirdrop: true,
         createMeta: true,
       });
-      nonmember = await createUser({
+      writer = writerUser.user;
+      writerEncryptionProps = writerUser.encryptionProps;
+      const nonmemberUser = await createUser({
         requestAirdrop: true,
         createMeta: false,
       });
+      nonmember = nonmemberUser.user;
+      nonmemberEncryptionProps = nonmemberUser.encryptionProps;
       members = [
         {
           publicKey: owner.publicKey,
@@ -648,15 +643,19 @@ describe('Protocol v1 test', () => {
 
     it('Message sender can send msg and then read the message text and time', async () => {
       // given
-      const dialect = await getDialectForMembers(program, members, writer);
+      const dialect = await getDialectForMembers(
+        program,
+        members,
+        writerEncryptionProps,
+      );
       const text = generateRandomText(256);
       // when
-      await sendMessage(program, dialect, writer, text);
+      await sendMessage(program, dialect, writer, text, writerEncryptionProps);
       // then
       const senderDialect = await getDialectForMembers(
         program,
         dialect.dialect.members,
-        writer,
+        writerEncryptionProps,
       );
       const message = senderDialect.dialect.messages[0];
       chai.expect(message.text).to.be.eq(text);
@@ -671,16 +670,22 @@ describe('Protocol v1 test', () => {
       const senderDialect = await getDialectForMembers(
         program,
         members,
-        writer,
+        writerEncryptionProps,
       );
       const text = generateRandomText(256);
       // when
-      await sendMessage(program, senderDialect, writer, text);
+      await sendMessage(
+        program,
+        senderDialect,
+        writer,
+        text,
+        writerEncryptionProps,
+      );
       // then
       const receiverDialect = await getDialectForMembers(
         program,
         dialect.dialect.members,
-        owner,
+        ownerEncryptionProps,
       );
       const message = receiverDialect.dialect.messages[0];
       chai.expect(message.text).to.be.eq(text);
@@ -695,13 +700,24 @@ describe('Protocol v1 test', () => {
       const senderDialect = await getDialectForMembers(
         program,
         members,
-        writer,
+        writerEncryptionProps,
       );
       const text = generateRandomText(256);
-      await sendMessage(program, senderDialect, writer, text);
+      await sendMessage(
+        program,
+        senderDialect,
+        writer,
+        text,
+        writerEncryptionProps,
+      );
       // when / then
-      expect(getDialectForMembers(program, dialect.dialect.members, nonmember))
-        .to.eventually.be.rejected;
+      expect(
+        getDialectForMembers(
+          program,
+          dialect.dialect.members,
+          nonmemberEncryptionProps,
+        ),
+      ).to.eventually.be.rejected;
     });
 
     it('New messages overwrite old, retrieved messages are in order.', async () => {
@@ -728,13 +744,23 @@ describe('Protocol v1 test', () => {
         // verify last last N messages look correct
         const messageCounter = messageIdx + 1;
         const text = texts[messageIdx];
-        const dialect = await getDialectForMembers(program, members, writer);
+        const dialect = await getDialectForMembers(
+          program,
+          members,
+          writerEncryptionProps,
+        );
         console.log(
           `Sending message ${messageCounter}/${texts.length}
     len = ${text.length}
     idx: ${dialect.dialect.nextMessageIdx}`,
         );
-        await sendMessage(program, dialect, writer, text);
+        await sendMessage(
+          program,
+          dialect,
+          writer,
+          text,
+          writerEncryptionProps,
+        );
         const sliceStart =
           messageCounter <= messagesPerDialect
             ? 0
@@ -745,7 +771,11 @@ describe('Protocol v1 test', () => {
         );
         const sliceEnd = sliceStart + expectedMessagesCount;
         const expectedMessages = texts.slice(sliceStart, sliceEnd).reverse();
-        const d = await getDialect(program, dialect.publicKey, writer);
+        const d = await getDialect(
+          program,
+          dialect.publicKey,
+          writerEncryptionProps,
+        );
         const actualMessages = d.dialect.messages.map((m) => m.text);
         console.log(`  msgs count after send: ${actualMessages.length}\n`);
         expect(actualMessages).to.be.deep.eq(expectedMessages);
@@ -759,15 +789,29 @@ describe('Protocol v1 test', () => {
       for (let messageIdx = 0; messageIdx < texts.length; messageIdx++) {
         const text = texts[messageIdx];
         const messageCounter = messageIdx + 1;
-        const dialect = await getDialectForMembers(program, members, writer);
+        const dialect = await getDialectForMembers(
+          program,
+          members,
+          writerEncryptionProps,
+        );
         console.log(
           `Sending message ${messageCounter}/${texts.length}
     len = ${text.length}
     idx: ${dialect.dialect.nextMessageIdx}`,
         );
         // when
-        await sendMessage(program, dialect, writer, text);
-        const d = await getDialect(program, dialect.publicKey, writer);
+        await sendMessage(
+          program,
+          dialect,
+          writer,
+          text,
+          writerEncryptionProps,
+        );
+        const d = await getDialect(
+          program,
+          dialect.publicKey,
+          writerEncryptionProps,
+        );
         const actualMessages = d.dialect.messages;
         const lastMessage = actualMessages[0];
         console.log(`  msgs count after send: ${actualMessages.length}\n`);
@@ -798,15 +842,29 @@ describe('Protocol v1 test', () => {
       for (let messageIdx = 0; messageIdx < texts.length; messageIdx++) {
         const text = texts[messageIdx];
         const messageCounter = messageIdx + 1;
-        const dialect = await getDialectForMembers(program, members, writer);
+        const dialect = await getDialectForMembers(
+          program,
+          members,
+          writerEncryptionProps,
+        );
         console.log(
           `Sending message ${messageCounter}/${texts.length}
   len = ${text.length}
   idx: ${dialect.dialect.nextMessageIdx}`,
         );
         // when
-        await sendMessage(program, dialect, writer, text);
-        const d = await getDialect(program, dialect.publicKey, writer);
+        await sendMessage(
+          program,
+          dialect,
+          writer,
+          text,
+          writerEncryptionProps,
+        );
+        const d = await getDialect(
+          program,
+          dialect.publicKey,
+          writerEncryptionProps,
+        );
         const actualMessages = d.dialect.messages;
         const lastMessage = actualMessages[0];
         console.log(`  msgs count after send: ${actualMessages.length}\n`);
@@ -827,48 +885,68 @@ describe('Protocol v1 test', () => {
       });
       members = [
         {
-          publicKey: writer1.publicKey,
+          publicKey: writer1.user.publicKey,
           scopes: [true, true], // owner, read-only
         },
         {
-          publicKey: writer2.publicKey,
+          publicKey: writer2.user.publicKey,
           scopes: [false, true], // non-owner, read-write
         },
       ];
-      await createDialect(program, writer1, members, true);
+      await createDialect(program, writer1.user, members, true);
       // when
       let writer1Dialect = await getDialectForMembers(
         program,
         members,
-        writer1,
+        writer1.encryptionProps,
       );
       const writer1Text = generateRandomText(256);
-      await sendMessage(program, writer1Dialect, writer1, writer1Text);
+      await sendMessage(
+        program,
+        writer1Dialect,
+        writer1.user,
+        writer1Text,
+        writer1.encryptionProps,
+      );
       let writer2Dialect = await getDialectForMembers(
         program,
         members,
-        writer2,
+        writer2.encryptionProps,
       ); // ensures dialect state linearization
       const writer2Text = generateRandomText(256);
-      await sendMessage(program, writer2Dialect, writer2, writer2Text);
+      await sendMessage(
+        program,
+        writer2Dialect,
+        writer2.user,
+        writer2Text,
+        writer2.encryptionProps,
+      );
 
-      writer1Dialect = await getDialectForMembers(program, members, writer1);
-      writer2Dialect = await getDialectForMembers(program, members, writer2);
+      writer1Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer1.encryptionProps,
+      );
+      writer2Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer2.encryptionProps,
+      );
 
       // then check writer1 dialect state
       const message1Writer1 = writer1Dialect.dialect.messages[1];
       const message2Writer1 = writer1Dialect.dialect.messages[0];
       chai.expect(message1Writer1.text).to.be.eq(writer1Text);
-      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.user.publicKey);
       chai.expect(message2Writer1.text).to.be.eq(writer2Text);
-      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.publicKey);
+      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.user.publicKey);
       // then check writer2 dialect state
       const message1Writer2 = writer2Dialect.dialect.messages[1];
       const message2Writer2 = writer2Dialect.dialect.messages[0];
       chai.expect(message1Writer2.text).to.be.eq(writer1Text);
-      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.user.publicKey);
       chai.expect(message2Writer2.text).to.be.eq(writer2Text);
-      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
+      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.user.publicKey);
     });
 
     // This test was failing before changing nonce generation algorithm
@@ -884,48 +962,68 @@ describe('Protocol v1 test', () => {
       });
       members = [
         {
-          publicKey: writer1.publicKey,
+          publicKey: writer1.user.publicKey,
           scopes: [true, true], // owner, read-only
         },
         {
-          publicKey: writer2.publicKey,
+          publicKey: writer2.user.publicKey,
           scopes: [false, true], // non-owner, read-write
         },
       ];
-      await createDialect(program, writer1, members, true);
+      await createDialect(program, writer1.user, members, true);
       // when
       let writer1Dialect = await getDialectForMembers(
         program,
         members,
-        writer1,
+        writer1.encryptionProps,
       );
       let writer2Dialect = await getDialectForMembers(
         program,
         members,
-        writer2,
+        writer2.encryptionProps,
       ); // ensures no dialect state linearization
       const writer1Text = generateRandomText(256);
-      await sendMessage(program, writer1Dialect, writer1, writer1Text);
+      await sendMessage(
+        program,
+        writer1Dialect,
+        writer1.user,
+        writer1Text,
+        writer1.encryptionProps,
+      );
       const writer2Text = generateRandomText(256);
-      await sendMessage(program, writer2Dialect, writer2, writer2Text);
+      await sendMessage(
+        program,
+        writer2Dialect,
+        writer2.user,
+        writer2Text,
+        writer2.encryptionProps,
+      );
 
-      writer1Dialect = await getDialectForMembers(program, members, writer1);
-      writer2Dialect = await getDialectForMembers(program, members, writer2);
+      writer1Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer1.encryptionProps,
+      );
+      writer2Dialect = await getDialectForMembers(
+        program,
+        members,
+        writer2.encryptionProps,
+      );
 
       // then check writer1 dialect state
       const message1Writer1 = writer1Dialect.dialect.messages[1];
       const message2Writer1 = writer1Dialect.dialect.messages[0];
       chai.expect(message1Writer1.text).to.be.eq(writer1Text);
-      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message1Writer1.owner).to.be.deep.eq(writer1.user.publicKey);
       chai.expect(message2Writer1.text).to.be.eq(writer2Text);
-      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.publicKey);
+      chai.expect(message2Writer1.owner).to.be.deep.eq(writer2.user.publicKey);
       // then check writer2 dialect state
       const message1Writer2 = writer2Dialect.dialect.messages[1];
       const message2Writer2 = writer2Dialect.dialect.messages[0];
       chai.expect(message1Writer2.text).to.be.eq(writer1Text);
-      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.publicKey);
+      chai.expect(message1Writer2.owner).to.be.deep.eq(writer1.user.publicKey);
       chai.expect(message2Writer2.text).to.be.eq(writer2Text);
-      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.publicKey);
+      chai.expect(message2Writer2.owner).to.be.deep.eq(writer2.user.publicKey);
     });
   });
 
@@ -937,11 +1035,11 @@ describe('Protocol v1 test', () => {
       owner = await createUser({
         requestAirdrop: true,
         createMeta: false,
-      });
+      }).then((it) => it.user);
       writer = await createUser({
         requestAirdrop: true,
         createMeta: false,
-      });
+      }).then((it) => it.user);
     });
 
     it('Can subscribe to events and receive them and unsubscribe', async () => {
@@ -993,7 +1091,14 @@ describe('Protocol v1 test', () => {
     if (createMeta) {
       await createMetadata(program, user);
     }
-    return user;
+    const encryptionProps = {
+      ed25519PublicKey: user.publicKey.toBytes(),
+      diffieHellmanKeyPair: ed25519KeyPairToCurve25519({
+        publicKey: user.publicKey.toBytes(),
+        secretKey: user.secretKey,
+      }),
+    };
+    return { user, encryptionProps };
   }
 });
 

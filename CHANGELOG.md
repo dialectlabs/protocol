@@ -6,6 +6,10 @@
 * Update packages with vulnerabilities
 * Imports cleanup
 
+## [0.2.0] - 2022-04-08
+
+* Support dialect messages encryption using Curve25519 key pair.
+
 ## [0.1.12] - 2022-04-02
 
 * Upgrade anchor to 0.23.0.
