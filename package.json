@@ -1,7 +1,7 @@
 {
   "name": "@dialectlabs/web3",
   "description": "A smart messaging protocol for dapp notifications and wallet-to-wallet messaging on the Solana Blockchain.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/dialectlabs/protocol"

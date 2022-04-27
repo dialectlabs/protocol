@@ -2,6 +2,8 @@
 
 ## [UNRELEASED]
 
+## [0.3.0] - 2022-04-27
+
 * Add esm build
 * Update packages with vulnerabilities
 * Imports cleanup
