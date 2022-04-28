@@ -4,14 +4,9 @@
     "noEmit": false,
     "module": "ESNext",
     "outDir": "lib/esm",
-    "declarationDir": "lib/types",
+    "declarationDir": "lib/types"
   },
   "rootDir": "./src",
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "lib"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "lib"]
 }

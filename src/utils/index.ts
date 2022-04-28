@@ -2,8 +2,8 @@ import type * as anchor from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
 
 import { EmbeddedWallet } from './Wallet';
-import * as idl_ from './dialect.json';
-import * as programs_ from './programs.json';
+import idl_ from './dialect.json';
+import programs_ from './programs.json';
 import { ecdhDecrypt, ecdhEncrypt } from './ecdh-encryption';
 
 export const idl = idl_;

@@ -32,7 +32,7 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-  # TODO: Address failing issue 
+  # TODO: Address failing issue
   # clippy:
   #   name: Clippy
   #   runs-on: ubuntu-latest
