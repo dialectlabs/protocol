@@ -36,6 +36,5 @@
       "plugins": ["@typescript-eslint"]
     }
   ],
-  "settings": {
-  }
+  "settings": {}
 }

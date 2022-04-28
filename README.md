@@ -13,6 +13,7 @@ This repository contains both the Dialect rust programs (protocol), in Anchor, a
 Currently, the dialect account rent cost is `~0.059 SOL`.
 
 ## Table of Contents
+
 1. Installation
 2. Usage
 3. Local Development
@@ -153,11 +154,13 @@ Add this program id in the following additional places before proceeding:
 Before deploying make sure you fund your Solana wallet:
 
 You can fund your wallet with:
+
 ```shell
 solana airdrop 10
 ```
 
 You can verify your token balance with:
+
 ```shell
 solana balance
 ```
