@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [0.3.1] - 2022-04-28
+
+- fix .json import in esm build
+
 ## [0.3.0] - 2022-04-27
 
 - Add esm build
