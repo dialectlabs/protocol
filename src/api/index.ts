@@ -238,7 +238,7 @@ Dialect
 */
 
 export async function getDialectProgramAddress(
-  programOrProgramAddress: anchor.Program | PublicKey,
+  programOrProgramAddress: PublicKey | anchor.Program,
   membersOrMemberPubKeys: (Member | PublicKey)[],
 ): Promise<[anchor.web3.PublicKey, number]> {
   const programAddress =
@@ -272,7 +272,7 @@ function parseMessages(
   const textSerde = TextSerdeFactory.create(
     {
       encrypted,
-      members,
+      memberPubKeys: members.map((it) => it.publicKey),
     },
     encryptionProps,
   );
@@ -481,7 +481,7 @@ export async function sendMessage(
   const textSerde = TextSerdeFactory.create(
     {
       encrypted: dialect.encrypted,
-      members: dialect.members,
+      memberPubKeys: dialect.members.map((it) => it.publicKey),
     },
     encryptionProps,
   );
