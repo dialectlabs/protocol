@@ -1,3 +1,4 @@
+import type { Wallet } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
 import type { Connection, Keypair, PublicKey } from '@solana/web3.js';
@@ -7,7 +8,6 @@ import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
 import { EncryptionProps, TextSerdeFactory } from './text-serde';
-import type { Wallet } from '../utils/Wallet';
 
 // TODO: Switch from types to classes
 
@@ -238,7 +238,7 @@ Dialect
 */
 
 export async function getDialectProgramAddress(
-  programOrProgramAddress: PublicKey | anchor.Program,
+  programOrProgramAddress: anchor.Program | PublicKey,
   membersOrMemberPubKeys: (Member | PublicKey)[],
 ): Promise<[anchor.web3.PublicKey, number]> {
   const programAddress =
@@ -272,7 +272,7 @@ function parseMessages(
   const textSerde = TextSerdeFactory.create(
     {
       encrypted,
-      memberPubKeys: members.map((it) => it.publicKey),
+      members,
     },
     encryptionProps,
   );
@@ -345,13 +345,13 @@ export async function getDialects(
 
 export async function getDialectForMembers(
   program: anchor.Program,
-  membersOrMemberPubKeys: (Member | PublicKey)[],
+  members: Member[],
   encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount> {
-  const sortedMemberPks = membersOrMemberPubKeys
-    .map((it) => ('publicKey' in it ? it.publicKey : it))
-    .sort((a, b) => a.toBuffer().compare(b.toBuffer()));
-  const [publicKey] = await getDialectProgramAddress(program, sortedMemberPks);
+  const sortedMembers = members.sort((a, b) =>
+    a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
+  );
+  const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
   return await getDialect(program, publicKey, encryptionProps);
 }
 
@@ -481,7 +481,7 @@ export async function sendMessage(
   const textSerde = TextSerdeFactory.create(
     {
       encrypted: dialect.encrypted,
-      memberPubKeys: dialect.members.map((it) => it.publicKey),
+      members: dialect.members,
     },
     encryptionProps,
   );
@@ -502,7 +502,7 @@ export async function sendMessage(
     },
   );
   const d = await getDialect(program, publicKey, encryptionProps);
-  return d.dialect.messages[0]; // TODO: Support ring
+  return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
 }
 
 // Events
