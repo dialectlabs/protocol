@@ -1,6 +1,6 @@
+import type { Wallet } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
-import type { Wallet } from '@project-serum/anchor';
 import type { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { sleep, waitForFinality, Wallet_ } from '../utils';
@@ -238,17 +238,21 @@ Dialect
 */
 
 export async function getDialectProgramAddress(
-  program: anchor.Program,
-  members: Member[],
+  programOrProgramAddress: anchor.Program | PublicKey,
+  membersOrMemberPubKeys: (Member | PublicKey)[],
 ): Promise<[anchor.web3.PublicKey, number]> {
+  const programAddress =
+    'programId' in programOrProgramAddress
+      ? programOrProgramAddress.programId
+      : programOrProgramAddress;
   return await anchor.web3.PublicKey.findProgramAddress(
     [
       Buffer.from('dialect'),
-      ...members // sort for deterministic PDA
-        .map((m) => m.publicKey.toBuffer())
+      ...membersOrMemberPubKeys // sort for deterministic PDA
+        .map((m) => ('publicKey' in m ? m.publicKey.toBuffer() : m.toBuffer()))
         .sort((a, b) => a.compare(b)), // TODO: test that buffers sort as expected
     ],
-    program.programId,
+    programAddress,
   );
 }
 
