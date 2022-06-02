@@ -7,6 +7,7 @@ import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
 import { EncryptionProps, TextSerdeFactory } from './text-serde';
+import type { Wallet } from '../utils/Wallet';
 
 // TODO: Switch from types to classes
 
