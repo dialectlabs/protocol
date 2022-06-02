@@ -1,4 +1,3 @@
-import type { Wallet } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
 import type { Connection, Keypair, PublicKey } from '@solana/web3.js';
@@ -345,13 +344,13 @@ export async function getDialects(
 
 export async function getDialectForMembers(
   program: anchor.Program,
-  members: Member[],
+  membersOrMemberPubKeys: (Member | PublicKey)[],
   encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount> {
-  const sortedMembers = members.sort((a, b) =>
-    a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
-  );
-  const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
+  const sortedMemberPks = membersOrMemberPubKeys
+    .map((it) => ('publicKey' in it ? it.publicKey : it))
+    .sort((a, b) => a.toBuffer().compare(b.toBuffer()));
+  const [publicKey] = await getDialectProgramAddress(program, sortedMemberPks);
   return await getDialect(program, publicKey, encryptionProps);
 }
 
