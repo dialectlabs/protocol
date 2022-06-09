@@ -96,7 +96,7 @@ export interface EncryptionProps {
 export class TextSerdeFactory {
   static create(
     { encrypted, memberPubKeys }: DialectAttributes,
-    encryptionProps?: EncryptionProps,
+    encryptionProps?: EncryptionProps | null,
   ): TextSerde {
     if (!encrypted) {
       return new UnencryptedTextSerde();
