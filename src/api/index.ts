@@ -498,7 +498,7 @@ export async function sendMessage(
     },
   );
   const d = await getDialect(program, publicKey, encryptionProps);
-  return d.dialect.messages[d.dialect.nextMessageIdx - 1]; // TODO: Support ring
+  return d.dialect.messages[0]; // TODO: Support ring
 }
 
 // Events
