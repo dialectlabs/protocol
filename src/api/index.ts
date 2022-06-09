@@ -258,7 +258,7 @@ export async function getDialectProgramAddress(
 
 function parseMessages(
   { messages: rawMessagesBuffer, members, encrypted }: RawDialect,
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ) {
   if (encrypted && !encryptionProps) {
     return [];
@@ -294,7 +294,7 @@ function parseMessages(
 
 function parseRawDialect(
   rawDialect: RawDialect,
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ) {
   return {
     encrypted: rawDialect.encrypted,
@@ -308,7 +308,7 @@ function parseRawDialect(
 export async function getDialect(
   program: anchor.Program,
   publicKey: PublicKey,
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ): Promise<DialectAccount> {
   const rawDialect = (await program.account.dialectAccount.fetch(
     publicKey,
@@ -325,7 +325,7 @@ export async function getDialect(
 export async function getDialects(
   program: anchor.Program,
   user: anchor.web3.Keypair | Wallet,
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ): Promise<DialectAccount[]> {
   const metadata = await getMetadata(program, user.publicKey);
   const enabledSubscriptions = metadata.subscriptions.filter(
@@ -346,7 +346,7 @@ export async function getDialects(
 export async function getDialectForMembers(
   program: anchor.Program,
   membersOrMemberPubKeys: (Member | PublicKey)[],
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ): Promise<DialectAccount> {
   const sortedMemberPks = membersOrMemberPubKeys
     .map((it) => ('publicKey' in it ? it.publicKey : it))
@@ -401,7 +401,7 @@ export async function createDialect(
   owner: anchor.web3.Keypair | Wallet,
   members: Member[],
   encrypted = false,
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ): Promise<DialectAccount> {
   const sortedMembers = members.sort((a, b) =>
     a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
@@ -472,7 +472,7 @@ export async function sendMessage(
   { dialect, publicKey }: DialectAccount,
   sender: anchor.web3.Keypair | Wallet,
   text: string,
-  encryptionProps?: EncryptionProps,
+  encryptionProps?: EncryptionProps | null,
 ): Promise<Message> {
   const [dialectPublicKey, nonce] = await getDialectProgramAddress(
     program,
