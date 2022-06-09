@@ -2,6 +2,11 @@
 
 ## [UNRELEASED]
 
+## [0.3.2] - 2022-06-09
+
+- Return message after sending
+- Increase flexibility by overloading arguments of several functions
+
 ## [0.3.1] - 2022-04-28
 
 - fix .json import in esm build
