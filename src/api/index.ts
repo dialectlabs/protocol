@@ -1,6 +1,5 @@
 import * as anchor from '@project-serum/anchor';
 import { EventParser } from '@project-serum/anchor';
-import type { Wallet } from '@project-serum/anchor';
 import type { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
 import { sleep, waitForFinality, Wallet_ } from '../utils';
@@ -8,6 +7,7 @@ import { ENCRYPTION_OVERHEAD_BYTES } from '../utils/ecdh-encryption';
 import { CyclicByteBuffer } from '../utils/cyclic-bytebuffer';
 import ByteBuffer from 'bytebuffer';
 import { EncryptionProps, TextSerdeFactory } from './text-serde';
+import type { Wallet } from '../utils/Wallet';
 
 // TODO: Switch from types to classes
 
@@ -238,17 +238,21 @@ Dialect
 */
 
 export async function getDialectProgramAddress(
-  program: anchor.Program,
-  members: Member[],
+  programOrProgramAddress: PublicKey | anchor.Program,
+  membersOrMemberPubKeys: (Member | PublicKey)[],
 ): Promise<[anchor.web3.PublicKey, number]> {
+  const programAddress =
+    'programId' in programOrProgramAddress
+      ? programOrProgramAddress.programId
+      : programOrProgramAddress;
   return await anchor.web3.PublicKey.findProgramAddress(
     [
       Buffer.from('dialect'),
-      ...members // sort for deterministic PDA
-        .map((m) => m.publicKey.toBuffer())
+      ...membersOrMemberPubKeys // sort for deterministic PDA
+        .map((m) => ('publicKey' in m ? m.publicKey.toBuffer() : m.toBuffer()))
         .sort((a, b) => a.compare(b)), // TODO: test that buffers sort as expected
     ],
-    program.programId,
+    programAddress,
   );
 }
 
@@ -268,7 +272,7 @@ function parseMessages(
   const textSerde = TextSerdeFactory.create(
     {
       encrypted,
-      members,
+      memberPubKeys: members.map((it) => it.publicKey),
     },
     encryptionProps,
   );
@@ -341,13 +345,13 @@ export async function getDialects(
 
 export async function getDialectForMembers(
   program: anchor.Program,
-  members: Member[],
+  membersOrMemberPubKeys: (Member | PublicKey)[],
   encryptionProps?: EncryptionProps,
 ): Promise<DialectAccount> {
-  const sortedMembers = members.sort((a, b) =>
-    a.publicKey.toBuffer().compare(b.publicKey.toBuffer()),
-  );
-  const [publicKey] = await getDialectProgramAddress(program, sortedMembers);
+  const sortedMemberPks = membersOrMemberPubKeys
+    .map((it) => ('publicKey' in it ? it.publicKey : it))
+    .sort((a, b) => a.toBuffer().compare(b.toBuffer()));
+  const [publicKey] = await getDialectProgramAddress(program, sortedMemberPks);
   return await getDialect(program, publicKey, encryptionProps);
 }
 
@@ -477,7 +481,7 @@ export async function sendMessage(
   const textSerde = TextSerdeFactory.create(
     {
       encrypted: dialect.encrypted,
-      members: dialect.members,
+      memberPubKeys: dialect.members.map((it) => it.publicKey),
     },
     encryptionProps,
   );

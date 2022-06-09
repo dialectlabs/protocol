@@ -1,4 +1,3 @@
-import type { Member } from './index';
 import {
   generateRandomNonceWithPrefix,
   NONCE_SIZE_BYTES,
@@ -24,7 +23,7 @@ export class EncryptedTextSerde implements TextSerde {
 
   constructor(
     private readonly encryptionProps: EncryptionProps,
-    private readonly members: Member[],
+    private readonly members: PublicKey[],
   ) {}
 
   deserialize(bytes: Uint8Array): string {
@@ -36,7 +35,7 @@ export class EncryptedTextSerde implements TextSerde {
     const encodedText = ecdhDecrypt(
       encryptedText,
       this.encryptionProps.diffieHellmanKeyPair,
-      otherMember.publicKey.toBytes(),
+      otherMember.toBytes(),
       encryptionNonce,
     );
     return this.unencryptedTextSerde.deserialize(encodedText);
@@ -51,17 +50,14 @@ export class EncryptedTextSerde implements TextSerde {
     const encryptedText = ecdhEncrypt(
       textBytes,
       this.encryptionProps.diffieHellmanKeyPair,
-
-      otherMember.publicKey.toBytes(),
+      otherMember.toBytes(),
       encryptionNonce,
     );
     return new Uint8Array([...encryptionNonce, ...encryptedText]);
   }
 
   private findMemberIdx(member: anchor.web3.PublicKey) {
-    const memberIdx = this.members.findIndex((it) =>
-      it.publicKey.equals(member),
-    );
+    const memberIdx = this.members.findIndex((it) => it.equals(member));
     if (memberIdx === -1) {
       throw new Error('Expected to have other member');
     }
@@ -69,7 +65,7 @@ export class EncryptedTextSerde implements TextSerde {
   }
 
   private findOtherMember(member: anchor.web3.PublicKey) {
-    const otherMember = this.members.find((it) => !it.publicKey.equals(member));
+    const otherMember = this.members.find((it) => !it.equals(member));
     if (!otherMember) {
       throw new Error('Expected to have other member');
     }
@@ -89,7 +85,7 @@ export class UnencryptedTextSerde implements TextSerde {
 
 export type DialectAttributes = {
   encrypted: boolean;
-  members: Member[];
+  memberPubKeys: PublicKey[];
 };
 
 export interface EncryptionProps {
@@ -99,14 +95,14 @@ export interface EncryptionProps {
 
 export class TextSerdeFactory {
   static create(
-    { encrypted, members }: DialectAttributes,
+    { encrypted, memberPubKeys }: DialectAttributes,
     encryptionProps?: EncryptionProps,
   ): TextSerde {
     if (!encrypted) {
       return new UnencryptedTextSerde();
     }
     if (encrypted && encryptionProps) {
-      return new EncryptedTextSerde(encryptionProps, members);
+      return new EncryptedTextSerde(encryptionProps, memberPubKeys);
     }
     throw new Error('Cannot proceed without encryptionProps');
   }
