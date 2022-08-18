@@ -131,15 +131,7 @@ Build the Dialect Solana program:
 anchor build
 ```
 
-If you haven't deployed this program to localnet before, `anchor build` produces a program-id stored in `target/idl/dialect.json`. The program-id is the address field of the "metadata" element (usually at bottom of file, note your address may differ locally):
-
-```json
-  "metadata": {
-    "address": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
-  }
-```
-
-Alternatively, you can get this program id from the command
+If you haven't deployed this program to localnet before, `anchor build` produces a program-id. To get this program-id use the command:
 
 ```bash
 solana address -k target/deploy/dialect-keypair.json
