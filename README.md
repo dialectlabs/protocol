@@ -156,7 +156,7 @@ Before deploying make sure you fund your Solana wallet:
 You can fund your wallet with:
 
 ```shell
-solana airdrop 10
+solana airdrop 2
 ```
 
 You can verify your token balance with:
