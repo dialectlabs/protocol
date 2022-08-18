@@ -97,7 +97,7 @@ Dialect is built with Solana and Anchor. Install both dependencies first followi
 - [Solana](https://docs.solana.com/cli/install-solana-cli-tools)
 - [Anchor](https://book.anchor-lang.com) v0.18.0
 
-We recommend installing anchor with [avm](https://book.anchor-lang.com/chapter_2/installation.html#installing-using-anchor-version-manager-avm-recommended) and using the `"@project-serum/anchor"` version that's specified in our [package.json](https://github.com/dialectlabs/protocol/blob/master/package.json) file.
+We recommend installing anchor with [avm](https://book.anchor-lang.com/getting_started/installation.html#installing-using-anchor-version-manager-avm-recommended) and using the `"@project-serum/anchor"` version that's specified in our [package.json](https://github.com/dialectlabs/protocol/blob/master/package.json) file.
 
 Be sure you are targeting a Solana `localnet` instance:
 
