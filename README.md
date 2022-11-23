@@ -148,7 +148,7 @@ solana address -k target/deploy/dialect-keypair.json
 Add this program id in the following additional places before proceeding:
 
 1. In the `dialect = "<program-id>"` in `Anchor.toml`
-2. In the `declare_id!("<program-id>")` in `programs/dialect/lib.rs`
+2. In the `declare_id!("<program-id>")` in `programs/dialect/src/lib.rs`
 3. In the `localnet` key in `src/utils/program.json` (redundant, to be retired)
 
 Before deploying make sure you fund your Solana wallet:
